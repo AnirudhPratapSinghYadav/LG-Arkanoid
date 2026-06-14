@@ -1,13 +1,23 @@
 import 'dart:convert';
 import 'dart:math';
-import 'dart:ui'; // Added for ImageFilter.blur
+import 'dart:ui';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
 
+class DevHttpOverrides extends HttpOverrides {
+  @override
+  HttpClient createHttpClient(SecurityContext? context) {
+    return super.createHttpClient(context)
+      ..badCertificateCallback = (X509Certificate cert, String host, int port) => true;
+  }
+}
+
 void main() {
+  HttpOverrides.global = DevHttpOverrides();
   runApp(
     ChangeNotifierProvider(
       create: (_) => GameService(),
@@ -42,7 +52,7 @@ class GameService extends ChangeNotifier {
     serverPort = port;
 
     try {
-      final url = 'http://$address:$port';
+      final url = 'https://$address:$port';
       socket = io.io(
         url,
         io.OptionBuilder()
@@ -233,10 +243,10 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   }
 
   Future<void> _bootstrap() async {
-    final prefs = await SharedPreferences.getInstance();
-    final savedAddress = prefs.getString('last_server_address');
-    final savedPort = prefs.getString('last_server_port') ?? '8080';
-    final savedToken = prefs.getString('last_session_token');
+    const storage = FlutterSecureStorage();
+    final savedAddress = await storage.read(key: 'last_server_address');
+    final savedPort = await storage.read(key: 'last_server_port') ?? '8080';
+    final savedToken = await storage.read(key: 'last_session_token');
 
     bool connectSuccess = false;
 
@@ -429,10 +439,10 @@ class _ConnectScreenState extends State<ConnectScreen> {
     setState(() => _connecting = false);
 
     if (ok) {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('last_server_address', address);
-      await prefs.setString('last_server_port', port);
-      await prefs.setString('last_session_token', token);
+      const storage = FlutterSecureStorage();
+      await storage.write(key: 'last_server_address', value: address);
+      await storage.write(key: 'last_server_port', value: port);
+      await storage.write(key: 'last_session_token', value: token);
       service.joinGame(token);
       if (mounted) {
         Navigator.pushReplacementNamed(context, '/controller');

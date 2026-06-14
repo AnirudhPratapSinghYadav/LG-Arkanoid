@@ -6,8 +6,11 @@
  */
 
 const express = require('express');
+const https = require('https');
 const http = require('http');
 const path = require('path');
+const fs = require('fs');
+const { execSync } = require('child_process');
 const crypto = require('crypto');
 const { Server } = require('socket.io');
 const fetch = require('node-fetch');
@@ -173,9 +176,33 @@ const socketToPlayerIndex = new Map();
 // ---------------------------------------------------------------------------
 
 const app = express();
-const server = http.createServer(app);
+
+const certPath = path.join(__dirname, 'cert.pem');
+const keyPath = path.join(__dirname, 'key.pem');
+
+if (!fs.existsSync(certPath) || !fs.existsSync(keyPath)) {
+  console.log('Generating self-signed SSL certificate...');
+  try {
+    execSync(`openssl req -nodes -new -x509 -keyout "${keyPath}" -out "${certPath}" -days 365 -subj "/CN=LG-Arkanoid"`);
+  } catch (err) {
+    console.error('Failed to generate cert via openssl. Falling back to HTTP.', err.message);
+  }
+}
+
+let server;
+if (fs.existsSync(certPath) && fs.existsSync(keyPath)) {
+  server = https.createServer({
+    key: fs.readFileSync(keyPath),
+    cert: fs.readFileSync(certPath)
+  }, app);
+  console.log('SSL certificate loaded. Running over HTTPS/WSS.');
+} else {
+  server = http.createServer(app);
+}
+
 const io = new Server(server, {
   cors: { origin: '*', methods: ['GET', 'POST'] },
+  maxHttpBufferSize: 1024, // 1KB limit to prevent huge payloads
 });
 
 const webClientPath = path.join(__dirname, '..', 'web client');
@@ -515,20 +542,20 @@ async function triggerCommentary(eventType, snapshot) {
 
 function validateMessage(player, timestamp, nonce) {
   const now = Date.now();
-  if (typeof timestamp !== 'number' || Math.abs(now - timestamp) > 500) {
+  
+  if (typeof timestamp !== 'number' || typeof nonce !== 'string' || nonce.length > 32) {
     return { valid: false, errorCode: 1003 };
   }
 
-  const recentDuplicate = player.lastNonces.some(
-    (entry) => entry.nonce === nonce && now - entry.time < 100
-  );
+  // Reject strictly older nonces to prevent replay, without assuming synced clocks
+  const recentDuplicate = player.lastNonces.some((entry) => entry.nonce === nonce);
   if (recentDuplicate) {
     return { valid: false, errorCode: 1004 };
   }
 
   player.lastNonces.push({ nonce, time: now });
-  if (player.lastNonces.length > 50) {
-    player.lastNonces = player.lastNonces.slice(-50);
+  if (player.lastNonces.length > 100) {
+    player.lastNonces.shift();
   }
 
   return { valid: true };
@@ -642,7 +669,14 @@ io.on('connection', (socket) => {
 
   socket.on('player_join', (data) => {
     const { sessionToken } = data || {};
-    if (!timingSafeTokenCompare(String(sessionToken || ''), String(worldState.sessionToken || ''))) {
+    
+    // Strict type check
+    if (typeof sessionToken !== 'string' || sessionToken.length > 64) {
+      socket.emit('join_rejected', { errorCode: 1005, message: 'Invalid payload' });
+      return;
+    }
+
+    if (!timingSafeTokenCompare(sessionToken, String(worldState.sessionToken || ''))) {
       socket.emit('join_rejected', { errorCode: 1001, message: 'Invalid session token' });
       return;
     }
@@ -705,6 +739,13 @@ io.on('connection', (socket) => {
 
     const { player } = found;
     const { x, timestamp, nonce } = data || {};
+    
+    // Strict type check to prevent NaN propagation DoS
+    if (typeof x !== 'number' || isNaN(x)) {
+      socket.emit('error', { errorCode: 1005, message: 'Invalid payload' });
+      return;
+    }
+
     const validation = validateMessage(player, timestamp, nonce);
     if (!validation.valid) {
       socket.emit('error', { errorCode: validation.errorCode });
@@ -720,6 +761,20 @@ io.on('connection', (socket) => {
 
     const { player } = found;
     const { powerUpType, timestamp, nonce } = data || {};
+
+    if (typeof powerUpType !== 'string' || powerUpType.length > 20) {
+      socket.emit('error', { errorCode: 1005, message: 'Invalid payload' });
+      return;
+    }
+
+    // Rate limit power-ups: 1 per 5 seconds per player
+    const now = Date.now();
+    if (player.lastPowerUpTime && now - player.lastPowerUpTime < 5000) {
+      socket.emit('error', { errorCode: 1006, message: 'Power-up on cooldown' });
+      return;
+    }
+    player.lastPowerUpTime = now;
+
     const validation = validateMessage(player, timestamp, nonce);
     if (!validation.valid) {
       socket.emit('error', { errorCode: validation.errorCode });
