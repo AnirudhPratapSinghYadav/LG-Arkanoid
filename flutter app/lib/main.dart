@@ -1,0 +1,658 @@
+import 'dart:convert';
+import 'dart:math';
+
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:socket_io_client/socket_io_client.dart' as io;
+
+void main() {
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => GameService(),
+      child: const LGArkanoidApp(),
+    ),
+  );
+}
+
+class GameService extends ChangeNotifier {
+  io.Socket? socket;
+  String? serverAddress;
+  String? serverPort;
+  String? playerId;
+  int? playerNumber;
+  String? sessionId;
+  int score = 0;
+  int lives = 3;
+  String lastCommentary = '';
+  String lastCommentarySource = 'fallback';
+  bool connected = false;
+  Map<String, dynamic>? latestGameState;
+
+  final Random _random = Random();
+
+  String generateNonce() {
+    return List.generate(8, (_) => _random.nextInt(16).toRadixString(16)).join();
+  }
+
+  Future<bool> connect(String address, String port, {Duration timeout = const Duration(seconds: 3)}) async {
+    disconnect();
+    serverAddress = address;
+    serverPort = port;
+
+    try {
+      final url = 'http://$address:$port';
+      socket = io.io(
+        url,
+        io.OptionBuilder()
+            .setTransports(['websocket'])
+            .enableAutoConnect()
+            .build(),
+      );
+
+      socket!.onConnect((_) {
+        connected = true;
+        notifyListeners();
+      });
+
+      socket!.onDisconnect((_) {
+        connected = false;
+        notifyListeners();
+      });
+
+      socket!.on('join_confirmed', (data) {
+        final map = _asMap(data);
+        playerId = map['playerId'] as String?;
+        playerNumber = map['playerNumber'] as int?;
+        sessionId = map['sessionId'] as String?;
+        notifyListeners();
+      });
+
+      socket!.on('join_rejected', (data) {
+        final map = _asMap(data);
+        lastCommentary = 'Join rejected: ${map['message'] ?? map['errorCode']}';
+        lastCommentarySource = 'fallback';
+        notifyListeners();
+      });
+
+      socket!.on('game_state', (data) {
+        latestGameState = _asMap(data);
+        if (playerId != null) {
+          final players = latestGameState!['players'] as List<dynamic>? ?? [];
+          for (final p in players) {
+            final pm = _asMap(p);
+            if (pm['id'] == playerId) {
+              score = pm['score'] as int? ?? 0;
+              lives = pm['lives'] as int? ?? 0;
+              break;
+            }
+          }
+        }
+        notifyListeners();
+      });
+
+      socket!.on('commentary', (data) {
+        final map = _asMap(data);
+        lastCommentary = map['text'] as String? ?? '';
+        lastCommentarySource = map['source'] as String? ?? 'fallback';
+        notifyListeners();
+      });
+
+      socket!.connect();
+
+      final start = DateTime.now();
+      while (DateTime.now().difference(start) < timeout) {
+        await Future.delayed(const Duration(milliseconds: 100));
+        if (connected) {
+          return true;
+        }
+      }
+      return false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  void joinGame(String sessionToken) {
+    socket?.emit('player_join', {'sessionToken': sessionToken});
+  }
+
+  void sendPaddleMove(double paddleVirtualX) {
+    if (socket == null || !connected || playerId == null) return;
+    socket!.emit('paddle_move', {
+      'playerId': playerId,
+      'x': paddleVirtualX.round(),
+      'timestamp': DateTime.now().millisecondsSinceEpoch,
+      'nonce': generateNonce(),
+    });
+  }
+
+  void activatePowerUp(String powerUpType) {
+    if (socket == null || !connected || playerId == null) return;
+    socket!.emit('power_up_activate', {
+      'playerId': playerId,
+      'powerUpType': powerUpType,
+      'timestamp': DateTime.now().millisecondsSinceEpoch,
+      'nonce': generateNonce(),
+    });
+  }
+
+  void disconnect() {
+    socket?.dispose();
+    socket = null;
+    connected = false;
+    notifyListeners();
+  }
+
+  Map<String, dynamic> _asMap(dynamic data) {
+    if (data is Map<String, dynamic>) return data;
+    if (data is Map) return Map<String, dynamic>.from(data);
+    return {};
+  }
+}
+
+class LGArkanoidApp extends StatelessWidget {
+  const LGArkanoidApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'LG Arkanoid',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        brightness: Brightness.dark,
+        colorScheme: ColorScheme.dark(
+          primary: Colors.teal,
+          secondary: Colors.tealAccent,
+          surface: const Color(0xFF121212),
+        ),
+        scaffoldBackgroundColor: const Color(0xFF0a0a0a),
+        useMaterial3: true,
+      ),
+      initialRoute: '/',
+      routes: {
+        '/': (context) => const SplashScreen(),
+        '/connect': (context) => const ConnectScreen(),
+        '/controller': (context) => const ControllerScreen(),
+        '/status': (context) => const StatusScreen(),
+      },
+    );
+  }
+}
+
+class SplashScreen extends StatefulWidget {
+  const SplashScreen({super.key});
+
+  @override
+  State<SplashScreen> createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends State<SplashScreen> {
+  @override
+  void initState() {
+    super.initState();
+    _bootstrap();
+  }
+
+  Future<void> _bootstrap() async {
+    await Future.delayed(const Duration(seconds: 1));
+    final prefs = await SharedPreferences.getInstance();
+    final savedAddress = prefs.getString('last_server_address');
+    final savedPort = prefs.getString('last_server_port') ?? '8080';
+    final savedToken = prefs.getString('last_session_token');
+
+    if (savedAddress != null && savedAddress.isNotEmpty) {
+      final service = context.read<GameService>();
+      final ok = await service.connect(savedAddress, savedPort);
+      if (ok && mounted) {
+        if (savedToken != null && savedToken.isNotEmpty) {
+          service.joinGame(savedToken);
+        }
+        Navigator.pushReplacementNamed(context, '/controller');
+        return;
+      }
+    }
+
+    await Future.delayed(const Duration(seconds: 2));
+    if (mounted) {
+      Navigator.pushReplacementNamed(context, '/connect');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: const [
+            Text(
+              'LG Arkanoid',
+              style: TextStyle(
+                fontSize: 42,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+            SizedBox(height: 12),
+            Text(
+              'Multiplayer Panoramic Brick Breaker',
+              style: TextStyle(fontSize: 18, color: Colors.teal),
+            ),
+            SizedBox(height: 32),
+            CircularProgressIndicator(color: Colors.teal),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class ConnectScreen extends StatefulWidget {
+  const ConnectScreen({super.key});
+
+  @override
+  State<ConnectScreen> createState() => _ConnectScreenState();
+}
+
+class _ConnectScreenState extends State<ConnectScreen> {
+  final _ipController = TextEditingController(text: '192.168.');
+  final _portController = TextEditingController(text: '8080');
+  final _tokenController = TextEditingController();
+  bool _connecting = false;
+
+  Future<void> _connect() async {
+    final address = _ipController.text.trim();
+    final port = _portController.text.trim();
+    final token = _tokenController.text.trim();
+
+    if (address.isEmpty || port.isEmpty || token.length != 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter IP, port, and a 6 digit session token')),
+      );
+      return;
+    }
+
+    setState(() => _connecting = true);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Connecting')),
+    );
+
+    final service = context.read<GameService>();
+    final ok = await service.connect(address, port);
+
+    if (!mounted) return;
+    setState(() => _connecting = false);
+
+    if (ok) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('last_server_address', address);
+      await prefs.setString('last_server_port', port);
+      await prefs.setString('last_session_token', token);
+      service.joinGame(token);
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, '/controller');
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Connection failed check IP and port')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Connect to LG Master Node')),
+      body: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TextField(
+              controller: _ipController,
+              decoration: const InputDecoration(
+                labelText: 'Master Node IP',
+                hintText: '192.168.x.x',
+              ),
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _portController,
+              decoration: const InputDecoration(labelText: 'Port'),
+              keyboardType: TextInputType.number,
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _tokenController,
+              decoration: const InputDecoration(
+                labelText: 'Session Token',
+                hintText: '6 digit code from Screen 5',
+              ),
+              keyboardType: TextInputType.number,
+              maxLength: 6,
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: _connecting ? null : _connect,
+              child: Text(_connecting ? 'Connecting...' : 'Connect'),
+            ),
+            const SizedBox(height: 16),
+            TextButton(
+              onPressed: () => Navigator.pushNamed(context, '/status'),
+              child: const Text('Open Status View'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class ControllerScreen extends StatefulWidget {
+  const ControllerScreen({super.key});
+
+  @override
+  State<ControllerScreen> createState() => _ControllerScreenState();
+}
+
+class _ControllerScreenState extends State<ControllerScreen> {
+  double _smoothedPaddleX = 4800;
+
+  double _applyTouchCurve(double localDx, double stripWidth) {
+    const maxX = 9600.0;
+    final raw = (localDx / stripWidth) * maxX;
+    if (raw <= 0) return 0;
+    if (raw >= maxX) return maxX;
+    return maxX * pow(raw / maxX, 1.5);
+  }
+
+  void _showPowerUpDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Activate Power Up'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _powerUpButton('Wide Paddle', 'wide_paddle'),
+            _powerUpButton('Slow Ball', 'slow_ball'),
+            _powerUpButton('Multi Ball', 'multi_ball'),
+            _powerUpButton('Bomb', 'bomb'),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _powerUpButton(String label, String type) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: ElevatedButton(
+        onPressed: () {
+          context.read<GameService>().activatePowerUp(type);
+          Navigator.pop(context);
+        },
+        child: Text(label),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<GameService>(
+      builder: (context, service, _) {
+        return Scaffold(
+          appBar: AppBar(
+            title: Text(
+              service.playerNumber != null
+                  ? 'Player ${service.playerNumber} (${service.playerId ?? "joining..."})'
+                  : 'LG Arkanoid Controller',
+            ),
+            actions: [
+              Padding(
+                padding: const EdgeInsets.only(right: 16),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 10,
+                      height: 10,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: service.connected ? Colors.green : Colors.red,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      service.connected ? 'Connected' : 'Disconnected',
+                      style: TextStyle(
+                        color: service.connected ? Colors.green : Colors.red,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.dashboard),
+                onPressed: () => Navigator.pushNamed(context, '/status'),
+              ),
+            ],
+          ),
+          body: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    Text(
+                      'Score: ${service.score}',
+                      style: const TextStyle(fontSize: 22, color: Colors.teal),
+                    ),
+                    Text(
+                      'Lives: ${service.lives}',
+                      style: const TextStyle(fontSize: 22, color: Colors.white),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    return GestureDetector(
+                      onHorizontalDragUpdate: (details) {
+                        final curved = _applyTouchCurve(
+                          details.localPosition.dx,
+                          constraints.maxWidth,
+                        );
+                        _smoothedPaddleX = curved;
+                        service.sendPaddleMove(_smoothedPaddleX);
+                      },
+                      onTapDown: (details) {
+                        final curved = _applyTouchCurve(
+                          details.localPosition.dx,
+                          constraints.maxWidth,
+                        );
+                        _smoothedPaddleX = curved;
+                        service.sendPaddleMove(_smoothedPaddleX);
+                      },
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 16),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade900,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.teal.withOpacity(0.4)),
+                        ),
+                        child: const Center(
+                          child: Text(
+                            'Drag horizontally to move paddle',
+                            style: TextStyle(color: Colors.white54),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: _showPowerUpDialog,
+                        child: const Text('Power Up'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () => service.activatePowerUp('multi_ball'),
+                        child: const Text('Fire Ball'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (service.lastCommentary.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 16, left: 16, right: 16),
+                  child: Text(
+                    service.lastCommentarySource == 'fallback'
+                        ? '${service.lastCommentary} (offline)'
+                        : service.lastCommentary,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.white70, fontSize: 14),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class StatusScreen extends StatelessWidget {
+  const StatusScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<GameService>(
+      builder: (context, service, _) {
+        final players = service.latestGameState?['players'] as List<dynamic>? ?? [];
+        final cardColors = [Colors.red, Colors.green, Colors.blue];
+
+        return Scaffold(
+          appBar: AppBar(title: const Text('Game Status')),
+          body: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                Row(
+                  children: List.generate(3, (index) {
+                    Map<String, dynamic> pdata = {};
+                    if (index < players.length) {
+                      pdata = Map<String, dynamic>.from(players[index] as Map);
+                    }
+                    final score = pdata['score'] as int? ?? 0;
+                    final lives = pdata['lives'] as int? ?? 0;
+                    final connected = pdata['connected'] as bool? ?? false;
+
+                    return Expanded(
+                      child: Card(
+                        color: Colors.grey.shade900,
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Column(
+                            children: [
+                              Text(
+                                'P${index + 1}',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  color: cardColors[index],
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Text(
+                                '$score',
+                                style: TextStyle(
+                                  fontSize: 32,
+                                  color: cardColors[index],
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: List.generate(
+                                  lives.clamp(0, 5),
+                                  (_) => Icon(Icons.favorite, color: cardColors[index], size: 18),
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                connected ? 'Connected' : 'Waiting',
+                                style: const TextStyle(fontSize: 11, color: Colors.white54),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  }),
+                ),
+                const SizedBox(height: 24),
+                Expanded(
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade900,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: service.lastCommentarySource == 'gemini'
+                            ? Colors.teal
+                            : Colors.grey,
+                        width: 2,
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Commentary',
+                          style: TextStyle(
+                            color: service.lastCommentarySource == 'gemini'
+                                ? Colors.teal
+                                : Colors.grey,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Expanded(
+                          child: SingleChildScrollView(
+                            child: Text(
+                              service.lastCommentary.isEmpty
+                                  ? 'Waiting for commentary...'
+                                  : service.lastCommentarySource == 'fallback'
+                                      ? '${service.lastCommentary} (offline)'
+                                      : service.lastCommentary,
+                              style: const TextStyle(fontSize: 18, color: Colors.white),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
