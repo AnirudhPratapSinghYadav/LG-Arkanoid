@@ -1,0 +1,10 @@
+node_modules/
+.env
+server/node_modules/
+flutter app/build/
+flutter app/.dart_tool/
+flutter app/.flutter-plugins
+flutter app/.flutter-plugins-dependencies
+flutter app/.packages
+flutter app/pubspec.lock
+.DS_Store
