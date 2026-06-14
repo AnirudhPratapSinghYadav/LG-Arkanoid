@@ -138,6 +138,11 @@ class GameService extends ChangeNotifier {
     });
   }
 
+  void startGame() {
+    if (socket == null || !connected) return;
+    socket!.emit('start_game');
+  }
+
   void disconnect() {
     socket?.dispose();
     socket = null;
@@ -762,11 +767,19 @@ class _ControllerScreenState extends State<ControllerScreen> {
                   children: [
                     Expanded(
                       child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(backgroundColor: Colors.teal.shade800),
+                        onPressed: () => service.startGame(),
+                        child: const Text('Start Game', style: TextStyle(color: Colors.white)),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: ElevatedButton(
                         onPressed: _showPowerUpDialog,
                         child: const Text('Power Up'),
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 8),
                     Expanded(
                       child: ElevatedButton(
                         onPressed: () => service.activatePowerUp('multi_ball'),
