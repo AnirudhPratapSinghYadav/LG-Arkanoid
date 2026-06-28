@@ -40,10 +40,40 @@ class GameScene extends Phaser.Scene {
         super({ key: 'GameScene' });
         this.currentState = null;
         this.boundaryBallOverrides = {};
+        this.previousBricks = {};
+        this.ballTrails = {};
     }
 
     create() {
+        const bgGraphics = this.make.graphics({x: 0, y: 0, add: false});
+        bgGraphics.lineStyle(1, 0x004444, 0.5);
+        bgGraphics.strokeRect(0, 0, 64, 64);
+        bgGraphics.generateTexture('bg_grid', 64, 64);
+        this.bg = this.add.tileSprite(960, 540, 1920, 1080, 'bg_grid');
+
+        const pGraphics = this.make.graphics({x:0, y:0, add:false});
+        pGraphics.fillStyle(0xffffff, 1);
+        pGraphics.fillRect(0, 0, 8, 8);
+        pGraphics.generateTexture('particle', 8, 8);
+        
+        this.brickEmitter = this.add.particles(0, 0, 'particle', {
+            speed: { min: 50, max: 300 },
+            scale: { start: 1, end: 0 },
+            alpha: { start: 1, end: 0 },
+            lifespan: 800,
+            emitting: false
+        });
+
         this.graphics = this.add.graphics();
+        this.trailGraphics = this.add.graphics();
+        
+        this.statusText = this.add.text(960, 540, '', {
+            fontFamily: 'monospace',
+            fontSize: '120px',
+            color: '#ff0000',
+            align: 'center',
+            fontStyle: 'bold'
+        }).setOrigin(0.5, 0.5).setAlpha(0);
 
         this.commentaryText = this.add.text(1800, 50, '', {
             fontFamily: 'monospace',
@@ -82,11 +112,75 @@ class GameScene extends Phaser.Scene {
     }
 
     update() {
+        if (this.bg) {
+            this.bg.tilePositionY -= 1;
+        }
+        
         this.graphics.clear();
+        this.trailGraphics.clear();
+        
         if (!this.currentState) return;
+        
+        this.checkStateChanges();
         this.drawBricks();
+        this.drawPowerUps();
         this.drawBalls();
         this.drawPaddles();
+    }
+
+    checkStateChanges() {
+        if (this.currentState.bricks) {
+            for (let r = 0; r < this.currentState.bricks.length; r++) {
+                const row = this.currentState.bricks[r];
+                for (let c = 0; c < row.length; c++) {
+                    const brick = row[c];
+                    const id = `${r}-${c}`;
+                    if (this.previousBricks[id] && !brick.active) {
+                        const localX = brick.x - virtualLeft;
+                        if (localX > -600 && localX < 2520) {
+                            this.brickEmitter.setParticleTint(ROW_COLORS[r % 6]);
+                            this.brickEmitter.emitParticleAt(localX + 300, brick.y + 15, 15);
+                        }
+                    }
+                    this.previousBricks[id] = brick.active;
+                }
+            }
+        }
+        
+        if (this.currentState.gameStatus === 'game_over') {
+            if (this.statusText.text !== 'GAME OVER') {
+                this.statusText.setText('GAME OVER');
+                this.statusText.setColor('#ff0000');
+                this.tweens.add({ targets: this.statusText, alpha: 1, duration: 500 });
+            }
+        } else if (this.currentState.gameStatus === 'win') {
+            if (this.statusText.text !== 'YOU WIN!') {
+                this.statusText.setText('YOU WIN!');
+                this.statusText.setColor('#00ff00');
+                this.tweens.add({ targets: this.statusText, alpha: 1, duration: 500 });
+            }
+        } else {
+            this.statusText.setAlpha(0);
+            this.statusText.setText('');
+        }
+    }
+
+    drawPowerUps() {
+        const powerUps = this.currentState.powerUps;
+        if (!powerUps) return;
+        
+        for (const p of powerUps) {
+            if (!p.active) continue;
+            const localX = p.x - virtualLeft;
+            if (localX < -50 || localX > 1970) continue;
+            
+            const pColor = p.type === 'wide_paddle' ? 0x00ff00 : (p.type === 'slow_ball' ? 0x0088ff : 0xff0000);
+            this.graphics.fillStyle(pColor, 1);
+            this.graphics.fillRoundedRect(localX - 20, p.y - 10, 40, 20, 10);
+            
+            this.graphics.fillStyle(0xffffff, 1);
+            this.graphics.fillCircle(localX, p.y, 4);
+        }
     }
 
     drawBricks() {
@@ -117,11 +211,26 @@ class GameScene extends Phaser.Scene {
 
         for (let i = 0; i < balls.length; i++) {
             const ball = balls[i];
-            if (!ball || !ball.active) continue;
+            if (!ball || !ball.active) {
+                if (this.ballTrails[i]) this.ballTrails[i] = [];
+                continue;
+            }
 
             const override = this.boundaryBallOverrides[ball.id];
             const localX = (override !== undefined) ? override : (ball.x - virtualLeft);
+            
+            if (!this.ballTrails[i]) this.ballTrails[i] = [];
+            this.ballTrails[i].push({ x: localX, y: ball.y });
+            if (this.ballTrails[i].length > 10) this.ballTrails[i].shift();
+            
             if (localX < -50 || localX > 1970) continue;
+
+            for (let t = 0; t < this.ballTrails[i].length; t++) {
+                const pos = this.ballTrails[i][t];
+                const alpha = t / 10;
+                this.trailGraphics.fillStyle(0x00ffff, alpha * 0.5);
+                this.trailGraphics.fillCircle(pos.x, pos.y, 8 * alpha);
+            }
 
             this.graphics.fillStyle(0xffffff, 1);
             this.graphics.fillCircle(localX, ball.y, 8);
@@ -192,6 +301,10 @@ class GameScene extends Phaser.Scene {
         });
 
         this.socket.on('commentary', (data) => {
+            if (data.eventType === 'life_lost') {
+                this.cameras.main.shake(200, 0.01);
+            }
+
             let message = data.text || data.message || '';
             if (data.source === 'fallback') {
                 message += ' (offline)';
