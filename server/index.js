@@ -3,8 +3,9 @@ const https = require('https');
 const http = require('http');
 const path = require('path');
 const fs = require('fs');
-const { execSync } = require('child_process');
+const { execFileSync } = require('child_process');
 const crypto = require('crypto');
+const gameEngine = require('./gameEngine.js');
 const { Server } = require('socket.io');
 const fetch = require('node-fetch');
 
@@ -55,104 +56,38 @@ const COMMENTARY_COOLDOWNS = {
 
 const PLAYER_SLOT_IDS = ['player1', 'player2', 'player3'];
 
-function createBrickGrid() {
-  const bricks = [];
-  for (let row = 0; row < 8; row++) {
-    const rowBricks = [];
-    for (let col = 0; col < 15; col++) {
-      rowBricks.push({
-        row,
-        col,
-        x: col * 640,
-        y: 100 + row * 40,
-        width: 600,
-        height: 30,
-        active: true,
-      });
-    }
-    bricks.push(rowBricks);
-  }
-  return bricks;
-}
-
 function createInitialWorldState() {
-  return {
-    balls: [
-      {
-        id: 'ball1',
-        x: 4800,
-        y: 500,
-        vx: 3,
-        vy: 4,
-        active: true,
-        lastTouchedByPlayerId: null,
-      },
-      {
-        id: 'ball2',
-        x: 4800,
-        y: 500,
-        vx: -3,
-        vy: 4,
-        active: false,
-        lastTouchedByPlayerId: null,
-      },
-    ],
-    bricks: createBrickGrid(),
-    players: [
-      {
-        id: null,
-        paddleX: 4800,
-        paddleWidth: 300,
-        paddleY: 1000,
-        score: 0,
-        lives: 3,
-        connected: false,
-        lastNonces: [],
-        socketId: null,
-        widePaddleTimer: null,
-        slowBallTimer: null,
-      },
-      {
-        id: null,
-        paddleX: 4800,
-        paddleWidth: 300,
-        paddleY: 1000,
-        score: 0,
-        lives: 3,
-        connected: false,
-        lastNonces: [],
-        socketId: null,
-        widePaddleTimer: null,
-        slowBallTimer: null,
-      },
-      {
-        id: null,
-        paddleX: 4800,
-        paddleWidth: 300,
-        paddleY: 1000,
-        score: 0,
-        lives: 3,
-        connected: false,
-        lastNonces: [],
-        socketId: null,
-        widePaddleTimer: null,
-        slowBallTimer: null,
-      },
-    ],
-    currentLevel: 1,
-    gameActive: false,
-    sessionId: null,
-    sessionToken: null,
-    commentaryRateLimiter: {
-      level_cleared: { lastCalledAt: 0 },
-      life_lost: { lastCalledAt: 0 },
-      multi_ball: { lastCalledAt: 0 },
-      score_milestone: { lastCalledAt: 0 },
-      victory: { lastCalledAt: 0 },
-    },
-    slowBallActive: false,
-    originalBallSpeeds: null,
+  const state = new gameEngine.GameState();
+  
+  state.balls = [
+    new gameEngine.Ball('ball1', 4800, 500, 3, 4, BALL_RADIUS),
+    new gameEngine.Ball('ball2', 4800, 500, -3, 4, BALL_RADIUS)
+  ];
+  state.balls[1].active = false;
+  
+  for (let i = 0; i < 3; i++) {
+    let p = new gameEngine.Player(null);
+    p.lastNonces = [];
+    p.widePaddleTimer = null;
+    p.slowBallTimer = null;
+    state.players.push(p);
+  }
+  
+  state.bricks = gameEngine.loadLevel(state.level);
+  
+  state.sessionId = null;
+  state.sessionToken = null;
+  state.commentaryRateLimiter = {
+    level_cleared: { lastCalledAt: 0 },
+    life_lost: { lastCalledAt: 0 },
+    multi_ball: { lastCalledAt: 0 },
+    score_milestone: { lastCalledAt: 0 },
+    victory: { lastCalledAt: 0 },
   };
+  state.slowBallActive = false;
+  state.originalBallSpeeds = null;
+  
+  return state;
 }
 
 let worldState = createInitialWorldState();
@@ -168,7 +103,7 @@ const keyPath = path.join(__dirname, 'key.pem');
 if (!fs.existsSync(certPath) || !fs.existsSync(keyPath)) {
   console.log('Generating self-signed SSL certificate...');
   try {
-    execSync(`openssl req -nodes -new -x509 -keyout "${keyPath}" -out "${certPath}" -days 365 -subj "/CN=LG-Arkanoid"`);
+    execFileSync('openssl', ['req', '-nodes', '-new', '-x509', '-keyout', keyPath, '-out', certPath, '-days', '365', '-subj', '/CN=LG-Arkanoid']);
   } catch (err) {
     console.error('Failed to generate cert via openssl. Falling back to HTTP.', err.message);
   }
@@ -196,7 +131,7 @@ app.use(express.static(webClientPath));
 app.get('/health', (req, res) => {
   res.json({
     status: 'ok',
-    gameActive: worldState.gameActive,
+    gameActive: worldState.gameStatus === 'playing',
     connectedPlayers: worldState.players.filter((p) => p.connected).length,
   });
 });
@@ -206,7 +141,7 @@ app.get('/', (req, res) => {
 });
 
 function generateToken() {
-  return crypto.randomInt(100000, 999999).toString();
+  return crypto.randomBytes(32).toString('hex');
 }
 
 function timingSafeTokenCompare(provided, stored) {
@@ -326,85 +261,7 @@ function triggerBoundaryHandoff(handoffResult, ball) {
   ball.x = handoffResult.entryX;
 }
 
-function circleRectOverlap(cx, cy, radius, rect) {
-  const closestX = Math.max(rect.x, Math.min(cx, rect.x + rect.width));
-  const closestY = Math.max(rect.y, Math.min(cy, rect.y + rect.height));
-  const dx = cx - closestX;
-  const dy = cy - closestY;
-  return dx * dx + dy * dy <= radius * radius;
-}
 
-function checkBrickCollision(ball) {
-  for (const row of worldState.bricks) {
-    for (const brick of row) {
-      if (!brick.active) continue;
-      if (circleRectOverlap(ball.x, ball.y, BALL_RADIUS, brick)) {
-        brick.active = false;
-        ball.vy = -ball.vy;
-        if (ball.lastTouchedByPlayerId) {
-          const player = worldState.players.find((p) => p.id === ball.lastTouchedByPlayerId);
-          if (player) {
-            const previousScore = player.score;
-            player.score += 100;
-            player._previousScore = previousScore;
-            return ball.lastTouchedByPlayerId;
-          }
-        }
-        return null;
-      }
-    }
-  }
-  return null;
-}
-
-function checkPaddleCollision(ball) {
-  for (const player of worldState.players) {
-    if (!player.connected) continue;
-
-    const nextY = ball.y + ball.vy;
-    const paddleTop = player.paddleY;
-    const withinVertical = nextY + BALL_RADIUS >= paddleTop - 10 && nextY <= paddleTop;
-    const withinHorizontal =
-      ball.x >= player.paddleX && ball.x <= player.paddleX + player.paddleWidth;
-
-    if (withinVertical && withinHorizontal) {
-      ball.vy = -Math.abs(ball.vy);
-      const paddleCenter = player.paddleX + player.paddleWidth / 2;
-      const offset = ball.x - paddleCenter;
-      const halfWidth = player.paddleWidth / 2;
-      const normalized = halfWidth > 0 ? offset / halfWidth : 0;
-
-      if (normalized <= -0.8) {
-        ball.vx = -6;
-      } else if (normalized >= 0.8) {
-        ball.vx = 6;
-      }
-
-      if (player.id) {
-        ball.lastTouchedByPlayerId = player.id;
-      }
-      return true;
-    }
-  }
-  return false;
-}
-
-function allBricksInactive() {
-  for (const row of worldState.bricks) {
-    for (const brick of row) {
-      if (brick.active) return false;
-    }
-  }
-  return true;
-}
-
-function resetBall(ball) {
-  ball.x = 4800;
-  ball.y = 500;
-  ball.vx = 3;
-  ball.vy = 4;
-  ball.active = true;
-}
 
 function broadcastGameState() {
   const payload = {
@@ -633,7 +490,7 @@ io.on('connection', (socket) => {
 
   socket.on('start_game', () => {
     resetWorldForNewGame();
-    worldState.gameActive = true;
+    worldState.gameStatus = 'playing';
     worldState.sessionId = crypto.randomUUID();
     worldState.sessionToken = generateToken();
     io.emit('game_started', {
@@ -854,84 +711,90 @@ io.on('connection', (socket) => {
 });
 
 setInterval(() => {
-  if (!worldState.gameActive) return;
+  if (worldState.gameStatus !== 'playing') return;
 
-  for (const ball of worldState.balls) {
-    if (!ball.active) continue;
+  const beforeScores = worldState.players.map(p => p.score);
+  const beforeLives = worldState.players.map(p => p.lives);
+  const beforeLevel = worldState.level;
+  const beforeBallScreens = worldState.balls.map(b => getScreenIdForX(b.x));
 
-    const scoringPlayerId = checkBrickCollision(ball);
-    if (scoringPlayerId) {
-      const player = worldState.players.find((p) => p.id === scoringPlayerId);
-      if (
-        player &&
-        player.score > 0 &&
-        player.score % 5000 === 0 &&
-        (player._previousScore === undefined || Math.floor(player._previousScore / 5000) < Math.floor(player.score / 5000))
-      ) {
-        triggerCommentary('score_milestone', getWorldSnapshot());
+  gameEngine.updateGameLoop(worldState);
+
+  for (let i = 0; i < worldState.players.length; i++) {
+    const p = worldState.players[i];
+    if (p.score > 0 && Math.floor(beforeScores[i] / 5000) < Math.floor(p.score / 5000)) {
+      triggerCommentary('score_milestone', getWorldSnapshot());
+    }
+    if (p.lives < beforeLives[i]) {
+      triggerCommentary('life_lost', getWorldSnapshot());
+      if (p.lives === 0) {
+        io.emit('player_eliminated', { playerId: p.id, playerNumber: i + 1 });
       }
-      if (player) player._previousScore = player.score;
-    }
-
-    checkPaddleCollision(ball);
-
-    if (ball.y - BALL_RADIUS < 0) {
-      ball.vy = Math.abs(ball.vy);
-    }
-
-    if (ball.x - BALL_RADIUS < 0) {
-      ball.x = BALL_RADIUS;
-      ball.vx = Math.abs(ball.vx);
-    }
-
-    if (ball.x + BALL_RADIUS > CANVAS_WIDTH - 1) {
-      ball.x = CANVAS_WIDTH - 1 - BALL_RADIUS;
-      ball.vx = -Math.abs(ball.vx);
-    }
-
-    if (ball.y > CANVAS_HEIGHT) {
-      if (ball.lastTouchedByPlayerId) {
-        const player = worldState.players.find((p) => p.id === ball.lastTouchedByPlayerId);
-        if (player) {
-          const previousLives = player.lives;
-          player.lives = Math.max(0, player.lives - 1);
-          if (previousLives > player.lives) {
-            triggerCommentary('life_lost', getWorldSnapshot());
-          }
-          if (player.lives === 0) {
-            io.emit('player_eliminated', { playerId: player.id, playerNumber: worldState.players.indexOf(player) + 1 });
-          }
-        }
-      }
-
-      ball.active = false;
-      const anyActive = worldState.balls.some((b) => b.active);
-      if (!anyActive) {
-        resetBall(worldState.balls[0]);
-        worldState.balls[1].active = false;
-      }
-      continue;
-    }
-
-    const handoff = detectBoundary(ball);
-    if (handoff) {
-      triggerBoundaryHandoff(handoff, ball);
-    } else {
-      ball.x += ball.vx;
-      ball.y += ball.vy;
     }
   }
 
-  if (allBricksInactive()) {
+  if (worldState.level > beforeLevel) {
     triggerCommentary('level_cleared', getWorldSnapshot());
-    worldState.currentLevel += 1;
-    worldState.bricks = createBrickGrid();
-
-    if (worldState.currentLevel >= 4) {
-      worldState.gameActive = false;
-      triggerCommentary('victory', getWorldSnapshot());
-    }
+  } else if (worldState.gameStatus === 'win' && beforeLevel > 0) {
+    triggerCommentary('victory', getWorldSnapshot());
   }
+
+  worldState.balls.forEach((ball, i) => {
+    if (!ball.active) return;
+    const currentScreen = getScreenIdForX(ball.x);
+    const oldScreen = beforeBallScreens[i];
+    if (currentScreen !== oldScreen) {
+      const handoffId = `${oldScreen}-${currentScreen}-${Date.now()}`;
+      
+      const isMovingRight = oldScreen < currentScreen;
+      const oldScreenInfo = getScreenById(oldScreen);
+      const newScreenInfo = getScreenById(currentScreen);
+      
+      const exitPayload = {
+        handoffId,
+        ballId: ball.id,
+        screenId: oldScreen,
+        exitX: isMovingRight ? oldScreenInfo.virtualRight : oldScreenInfo.virtualLeft,
+        exitY: ball.y,
+        velocityX: ball.vx,
+        velocityY: ball.vy,
+      };
+
+      const enterPayload = {
+        handoffId,
+        ballId: ball.id,
+        screenId: currentScreen,
+        entryX: isMovingRight ? newScreenInfo.virtualLeft : newScreenInfo.virtualRight,
+        entryY: ball.y,
+        velocityX: ball.vx,
+        velocityY: ball.vy,
+      };
+
+      io.to(`screen-${oldScreen}`).emit('boundary_exit', exitPayload);
+      io.to(`screen-${currentScreen}`).emit('boundary_enter', enterPayload);
+      
+      pendingHandoffs.set(handoffId, {
+        departingAck: false,
+        arrivingAck: false,
+        exitPayload,
+        enterPayload,
+        retried: false,
+      });
+
+      setTimeout(() => {
+        const pending = pendingHandoffs.get(handoffId);
+        if (!pending) return;
+
+        if (!pending.departingAck || !pending.arrivingAck) {
+          io.to(`screen-${pending.exitPayload.screenId}`).emit('boundary_exit', pending.exitPayload);
+          io.to(`screen-${pending.enterPayload.screenId}`).emit('boundary_enter', pending.enterPayload);
+          pending.retried = true;
+        }
+
+        setTimeout(() => pendingHandoffs.delete(handoffId), 100);
+      }, 16);
+    }
+  });
 
   broadcastGameState();
 }, TICK_MS);

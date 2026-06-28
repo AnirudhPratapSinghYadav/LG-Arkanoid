@@ -96,7 +96,6 @@ function loadLevel(levelNumber) {
   }
 }
 
-// Physics engine is taken from AI but understood
 function moveBall(ball) {
   try {
     ball.x += ball.vx;
@@ -142,6 +141,8 @@ function checkPaddleCollision(ball, players) {
 
         let paddleCenter = player.paddleX + (player.paddleWidth / 2);
         let offset = ball.x - paddleCenter;
+        
+        if (player.paddleWidth <= 0) return true; // prevent div by zero
         let normalized = offset / (player.paddleWidth / 2);
 
         if (normalized <= -0.8) {
@@ -200,7 +201,6 @@ function checkBrickCollision(ball, gameState) {
             }
             
             // Spawn power-up (10% chance)
-            // This was taken from openai
             if (Math.random() < 0.1) {
               gameState.powerUps.push(new PowerUp('wide_paddle', brick.x + brick.width / 2, brick.y));
             }
