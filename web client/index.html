@@ -4,13 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=1920, height=1080">
     <title>LG Arkanoid</title>
-
-    <!-- Phaser 3 game framework -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.80.1/phaser.min.js"></script>
-
-    <!-- Socket.io for real-time server communication -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.8.0/socket.io.min.js"></script>
-
     <style>
         html, body {
             margin: 0;
@@ -22,11 +17,7 @@
 </head>
 <body>
 <script>
-// ---------------------------------------------------------------------------
-// Screen layout for the 5-screen Liquid Galaxy rig.
-// Each screen occupies a 1920px-wide slice of the shared virtual canvas,
-// giving a total virtual width of 9600px.
-// ---------------------------------------------------------------------------
+
 const SCREEN_BOUNDARIES = [
     { screenId: 1, virtualLeft: 0,    virtualRight: 1919 },
     { screenId: 2, virtualLeft: 1920, virtualRight: 3839 },
@@ -35,44 +26,25 @@ const SCREEN_BOUNDARIES = [
     { screenId: 5, virtualLeft: 7680, virtualRight: 9599 }
 ];
 
-// Parse the screen ID from the URL query string, defaulting to the centre screen
 const urlParams = new URLSearchParams(window.location.search);
 const screenId = parseInt(urlParams.get('screenId'), 10) || 3;
-
-// Work out where this screen sits in virtual space
 const screenBoundary = SCREEN_BOUNDARIES.find(s => s.screenId === screenId) || SCREEN_BOUNDARIES[2];
 const virtualLeft = screenBoundary.virtualLeft;
-
-// Server URL can be passed explicitly; otherwise fall back to the page origin
 const serverUrl = urlParams.get('server') || window.location.origin;
 
-// Colour palette for brick rows -- cycles every 6 rows
 const ROW_COLORS = [0xff0000, 0xff8800, 0xffff00, 0x00ff00, 0x0088ff, 0xaa00ff];
-
-// Each connected player gets a distinct paddle colour
 const PADDLE_COLORS = [0xff0000, 0x00ff00, 0x0088ff];
 
-// ---------------------------------------------------------------------------
-// GameScene -- the single Phaser scene that renders everything
-// ---------------------------------------------------------------------------
 class GameScene extends Phaser.Scene {
     constructor() {
         super({ key: 'GameScene' });
-
-        // The latest authoritative state received from the server
         this.currentState = null;
-
-        // Overrides for ball positions during boundary-crossing tweens.
-        // Keyed by ball id, value is the tweened local-X position.
         this.boundaryBallOverrides = {};
     }
 
-    // ----- Scene lifecycle: create -----
     create() {
-        // Main graphics object used for all primitive drawing each frame
         this.graphics = this.add.graphics();
 
-        // Commentary text floats in the top-right corner and fades in/out
         this.commentaryText = this.add.text(1800, 50, '', {
             fontFamily: 'monospace',
             fontSize: '20px',
@@ -80,7 +52,6 @@ class GameScene extends Phaser.Scene {
             align: 'right'
         }).setOrigin(1, 0).setAlpha(0);
 
-        // Session token shown large in the centre when a game starts
         this.sessionTokenText = this.add.text(960, 540, '', {
             fontFamily: 'monospace',
             fontSize: '72px',
@@ -88,14 +59,12 @@ class GameScene extends Phaser.Scene {
             align: 'center'
         }).setOrigin(0.5, 0.5).setAlpha(0);
 
-        // Small label so operators can verify which screen this instance represents
         this.screenLabel = this.add.text(20, 20, 'Screen ' + screenId, {
             fontFamily: 'monospace',
             fontSize: '24px',
             color: '#888888'
         });
 
-        // Prompt to start the game -- visible until a game is active
         this.startButton = this.add.text(960, 100, 'Press S to Start Game', {
             fontFamily: 'monospace',
             fontSize: '28px',
@@ -103,41 +72,23 @@ class GameScene extends Phaser.Scene {
             align: 'center'
         }).setOrigin(0.5, 0.5);
 
-        // Listen for the S key to request a new game from the server
         this.input.keyboard.on('keydown-S', () => {
             if (this.socket && this.socket.connected) {
                 this.socket.emit('start_game');
             }
         });
 
-        // Wire up the socket connection
         this.setupSocket();
     }
 
-    // ----- Scene lifecycle: update (called every frame) -----
     update() {
-        // Wipe the previous frame's drawings
         this.graphics.clear();
-
-        // Nothing to render until we have state from the server
-        if (!this.currentState) {
-            return;
-        }
-
+        if (!this.currentState) return;
         this.drawBricks();
         this.drawBalls();
         this.drawPaddles();
     }
 
-    // ----- Drawing helpers -----
-
-    /**
-     * Render the brick grid.
-     * Bricks are stored as a 2D array on the server. Each brick has x, y,
-     * row, and an active flag. We translate from virtual coords to local
-     * screen coords and cull anything that falls well outside our viewport
-     * to save draw calls.
-     */
     drawBricks() {
         const bricks = this.currentState.bricks;
         if (!bricks) return;
@@ -150,10 +101,7 @@ class GameScene extends Phaser.Scene {
                 const brick = row[c];
                 if (!brick || !brick.active) continue;
 
-                // Convert from virtual-world X to this screen's local X
                 const localX = brick.x - virtualLeft;
-
-                // Generous culling margin so wide bricks partially on-screen still render
                 if (localX < -600 || localX > 2520) continue;
 
                 const color = ROW_COLORS[brick.row % 6];
@@ -163,12 +111,6 @@ class GameScene extends Phaser.Scene {
         }
     }
 
-    /**
-     * Render all active balls.
-     * During a boundary crossing the server tells us to tween the ball's
-     * entry; in that case we use the override position instead of the raw
-     * server value.
-     */
     drawBalls() {
         const balls = this.currentState.balls;
         if (!balls) return;
@@ -177,11 +119,8 @@ class GameScene extends Phaser.Scene {
             const ball = balls[i];
             if (!ball || !ball.active) continue;
 
-            // Check if there is an active boundary-crossing tween for this ball
             const override = this.boundaryBallOverrides[ball.id];
             const localX = (override !== undefined) ? override : (ball.x - virtualLeft);
-
-            // Cull balls that are clearly off this screen
             if (localX < -50 || localX > 1970) continue;
 
             this.graphics.fillStyle(0xffffff, 1);
@@ -189,16 +128,10 @@ class GameScene extends Phaser.Scene {
         }
     }
 
-    /**
-     * Render paddles for every connected player.
-     * The server state includes a players collection with each player's
-     * paddle position and width.
-     */
     drawPaddles() {
         const players = this.currentState.players;
         if (!players) return;
 
-        // Players may be an array or an object keyed by id -- handle both
         const entries = Array.isArray(players) ? players : Object.values(players);
 
         for (let i = 0; i < entries.length; i++) {
@@ -212,8 +145,6 @@ class GameScene extends Phaser.Scene {
             if (paddleX === undefined) continue;
 
             const localX = paddleX - virtualLeft;
-
-            // Cull paddles entirely off-screen
             if (localX + paddleWidth < 0 || localX > 1920) continue;
 
             const color = PADDLE_COLORS[(playerNumber - 1) % PADDLE_COLORS.length];
@@ -222,33 +153,22 @@ class GameScene extends Phaser.Scene {
         }
     }
 
-    // ----- Socket.io connection and event handlers -----
-
     setupSocket() {
-        // Open a persistent connection to the game server, identifying this screen
         this.socket = io(serverUrl, {
             query: { screenId: screenId },
             transports: ['websocket', 'polling']
         });
 
-        // -- Core state broadcast ------------------------------------------------
-        // The server sends the full game state at a high frequency. We just
-        // store the latest snapshot and let update() render from it.
         this.socket.on('game_state', (state) => {
             this.currentState = state;
         });
 
-        // -- Boundary crossing (ball enters this screen) -------------------------
-        // When a ball crosses from an adjacent screen onto ours the server
-        // tells us where it should appear. We tween it in over 16ms so the
-        // transition looks smooth, then acknowledge receipt.
         this.socket.on('boundary_enter', (data) => {
             if (data.screenId !== screenId) return;
 
             const ballId = data.ballId;
             const entryX = data.entryX;
 
-            // Start the ball at the entry edge and tween to its true position
             this.boundaryBallOverrides[ballId] = entryX;
 
             this.tweens.add({
@@ -259,7 +179,6 @@ class GameScene extends Phaser.Scene {
                     this.boundaryBallOverrides[ballId] = target.value;
                 },
                 onComplete: () => {
-                    // Tween done -- remove override so future frames use raw state
                     delete this.boundaryBallOverrides[ballId];
                 }
             });
@@ -267,38 +186,26 @@ class GameScene extends Phaser.Scene {
             this.socket.emit('boundary_ack', { ballId: ballId });
         });
 
-        // -- Boundary crossing (ball leaves this screen) -------------------------
-        // Acknowledge that the ball has left so the server can clean up its
-        // transition tracking.
         this.socket.on('boundary_exit', (data) => {
             if (data.screenId !== screenId) return;
-
             this.socket.emit('boundary_ack', { ballId: data.ballId });
         });
 
-        // -- Commentary overlay --------------------------------------------------
-        // Short flavour text that fades in, lingers, then fades out.
         this.socket.on('commentary', (data) => {
             let message = data.text || data.message || '';
-
-            // If the commentary was generated by the fallback engine, label it
             if (data.source === 'fallback') {
                 message += ' (offline)';
             }
 
             this.commentaryText.setText(message);
-
-            // Kill any running commentary tweens so they do not conflict
             this.tweens.killTweensOf(this.commentaryText);
 
-            // Fade in
             this.tweens.add({
                 targets: this.commentaryText,
                 alpha: 1,
                 duration: 300,
                 ease: 'Power1',
                 onComplete: () => {
-                    // Hold for 3 seconds, then fade out
                     this.tweens.add({
                         targets: this.commentaryText,
                         alpha: 0,
@@ -310,25 +217,17 @@ class GameScene extends Phaser.Scene {
             });
         });
 
-        // -- Game started --------------------------------------------------------
-        // When a new game begins the server sends a session token that all
-        // screens display so players can confirm they are in the right lobby.
         this.socket.on('game_started', (data) => {
             const token = data.sessionToken || data.token || '';
-
             this.sessionTokenText.setText(token);
-
-            // Kill any running tweens on the token text
             this.tweens.killTweensOf(this.sessionTokenText);
 
-            // Fade in the token
             this.tweens.add({
                 targets: this.sessionTokenText,
                 alpha: 1,
                 duration: 300,
                 ease: 'Power1',
                 onComplete: () => {
-                    // Keep it visible for 10 seconds, then fade out
                     this.tweens.add({
                         targets: this.sessionTokenText,
                         alpha: 0,
@@ -339,26 +238,20 @@ class GameScene extends Phaser.Scene {
                 }
             });
 
-            // Update the prompt so players know the game is running
             this.startButton.setText('Game Active');
         });
     }
 }
 
-// ---------------------------------------------------------------------------
-// Phaser game configuration and boot
-// ---------------------------------------------------------------------------
 const config = {
-    type: Phaser.AUTO,         // Prefer WebGL, fall back to Canvas
+    type: Phaser.AUTO,
     width: 1920,
     height: 1080,
     backgroundColor: '#0a0a0a',
     scene: [GameScene],
-    // Disable Phaser's default banner in the console to keep logs clean
     banner: false
 };
 
-// Create and start the game
 const game = new Phaser.Game(config);
 </script>
 </body>

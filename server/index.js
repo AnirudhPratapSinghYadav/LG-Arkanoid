@@ -1,10 +1,3 @@
-/**
- * LG Arkanoid Game Server
- *
- * Authoritative multiplayer brick breaker for the Liquid Galaxy five screen rig.
- * Owns world state, physics, boundary handoffs, security validation, and Gemini commentary.
- */
-
 const express = require('express');
 const https = require('https');
 const http = require('http');
@@ -61,10 +54,6 @@ const COMMENTARY_COOLDOWNS = {
 };
 
 const PLAYER_SLOT_IDS = ['player1', 'player2', 'player3'];
-
-// ---------------------------------------------------------------------------
-// World state factory
-// ---------------------------------------------------------------------------
 
 function createBrickGrid() {
   const bricks = [];
@@ -171,10 +160,6 @@ const pendingHandoffs = new Map();
 const disconnectTimers = new Map();
 const socketToPlayerIndex = new Map();
 
-// ---------------------------------------------------------------------------
-// Express and Socket.io
-// ---------------------------------------------------------------------------
-
 const app = express();
 
 const certPath = path.join(__dirname, 'cert.pem');
@@ -202,7 +187,7 @@ if (fs.existsSync(certPath) && fs.existsSync(keyPath)) {
 
 const io = new Server(server, {
   cors: { origin: '*', methods: ['GET', 'POST'] },
-  maxHttpBufferSize: 1024, // 1KB limit to prevent huge payloads
+  maxHttpBufferSize: 1024,
 });
 
 const webClientPath = path.join(__dirname, '..', 'web client');
@@ -219,10 +204,6 @@ app.get('/health', (req, res) => {
 app.get('/', (req, res) => {
   res.sendFile(path.join(webClientPath, 'index.html'));
 });
-
-// ---------------------------------------------------------------------------
-// Utility functions
-// ---------------------------------------------------------------------------
 
 function generateToken() {
   return crypto.randomInt(100000, 999999).toString();
@@ -542,12 +523,11 @@ async function triggerCommentary(eventType, snapshot) {
 
 function validateMessage(player, timestamp, nonce) {
   const now = Date.now();
-  
+
   if (typeof timestamp !== 'number' || typeof nonce !== 'string' || nonce.length > 32) {
     return { valid: false, errorCode: 1003 };
   }
 
-  // Reject strictly older nonces to prevent replay, without assuming synced clocks
   const recentDuplicate = player.lastNonces.some((entry) => entry.nonce === nonce);
   if (recentDuplicate) {
     return { valid: false, errorCode: 1004 };
@@ -645,10 +625,6 @@ function getWorldSnapshot() {
   };
 }
 
-// ---------------------------------------------------------------------------
-// Socket.io connection handler
-// ---------------------------------------------------------------------------
-
 io.on('connection', (socket) => {
   const screenId = parseInt(socket.handshake.query.screenId, 10);
   if (screenId >= 1 && screenId <= 5) {
@@ -669,8 +645,7 @@ io.on('connection', (socket) => {
 
   socket.on('player_join', (data) => {
     const { sessionToken } = data || {};
-    
-    // Strict type check
+
     if (typeof sessionToken !== 'string' || sessionToken.length > 64) {
       socket.emit('join_rejected', { errorCode: 1005, message: 'Invalid payload' });
       return;
@@ -739,8 +714,7 @@ io.on('connection', (socket) => {
 
     const { player } = found;
     const { x, timestamp, nonce } = data || {};
-    
-    // Strict type check to prevent NaN propagation DoS
+
     if (typeof x !== 'number' || isNaN(x)) {
       socket.emit('error', { errorCode: 1005, message: 'Invalid payload' });
       return;
@@ -767,7 +741,6 @@ io.on('connection', (socket) => {
       return;
     }
 
-    // Rate limit power-ups: 1 per 5 seconds per player
     const now = Date.now();
     if (player.lastPowerUpTime && now - player.lastPowerUpTime < 5000) {
       socket.emit('error', { errorCode: 1006, message: 'Power-up on cooldown' });
@@ -880,10 +853,6 @@ io.on('connection', (socket) => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Main game loop at 60 fps
-// ---------------------------------------------------------------------------
-
 setInterval(() => {
   if (!worldState.gameActive) return;
 
@@ -966,10 +935,6 @@ setInterval(() => {
 
   broadcastGameState();
 }, TICK_MS);
-
-// ---------------------------------------------------------------------------
-// Start server
-// ---------------------------------------------------------------------------
 
 server.listen(PORT, () => {
   console.log(`LG Arkanoid game server running on port ${PORT}`);
