@@ -199,9 +199,22 @@
                     document.getElementById('gameArea').classList.remove('hidden');
                     document.getElementById('playerStatus').innerText = 'Player ' + data.playerNumber;
                     setupTouchControls();
+                    
+                    // Initialize speech synthesis on user interaction
+                    if ('speechSynthesis' in window) {
+                        window.speechSynthesis.getVoices();
+                    }
                 } else {
                     alert('Join failed: ' + data.message);
                     socket.disconnect();
+                }
+            });
+
+            socket.on('commentary', (data) => {
+                if (data && data.text && 'speechSynthesis' in window) {
+                    const utterance = new SpeechSynthesisUtterance(data.text);
+                    utterance.rate = 1.1;
+                    window.speechSynthesis.speak(utterance);
                 }
             });
         }
