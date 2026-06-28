@@ -15,13 +15,18 @@ const CANVAS_HEIGHT = 1080;
 const BALL_RADIUS = 8;
 const TICK_MS = 16;
 
-const SCREEN_BOUNDARIES = [
-  { screenId: 1, virtualLeft: 0, virtualRight: 1919 },
-  { screenId: 2, virtualLeft: 1920, virtualRight: 3839 },
-  { screenId: 3, virtualLeft: 3840, virtualRight: 5759 },
-  { screenId: 4, virtualLeft: 5760, virtualRight: 7679 },
-  { screenId: 5, virtualLeft: 7680, virtualRight: 9599 },
-];
+function getScreenBoundaries() {
+  const boundaries = [];
+  const numScreens = worldState.numScreens || 5;
+  for (let i = 0; i < numScreens; i++) {
+    boundaries.push({
+      screenId: i + 1,
+      virtualLeft: i * 1920,
+      virtualRight: (i + 1) * 1920 - 1
+    });
+  }
+  return boundaries;
+}
 
 const FALLBACK_COMMENTARY = [
   'Great shot',
@@ -137,7 +142,27 @@ app.get('/health', (req, res) => {
 });
 
 app.get('/', (req, res) => {
+  res.sendFile(path.join(webClientPath, 'controller.html'));
+});
+
+app.get('/screen', (req, res) => {
   res.sendFile(path.join(webClientPath, 'index.html'));
+});
+
+app.post('/api/deploy_lg', express.json(), (req, res) => {
+  const { numScreens, masterIp, username, password } = req.body;
+  worldState.numScreens = parseInt(numScreens) || 5;
+  
+  if (masterIp && password) {
+    try {
+      const deployScriptPath = path.join(__dirname, '..', 'deploy_to_rig.sh');
+      execFileSync('bash', [deployScriptPath, masterIp, username, password, worldState.numScreens]);
+    } catch (err) {
+      console.error('Failed to deploy to LG Rig:', err.message);
+    }
+  }
+
+  res.json({ status: 'deployed', numScreens: worldState.numScreens });
 });
 
 function generateToken() {
@@ -157,17 +182,14 @@ function timingSafeTokenCompare(provided, stored) {
 }
 
 function getScreenIdForX(x) {
-  for (const screen of SCREEN_BOUNDARIES) {
-    if (x >= screen.virtualLeft && x <= screen.virtualRight) {
-      return screen.screenId;
-    }
-  }
-  if (x < 0) return 1;
-  return 5;
+  const numScreens = worldState.numScreens || 5;
+  const maxRight = numScreens * 1920 - 1;
+  const clampedX = Math.max(0, Math.min(x, maxRight));
+  return Math.floor(clampedX / 1920) + 1;
 }
 
 function getScreenById(screenId) {
-  return SCREEN_BOUNDARIES.find((s) => s.screenId === screenId);
+  return getScreenBoundaries().find((s) => s.screenId === screenId);
 }
 
 function detectBoundary(ball) {

@@ -105,7 +105,7 @@ function moveBall(ball) {
   }
 }
 
-function checkWallCollision(ball) {
+function checkWallCollision(ball, gameState) {
   try {
     // Bounce off top wall
     if (ball.y - ball.radius <= 0) {
@@ -116,8 +116,11 @@ function checkWallCollision(ball) {
       ball.vx = Math.abs(ball.vx);
     }
     // Bounce off right wall (width can be changed with rig specifications)
-    else if (ball.x + ball.radius >= 9600) {
-      ball.vx = -Math.abs(ball.vx);
+    else {
+      let totalWidth = (gameState.numScreens || 5) * 1920;
+      if (ball.x + ball.radius >= totalWidth) {
+        ball.vx = -Math.abs(ball.vx);
+      }
     }
   } catch (error) {
     console.log(error);
@@ -263,7 +266,7 @@ function updateGameLoop(gameState) {
       if (!ball.active) continue;
 
       moveBall(ball);
-      checkWallCollision(ball);
+      checkWallCollision(ball, gameState);
       checkPaddleCollision(ball, gameState.players);
       checkBrickCollision(ball, gameState);
 
@@ -272,7 +275,7 @@ function updateGameLoop(gameState) {
         ball.active = false;
 
         // if yes then Reset ball to the center
-        ball.x = 4800;
+        ball.x = ((gameState.numScreens || 5) * 1920) / 2;
         ball.y = 500;
         ball.vx = 3;
         ball.vy = 4;
