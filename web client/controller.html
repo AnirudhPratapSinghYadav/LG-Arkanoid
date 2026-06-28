@@ -133,7 +133,6 @@
         </div>
     </div>
 
-    <!-- About Modal -->
     <div id="aboutModal" class="modal">
         <div class="modal-content">
             <h3>Author</h3>
@@ -143,7 +142,6 @@
         </div>
     </div>
 
-    <!-- Settings Modal -->
     <div id="settingsModal" class="modal">
         <div class="modal-content">
             <h3>Liquid Galaxy Settings</h3>
@@ -223,7 +221,6 @@
                 const currentX = e.touches[0].clientX;
                 const deltaX = currentX - lastX;
                 
-                // Amplify delta for rig screens
                 const rigDeltaX = deltaX * 10; 
 
                 if (Math.abs(rigDeltaX) > 0) {

@@ -10,7 +10,6 @@ const { Server } = require('socket.io');
 const fetch = require('node-fetch');
 
 const PORT = 8080;
-const CANVAS_WIDTH = 9600;
 const CANVAS_HEIGHT = 1080;
 const BALL_RADIUS = 8;
 const TICK_MS = 16;
@@ -545,6 +544,7 @@ io.on('connection', (socket) => {
     player.connected = true;
     player.id = PLAYER_SLOT_IDS[slotIndex];
     player.socketId = socket.id;
+    player.paddleX = ((worldState.numScreens || 5) * 1920) / 2 - 100;
     player.lastNonces = [];
     socketToPlayerIndex.set(socket.id, slotIndex);
 
@@ -592,9 +592,9 @@ io.on('connection', (socket) => {
     if (!found) return;
 
     const { player } = found;
-    const { x, timestamp, nonce } = data || {};
+    const { deltaX, timestamp, nonce } = data || {};
 
-    if (typeof x !== 'number' || isNaN(x)) {
+    if (typeof deltaX !== 'number' || isNaN(deltaX)) {
       socket.emit('error', { errorCode: 1005, message: 'Invalid payload' });
       return;
     }
@@ -605,7 +605,9 @@ io.on('connection', (socket) => {
       return;
     }
 
-    player.paddleX = Math.max(0, Math.min(9300, Math.round(x)));
+    const maxRight = (worldState.numScreens || 5) * 1920;
+    player.paddleX += deltaX;
+    player.paddleX = Math.max(0, Math.min(maxRight - 300, Math.round(player.paddleX)));
   });
 
   socket.on('power_up_activate', (data) => {

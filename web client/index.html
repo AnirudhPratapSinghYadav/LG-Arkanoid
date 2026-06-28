@@ -95,6 +95,14 @@ class GameScene extends Phaser.Scene {
             color: '#888888'
         });
 
+        this.hudText = this.add.text(40, 40, '', {
+            fontFamily: 'monospace',
+            fontSize: '32px',
+            color: '#00cccc',
+            fontStyle: 'bold',
+            shadow: { offsetX: 2, offsetY: 2, color: '#000', blur: 4, fill: true }
+        });
+
         this.startButton = this.add.text(960, 100, 'Press S to Start Game', {
             fontFamily: 'monospace',
             fontSize: '28px',
@@ -126,6 +134,25 @@ class GameScene extends Phaser.Scene {
         this.drawPowerUps();
         this.drawBalls();
         this.drawPaddles();
+        this.updateHUD();
+    }
+
+    updateHUD() {
+        if (!this.currentState || !this.currentState.players) {
+            this.hudText.setText('');
+            return;
+        }
+
+        let hudStr = `LEVEL: ${this.currentState.currentLevel || 1}\n\n`;
+        
+        for (let i = 0; i < 3; i++) {
+            const p = this.currentState.players[i];
+            if (p && p.connected) {
+                hudStr += `P${i+1} SCORE: ${p.score}  LIVES: ${p.lives}\n`;
+            }
+        }
+        
+        this.hudText.setText(hudStr);
     }
 
     checkStateChanges() {

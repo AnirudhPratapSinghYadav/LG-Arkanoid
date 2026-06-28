@@ -107,15 +107,12 @@ function moveBall(ball) {
 
 function checkWallCollision(ball, gameState) {
   try {
-    // Bounce off top wall
     if (ball.y - ball.radius <= 0) {
       ball.vy = Math.abs(ball.vy);
     }
-    // Bounce off left wall
     if (ball.x - ball.radius <= 0) {
       ball.vx = Math.abs(ball.vx);
     }
-    // Bounce off right wall (width can be changed with rig specifications)
     else {
       let totalWidth = (gameState.numScreens || 5) * 1920;
       if (ball.x + ball.radius >= totalWidth) {
@@ -184,18 +181,16 @@ function checkBrickCollision(ball, gameState) {
         let distanceSquared = (dx * dx) + (dy * dy);
 
         if (distanceSquared <= (ball.radius * ball.radius)) {
-          // Bounce off brick
           ball.vy = -ball.vy;
           
           if (brick.type === 'indestructible') {
-            return true; // Just bounce
+            return true;
           } else if (brick.type === 'hard') {
-            brick.type = 'normal'; // Crack it
+            brick.type = 'normal';
             return true;
           } else {
-            brick.active = false; // Break it
+            brick.active = false;
             
-            // Add score
             if (ball.lastTouchedByPlayerId) {
               let player = players.find(p => p.id === ball.lastTouchedByPlayerId);
               if (player) {
@@ -203,7 +198,6 @@ function checkBrickCollision(ball, gameState) {
               }
             }
             
-            // Spawn power-up (10% chance)
             if (Math.random() < 0.1) {
               gameState.powerUps.push(new PowerUp('wide_paddle', brick.x + brick.width / 2, brick.y));
             }
@@ -225,14 +219,13 @@ function updatePowerUps(gameState) {
       let p = gameState.powerUps[i];
       if (!p.falling) continue;
       
-      p.y += 5; // Fall down
+      p.y += 5;
       
       if (p.y > 1080) {
         gameState.powerUps.splice(i, 1);
         continue;
       }
       
-      // Check paddle collision
       for (let j = 0; j < gameState.players.length; j++) {
         let player = gameState.players[j];
         if (!player.connected) continue;
@@ -243,7 +236,6 @@ function updatePowerUps(gameState) {
         if (withinVertical && withinHorizontal) {
           p.falling = false;
           p.active = true;
-          // Apply simple effect
           if (player.id) {
             player.score += 500;
           }
@@ -270,11 +262,8 @@ function updateGameLoop(gameState) {
       checkPaddleCollision(ball, gameState.players);
       checkBrickCollision(ball, gameState);
 
-      // Check if ball falls below the bottom screen
       if (ball.y - ball.radius >= 1080) {
         ball.active = false;
-
-        // if yes then Reset ball to the center
         ball.x = ((gameState.numScreens || 5) * 1920) / 2;
         ball.y = 500;
         ball.vx = 3;
