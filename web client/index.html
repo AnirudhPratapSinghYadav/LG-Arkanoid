@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=1920, height=1080">
-    <title>LG Arkanoid</title>
+    <title>AI Arkanoid by LG </title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.80.1/phaser.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.8.0/socket.io.min.js"></script>
     <style>
@@ -17,7 +17,6 @@
 </head>
 <body>
 <script>
-
 const SCREEN_BOUNDARIES = [
     { screenId: 1, virtualLeft: 0,    virtualRight: 1919 },
     { screenId: 2, virtualLeft: 1920, virtualRight: 3839 },
@@ -31,10 +30,8 @@ const screenId = parseInt(urlParams.get('screenId'), 10) || 3;
 const screenBoundary = SCREEN_BOUNDARIES.find(s => s.screenId === screenId) || SCREEN_BOUNDARIES[2];
 const virtualLeft = screenBoundary.virtualLeft;
 const serverUrl = urlParams.get('server') || window.location.origin;
-
 const ROW_COLORS = [0xff0000, 0xff8800, 0xffff00, 0x00ff00, 0x0088ff, 0xaa00ff];
 const PADDLE_COLORS = [0xff0000, 0x00ff00, 0x0088ff];
-
 class GameScene extends Phaser.Scene {
     constructor() {
         super({ key: 'GameScene' });
@@ -43,14 +40,12 @@ class GameScene extends Phaser.Scene {
         this.previousBricks = {};
         this.ballTrails = {};
     }
-
     create() {
         const bgGraphics = this.make.graphics({x: 0, y: 0, add: false});
         bgGraphics.lineStyle(1, 0x004444, 0.5);
         bgGraphics.strokeRect(0, 0, 64, 64);
         bgGraphics.generateTexture('bg_grid', 64, 64);
         this.bg = this.add.tileSprite(960, 540, 1920, 1080, 'bg_grid');
-
         const pGraphics = this.make.graphics({x:0, y:0, add:false});
         pGraphics.fillStyle(0xffffff, 1);
         pGraphics.fillRect(0, 0, 8, 8);
@@ -61,12 +56,9 @@ class GameScene extends Phaser.Scene {
             scale: { start: 1, end: 0 },
             alpha: { start: 1, end: 0 },
             lifespan: 800,
-            emitting: false
-        });
-
+            emitting: false  });
         this.graphics = this.add.graphics();
         this.trailGraphics = this.add.graphics();
-        
         this.statusText = this.add.text(960, 540, '', {
             fontFamily: 'monospace',
             fontSize: '120px',
@@ -74,87 +66,67 @@ class GameScene extends Phaser.Scene {
             align: 'center',
             fontStyle: 'bold'
         }).setOrigin(0.5, 0.5).setAlpha(0);
-
         this.commentaryText = this.add.text(1800, 50, '', {
             fontFamily: 'monospace',
             fontSize: '20px',
             color: '#ffffff',
             align: 'right'
         }).setOrigin(1, 0).setAlpha(0);
-
         this.sessionTokenText = this.add.text(960, 540, '', {
             fontFamily: 'monospace',
             fontSize: '72px',
             color: '#00cccc',
             align: 'center'
         }).setOrigin(0.5, 0.5).setAlpha(0);
-
         this.screenLabel = this.add.text(20, 20, 'Screen ' + screenId, {
             fontFamily: 'monospace',
             fontSize: '24px',
-            color: '#888888'
-        });
-
+            color: '#888888' });
         this.hudText = this.add.text(40, 40, '', {
             fontFamily: 'monospace',
             fontSize: '32px',
             color: '#00cccc',
             fontStyle: 'bold',
-            shadow: { offsetX: 2, offsetY: 2, color: '#000', blur: 4, fill: true }
-        });
-
-        this.startButton = this.add.text(960, 100, 'Press S to Start Game', {
+            shadow: { offsetX: 2, offsetY: 2, color: '#000', blur: 4, fill: true }  });
+        this.startButton = this.add.text(960, 100, 'Press S to Start the  Game', {
             fontFamily: 'monospace',
             fontSize: '28px',
             color: '#00cccc',
             align: 'center'
         }).setOrigin(0.5, 0.5);
-
         this.input.keyboard.on('keydown-S', () => {
             if (this.socket && this.socket.connected) {
-                this.socket.emit('start_game');
-            }
-        });
+                this.socket.emit('start the game');
+            }     });
 
-        this.setupSocket();
-    }
+        this.setupSocket();  }
 
     update() {
         if (this.bg) {
             this.bg.tilePositionY -= 1;
-        }
-        
+        }    
         this.graphics.clear();
-        this.trailGraphics.clear();
-        
-        if (!this.currentState) return;
-        
+        this.trailGraphics.clear();    
+        if (!this.currentState) return;    
         this.checkStateChanges();
         this.drawBricks();
         this.drawPowerUps();
         this.drawBalls();
         this.drawPaddles();
-        this.updateHUD();
-    }
-
+        this.updateHUD(); }
     updateHUD() {
         if (!this.currentState || !this.currentState.players) {
             this.hudText.setText('');
-            return;
-        }
-
+            return; }
         let hudStr = `LEVEL: ${this.currentState.currentLevel || 1}\n\n`;
         
         for (let i = 0; i < 3; i++) {
             const p = this.currentState.players[i];
             if (p && p.connected) {
                 hudStr += `P${i+1} SCORE: ${p.score}  LIVES: ${p.lives}\n`;
-            }
-        }
+            } }
         
-        this.hudText.setText(hudStr);
-    }
-
+        this.hudText.setText(hudStr); }
     checkStateChanges() {
         if (this.currentState.bricks) {
             for (let r = 0; r < this.currentState.bricks.length; r++) {
@@ -167,31 +139,26 @@ class GameScene extends Phaser.Scene {
                         if (localX > -600 && localX < 2520) {
                             this.brickEmitter.setParticleTint(ROW_COLORS[r % 6]);
                             this.brickEmitter.emitParticleAt(localX + 300, brick.y + 15, 15);
-                        }
-                    }
+                        }        }
                     this.previousBricks[id] = brick.active;
-                }
-            }
-        }
+                }}  }
         
         if (this.currentState.gameStatus === 'game_over') {
             if (this.statusText.text !== 'GAME OVER') {
                 this.statusText.setText('GAME OVER');
                 this.statusText.setColor('#ff0000');
                 this.tweens.add({ targets: this.statusText, alpha: 1, duration: 500 });
-            }
+        }
         } else if (this.currentState.gameStatus === 'win') {
             if (this.statusText.text !== 'YOU WIN!') {
                 this.statusText.setText('YOU WIN!');
                 this.statusText.setColor('#00ff00');
                 this.tweens.add({ targets: this.statusText, alpha: 1, duration: 500 });
-            }
+         }
         } else {
             this.statusText.setAlpha(0);
             this.statusText.setText('');
-        }
-    }
-
+        }   }
     drawPowerUps() {
         const powerUps = this.currentState.powerUps;
         if (!powerUps) return;
@@ -207,101 +174,79 @@ class GameScene extends Phaser.Scene {
             
             this.graphics.fillStyle(0xffffff, 1);
             this.graphics.fillCircle(localX, p.y, 4);
-        }
-    }
+        } }
 
     drawBricks() {
         const bricks = this.currentState.bricks;
         if (!bricks) return;
-
         for (let r = 0; r < bricks.length; r++) {
             const row = bricks[r];
             if (!row) continue;
-
             for (let c = 0; c < row.length; c++) {
                 const brick = row[c];
                 if (!brick || !brick.active) continue;
-
                 const localX = brick.x - virtualLeft;
                 if (localX < -600 || localX > 2520) continue;
-
                 const color = ROW_COLORS[brick.row % 6];
                 this.graphics.fillStyle(color, 1);
                 this.graphics.fillRect(localX, brick.y, 600, 30);
-            }
-        }
-    }
+            }     } }
 
     drawBalls() {
         const balls = this.currentState.balls;
         if (!balls) return;
-
         for (let i = 0; i < balls.length; i++) {
             const ball = balls[i];
             if (!ball || !ball.active) {
                 if (this.ballTrails[i]) this.ballTrails[i] = [];
                 continue;
             }
-
             const override = this.boundaryBallOverrides[ball.id];
             const localX = (override !== undefined) ? override : (ball.x - virtualLeft);
             
             if (!this.ballTrails[i]) this.ballTrails[i] = [];
             this.ballTrails[i].push({ x: localX, y: ball.y });
             if (this.ballTrails[i].length > 10) this.ballTrails[i].shift();
-            
+         
             if (localX < -50 || localX > 1970) continue;
-
             for (let t = 0; t < this.ballTrails[i].length; t++) {
                 const pos = this.ballTrails[i][t];
                 const alpha = t / 10;
                 this.trailGraphics.fillStyle(0x00ffff, alpha * 0.5);
                 this.trailGraphics.fillCircle(pos.x, pos.y, 8 * alpha);
             }
-
             this.graphics.fillStyle(0xffffff, 1);
             this.graphics.fillCircle(localX, ball.y, 8);
         }
     }
-
     drawPaddles() {
         const players = this.currentState.players;
         if (!players) return;
-
         const entries = Array.isArray(players) ? players : Object.values(players);
-
         for (let i = 0; i < entries.length; i++) {
             const player = entries[i];
             if (!player) continue;
-
             const paddleX = player.paddleX !== undefined ? player.paddleX : player.x;
             const paddleWidth = player.paddleWidth !== undefined ? player.paddleWidth : player.width || 200;
             const playerNumber = player.playerNumber !== undefined ? player.playerNumber : (i + 1);
-
             if (paddleX === undefined) continue;
-
             const localX = paddleX - virtualLeft;
             if (localX + paddleWidth < 0 || localX > 1920) continue;
-
             const color = PADDLE_COLORS[(playerNumber - 1) % PADDLE_COLORS.length];
             this.graphics.fillStyle(color, 1);
             this.graphics.fillRoundedRect(localX, 1000, paddleWidth, 20, 6);
         }
     }
-
     setupSocket() {
         this.socket = io(serverUrl, {
             query: { screenId: screenId },
             transports: ['websocket', 'polling']
         });
-
         this.socket.on('game_state', (state) => {
             this.currentState = state;
         });
-
         this.socket.on('boundary_enter', (data) => {
             if (data.screenId !== screenId) return;
-
             const ballId = data.ballId;
             const entryX = data.entryX;
 
@@ -321,25 +266,20 @@ class GameScene extends Phaser.Scene {
 
             this.socket.emit('boundary_ack', { ballId: ballId });
         });
-
         this.socket.on('boundary_exit', (data) => {
             if (data.screenId !== screenId) return;
             this.socket.emit('boundary_ack', { ballId: data.ballId });
         });
-
         this.socket.on('commentary', (data) => {
             if (data.eventType === 'life_lost') {
                 this.cameras.main.shake(200, 0.01);
-            }
-
+            
             let message = data.text || data.message || '';
             if (data.source === 'fallback') {
                 message += ' (offline)';
             }
-
             this.commentaryText.setText(message);
             this.tweens.killTweensOf(this.commentaryText);
-
             this.tweens.add({
                 targets: this.commentaryText,
                 alpha: 1,
@@ -356,12 +296,10 @@ class GameScene extends Phaser.Scene {
                 }
             });
         });
-
         this.socket.on('game_started', (data) => {
             const token = data.sessionToken || data.token || '';
             this.sessionTokenText.setText(token);
             this.tweens.killTweensOf(this.sessionTokenText);
-
             this.tweens.add({
                 targets: this.sessionTokenText,
                 alpha: 1,
@@ -377,12 +315,10 @@ class GameScene extends Phaser.Scene {
                     });
                 }
             });
-
-            this.startButton.setText('Game Active');
+            this.startButton.setText('Game is Active');
         });
     }
 }
-
 const config = {
     type: Phaser.AUTO,
     width: 1920,
@@ -391,7 +327,6 @@ const config = {
     scene: [GameScene],
     banner: false
 };
-
 const game = new Phaser.Game(config);
 </script>
 </body>
