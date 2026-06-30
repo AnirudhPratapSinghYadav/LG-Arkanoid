@@ -8,38 +8,28 @@ class ConnectScreen extends StatefulWidget {
   const ConnectScreen({super.key});
 
   @override
-  State<ConnectScreen> createState() => _ConnectScreenState();
-}
-
+  State<ConnectScreen> createState() => _ConnectScreenState();}
 class _ConnectScreenState extends State<ConnectScreen> {
   final _ipController = TextEditingController(text: '192.168.');
   final _portController = TextEditingController(text: '8080');
   final _tokenController = TextEditingController();
   bool _connecting = false;
-
   Future<void> _connect() async {
     final address = _ipController.text.trim();
     final port = _portController.text.trim();
     final token = _tokenController.text.trim();
-
     if (address.isEmpty || port.isEmpty || token.length != 6) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enter IP, port, and a 6 digit session token')),
-      );
-      return;
-    }
+        const SnackBar(content: Text('Enter IP, port, and a 6 digit session token')),);
+      return;}
 
     setState(() => _connecting = true);
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Connecting')),
-    );
-
+      const SnackBar(content: Text('Connecting')),);
     final service = context.read<GameService>();
     final ok = await service.connect(address, port);
-
     if (!mounted) return;
     setState(() => _connecting = false);
-
     if (ok) {
       const storage = FlutterSecureStorage();
       await storage.write(key: 'last_server_address', value: address);
@@ -47,14 +37,11 @@ class _ConnectScreenState extends State<ConnectScreen> {
       await storage.write(key: 'last_session_token', value: token);
       service.joinGame(token);
       if (mounted) {
-        Navigator.pushReplacementNamed(context, '/controller');
-      }
+        Navigator.pushReplacementNamed(context, '/controller');}
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Connection failed check IP and port')),
-      );
-    }
-  }
+      );}}
 
   @override
   Widget build(BuildContext context) {
@@ -73,11 +60,7 @@ class _ConnectScreenState extends State<ConnectScreen> {
                 color: Colors.teal.withOpacity(0.1),
                 boxShadow: [
                   BoxShadow(
-                      color: Colors.teal.withOpacity(0.1), blurRadius: 100),
-                ],
-              ),
-            ),
-          ),
+                      color: Colors.teal.withOpacity(0.1), blurRadius: 100),],),),),
           Center(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 32),
@@ -93,8 +76,7 @@ class _ConnectScreenState extends State<ConnectScreen> {
                       fontWeight: FontWeight.w300,
                       letterSpacing: 8,
                       color: Colors.white,
-                    ),
-                  ),
+                    ),),
                   const SizedBox(height: 48),
                   ClipRRect(
                     borderRadius: BorderRadius.circular(24),
@@ -106,8 +88,7 @@ class _ConnectScreenState extends State<ConnectScreen> {
                           color: Colors.white.withOpacity(0.05),
                           borderRadius: BorderRadius.circular(24),
                           border: Border.all(
-                              color: Colors.white.withOpacity(0.1)),
-                        ),
+                              color: Colors.white.withOpacity(0.1)),),
                         child: Column(
                           children: [
                             _buildInputField(
@@ -127,12 +108,7 @@ class _ConnectScreenState extends State<ConnectScreen> {
                               label: 'Session Token',
                               icon: Icons.key_outlined,
                               maxLength: 6,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
+                            ),],),),),),
                   const SizedBox(height: 32),
                   AnimatedContainer(
                     duration: const Duration(milliseconds: 300),
@@ -150,10 +126,7 @@ class _ConnectScreenState extends State<ConnectScreen> {
                               BoxShadow(
                                 color: Colors.teal.withOpacity(0.3),
                                 blurRadius: 12,
-                                offset: const Offset(0, 4),
-                              )
-                            ],
-                    ),
+                                offset: const Offset(0, 4),)],),
                     child: Material(
                       color: Colors.transparent,
                       child: InkWell(
@@ -177,29 +150,14 @@ class _ConnectScreenState extends State<ConnectScreen> {
                                     fontSize: 16,
                                     fontWeight: FontWeight.w600,
                                     letterSpacing: 2,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                        ),
-                      ),
-                    ),
-                  ),
+                                    color: Colors.white,),),),),),),
                   const SizedBox(height: 24),
                   TextButton(
                     onPressed: () => Navigator.pushNamed(context, '/status'),
                     style:
                         TextButton.styleFrom(foregroundColor: Colors.white54),
                     child: const Text('Open Status View',
-                        style: TextStyle(letterSpacing: 1)),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+                        style: TextStyle(letterSpacing: 1)),),],),),),],),);}
 
   Widget _buildInputField({
     required TextEditingController controller,
@@ -228,6 +186,4 @@ class _ConnectScreenState extends State<ConnectScreen> {
         ),
       ),
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
-    );
-  }
-}
+    );}}
