@@ -11,35 +11,36 @@ class ControllerScreen extends StatefulWidget {
 }
 
 class _ControllerScreenState extends State<ControllerScreen> {
-  double _smoothedPaddleX = 4800;
+  double paddleX = 4800;
 
-  double _applyTouchCurve(double localDx, double stripWidth) {
-    const maxX = 9600.0;
-    final raw = (localDx / stripWidth) * maxX;
-    if (raw <= 0) return 0;
-    if (raw >= maxX) return maxX;
-    return maxX * pow(raw / maxX, 1.5);
+  double getPaddlePos(double dx, double width) {
+    double maxX = 9600.0;
+    double pos = (dx / width) * maxX;
+
+    if (pos < 0) {
+      pos = 0;
+    }
+    if (pos > maxX) {
+      pos = maxX;
+    }
+    return maxX * pow(pos / maxX, 1.5);
   }
-
-  void _showPowerUpDialog() {
+  void openPowerUpMenu() {
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Activate Power Up'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _powerUpButton('Wide Paddle', 'wide_paddle'),
-            _powerUpButton('Slow Ball', 'slow_ball'),
-            _powerUpButton('Multi Ball', 'multi_ball'),
-            _powerUpButton('Bomb', 'bomb'),
-          ],
-        ),
-      ),
-    );
-  }
+      builder: (ctx) {
+        return AlertDialog(
+          title: const Text('Activate Power Up'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              powerUpBtn('Wide Paddle', 'wide_paddle'),
+              powerUpBtn('Slow Ball', 'slow_ball'),
+              powerUpBtn('Multi Ball', 'multi_ball'),
+              powerUpBtn('Bomb', 'bomb'),
+            ],),);},); }
 
-  Widget _powerUpButton(String label, String type) {
+  Widget powerUpBtn(String label, String type) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: ElevatedButton(
@@ -49,20 +50,20 @@ class _ControllerScreenState extends State<ControllerScreen> {
         },
         child: Text(label),
       ),
-    );
-  }
+    );}
 
   @override
   Widget build(BuildContext context) {
     return Consumer<GameService>(
-      builder: (context, service, _) {
+      builder: (context, service, child) {
+        String title = 'LG Arkanoid Controller';
+        if (service.playerNumber != null) {
+          title = 'Player ${service.playerNumber} (${service.playerId ?? "joining..."})';
+        }
+
         return Scaffold(
           appBar: AppBar(
-            title: Text(
-              service.playerNumber != null
-                  ? 'Player ${service.playerNumber} (${service.playerId ?? "joining..."})'
-                  : 'LG Arkanoid Controller',
-            ),
+            title: Text(title),
             actions: [
               Padding(
                 padding: const EdgeInsets.only(right: 16),
@@ -82,17 +83,12 @@ class _ControllerScreenState extends State<ControllerScreen> {
                       style: TextStyle(
                         color: service.connected ? Colors.green : Colors.red,
                         fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+                      ),),],),),
               IconButton(
                 icon: const Icon(Icons.dashboard),
-                onPressed: () => Navigator.pushNamed(context, '/status'),
-              ),
-            ],
-          ),
+                onPressed: () {
+                  Navigator.pushNamed(context, '/status');
+                },),],),
           body: Column(
             children: [
               Padding(
@@ -102,13 +98,11 @@ class _ControllerScreenState extends State<ControllerScreen> {
                   children: [
                     Text(
                       'Score: ${service.score}',
-                      style:
-                          const TextStyle(fontSize: 22, color: Colors.teal),
+                      style: const TextStyle(fontSize: 22, color: Colors.teal),
                     ),
                     Text(
                       'Lives: ${service.lives}',
-                      style:
-                          const TextStyle(fontSize: 22, color: Colors.white),
+                      style: const TextStyle(fontSize: 22, color: Colors.white),
                     ),
                   ],
                 ),
@@ -118,28 +112,27 @@ class _ControllerScreenState extends State<ControllerScreen> {
                   builder: (context, constraints) {
                     return GestureDetector(
                       onHorizontalDragUpdate: (details) {
-                        final curved = _applyTouchCurve(
+                        double newX = getPaddlePos(
                           details.localPosition.dx,
                           constraints.maxWidth,
                         );
-                        _smoothedPaddleX = curved;
-                        service.sendPaddleMove(_smoothedPaddleX);
+                        paddleX = newX;
+                        service.sendPaddleMove(paddleX);
                       },
                       onTapDown: (details) {
-                        final curved = _applyTouchCurve(
+                        double newX = getPaddlePos(
                           details.localPosition.dx,
                           constraints.maxWidth,
                         );
-                        _smoothedPaddleX = curved;
-                        service.sendPaddleMove(_smoothedPaddleX);
+                        paddleX = newX;
+                        service.sendPaddleMove(paddleX);
                       },
                       child: Container(
                         margin: const EdgeInsets.symmetric(horizontal: 16),
                         decoration: BoxDecoration(
                           color: Colors.grey.shade900,
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                              color: Colors.teal.withOpacity(0.4)),
+                          border: Border.all(color: Colors.teal.withOpacity(0.4)),
                         ),
                         child: const Center(
                           child: Text(
@@ -159,47 +152,34 @@ class _ControllerScreenState extends State<ControllerScreen> {
                     Expanded(
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.teal.shade800),
-                        onPressed: () => service.startGame(),
-                        child: const Text('Start Game',
-                            style: TextStyle(color: Colors.white)),
-                      ),
-                    ),
+                          backgroundColor: Colors.teal.shade800,
+                        ),
+                        onPressed: () {
+                          service.startGame();
+                        },
+                        child: const Text(
+                          'Start Game',
+                          style: TextStyle(color: Colors.white),
+                        ),),),
                     const SizedBox(width: 8),
                     Expanded(
                       child: ElevatedButton(
-                        onPressed: _showPowerUpDialog,
+                        onPressed: openPowerUpMenu,
                         child: const Text('Power Up'),
                       ),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: ElevatedButton(
-                        onPressed: () =>
-                            service.activatePowerUp('multi_ball'),
-                        child: const Text('Fire Ball'),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+                        onPressed: () {
+                          service.activatePowerUp('multi_ball');},
+                        child: const Text('Fire Ball'),),),],),),
               if (service.lastCommentary.isNotEmpty)
                 Padding(
-                  padding: const EdgeInsets.only(
-                      bottom: 16, left: 16, right: 16),
+                  padding: const EdgeInsets.only(bottom: 16, left: 16, right: 16),
                   child: Text(
                     service.lastCommentarySource == 'fallback'
                         ? '${service.lastCommentary} (offline)'
                         : service.lastCommentary,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
-                        color: Colors.white70, fontSize: 14),
-                  ),
-                ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-}
+                    style: const TextStyle(color: Colors.white70, fontSize: 14),),),],),);},);}}
