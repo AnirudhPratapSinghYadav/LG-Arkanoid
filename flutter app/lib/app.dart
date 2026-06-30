@@ -10,25 +10,19 @@ class LGArkanoidApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'LG Arkanoid',
+      title: 'Arkanoid AI by LG',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         brightness: Brightness.dark,
         colorScheme: ColorScheme.dark(
           primary: Colors.teal,
           secondary: Colors.tealAccent,
-          surface: const Color(0xFF121212),
-        ),
+          surface: const Color(0xFF121212),),
         scaffoldBackgroundColor: const Color(0xFF0a0a0a),
-        useMaterial3: true,
-      ),
+        useMaterial3: true,),
       initialRoute: '/',
       routes: {
         '/': (context) => const SplashScreen(),
         '/connect': (context) => const ConnectScreen(),
         '/controller': (context) => const ControllerScreen(),
-        '/status': (context) => const StatusScreen(),
-      },
-    );
-  }
-}
+        '/status': (context) => const StatusScreen(),},);}}
