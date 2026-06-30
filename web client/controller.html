@@ -18,17 +18,13 @@
             justify-content: center;
             height: 100vh;
             overflow: hidden;
-            touch-action: none;
-        }
-
+            touch-action: none;  }
         .top-right {
             position: absolute;
             top: 20px;
             right: 20px;
             display: flex;
-            gap: 15px;
-        }
-
+            gap: 15px; }
         .icon-btn {
             background: rgba(255, 0, 255, 0.1);
             border: 2px solid #ff00ff;
@@ -42,13 +38,11 @@
             align-items: center;
             justify-content: center;
             box-shadow: 0 0 10px rgba(255, 0, 255, 0.5);
-            transition: all 0.2s;
-        }
+            transition: all 0.2s;}
 
         .icon-btn:active {
             background: rgba(255, 0, 255, 0.4);
-            box-shadow: 0 0 20px rgba(255, 0, 255, 1);
-        }
+            box-shadow: 0 0 20px rgba(255, 0, 255, 1); }
 
         .modal {
             display: none;
@@ -58,9 +52,7 @@
             backdrop-filter: blur(5px);
             justify-content: center;
             align-items: center;
-            z-index: 1000;
-        }
-
+            z-index: 1000; }
         .modal-content {
             background: rgba(10, 10, 30, 0.9);
             padding: 30px;
@@ -69,15 +61,12 @@
             box-shadow: 0 0 25px rgba(0, 255, 255, 0.3);
             width: 80%;
             max-width: 400px;
-            text-align: center;
-        }
+            text-align: center;   }
 
         h1, h2, h3 {
             color: #00ffff;
             text-shadow: 0 0 10px rgba(0, 255, 255, 0.7);
-            letter-spacing: 2px;
-        }
-
+            letter-spacing: 2px; }
         input {
             width: 100%;
             padding: 12px;
@@ -89,14 +78,10 @@
             font-family: 'Orbitron', sans-serif;
             box-sizing: border-box;
             border-radius: 5px;
-            text-align: center;
-        }
-
+            text-align: center; }
         input:focus {
             outline: none;
-            box-shadow: 0 0 15px rgba(255, 0, 255, 0.6);
-        }
-
+            box-shadow: 0 0 15px rgba(255, 0, 255, 0.6);  }
         button.action-btn {
             background: linear-gradient(90deg, #00ffff, #0088ff);
             color: #000;
@@ -111,33 +96,26 @@
             width: 100%;
             text-transform: uppercase;
             box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
-            transition: all 0.2s;
-        }
+            transition: all 0.2s;  }
 
         button.action-btn:active {
             transform: scale(0.95);
-            box-shadow: 0 0 25px rgba(0, 255, 255, 1);
-        }
+            box-shadow: 0 0 25px rgba(0, 255, 255, 1); }
 
         .hidden { display: none !important; }
-
         #joinArea {
             display: flex;
             flex-direction: column;
             align-items: center;
             width: 90%;
-            max-width: 400px;
-        }
-
+            max-width: 400px;    }
         #gameArea {
             width: 100%;
             height: 100%;
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
-        }
-
+            justify-content: center;}
         .touch-pad {
             width: 90%;
             height: 60vh;
@@ -150,8 +128,7 @@
             font-size: 24px;
             color: rgba(0, 255, 255, 0.5);
             margin-top: 20px;
-            box-shadow: inset 0 0 30px rgba(0, 255, 255, 0.1);
-        }
+            box-shadow: inset 0 0 30px rgba(0, 255, 255, 0.1);  }
     </style>
 </head>
 <body>
@@ -160,21 +137,18 @@
         <button class="icon-btn" onclick="document.getElementById('settingsModal').style.display='flex'">⚙️</button>
         <button class="icon-btn" onclick="document.getElementById('aboutModal').style.display='flex'">?</button>
     </div>
-
     <div id="joinArea">
-        <h1>LG Arkanoid</h1>
-        <p>Enter Session Token from Rig</p>
+        <h1> Arkanoid AI by LG</h1>
+        <p>Enter Session Token displa7ed on the Rig</p>
         <input type="text" id="tokenInput" placeholder="Token (e.g. abc123def)" />
         <button class="action-btn" onclick="joinGame()">Join Game</button>
     </div>
-
     <div id="gameArea" class="hidden">
         <h2 id="playerStatus">Connected</h2>
         <div class="touch-pad" id="touchPad">
             DRAG TO MOVE PADDLE
         </div>
     </div>
-
     <div id="aboutModal" class="modal">
         <div class="modal-content">
             <h3>Author</h3>
@@ -195,45 +169,35 @@
             <button class="action-btn" style="background:#555;color:#fff;" onclick="document.getElementById('settingsModal').style.display='none'">Close</button>
         </div>
     </div>
-
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.8.0/socket.io.min.js"></script>
     <script>
         let socket;
         let isConnected = false;
-
         function deployToRig() {
             const numScreens = document.getElementById('numScreens').value;
             const masterIp = document.getElementById('masterIp').value;
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
-
             fetch('/api/deploy_lg', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ numScreens, masterIp, username, password })
-            })
+                body: JSON.stringify({ numScreens, masterIp, username, password })})
             .then(res => res.json())
             .then(data => {
                 alert('Deployment triggered for ' + data.numScreens + ' screens!');
-                document.getElementById('settingsModal').style.display = 'none';
-            })
-            .catch(err => alert('Error deploying: ' + err));
-        }
-
+                document.getElementById('settingsModal').style.display = 'none'; })
+            .catch(err => alert('Error deploying: ' + err)); }
         function joinGame() {
             const token = document.getElementById('tokenInput').value.trim();
             if (!token) return alert('Please enter a token');
 
             socket = io(window.location.origin, {
                 query: { controller: 'true' },
-                transports: ['websocket', 'polling']
-            });
-
+                transports: ['websocket', 'polling'] });
             socket.on('connect', () => {
                 const nonce = Math.random().toString(36).substring(2, 15);
                 socket.emit('player_join', { token, timestamp: Date.now(), nonce });
             });
-
             socket.on('join_result', (data) => {
                 if (data.success) {
                     isConnected = true;
@@ -272,23 +236,17 @@
             pad.addEventListener('touchmove', (e) => {
                 e.preventDefault();
                 if (!isConnected) return;
-                
                 const currentX = e.touches[0].clientX;
                 const deltaX = currentX - lastX;
-                
                 const rigDeltaX = deltaX * 10; 
-
                 if (Math.abs(rigDeltaX) > 0) {
                     const nonce = Math.random().toString(36).substring(2, 15);
                     socket.emit('paddle_move', { 
                         deltaX: rigDeltaX, 
                         timestamp: Date.now(), 
                         nonce 
-                    });
-                }
-                
-                lastX = currentX;
-            });
+                    });}
+                lastX = currentX;});
         }
     </script>
 </body>
