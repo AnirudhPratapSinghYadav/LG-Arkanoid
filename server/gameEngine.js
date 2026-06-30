@@ -1,5 +1,3 @@
-// Game State Models
-
 class Ball {
   constructor(id, x, y, vx, vy, radius) {
     this.id = id;
@@ -12,7 +10,6 @@ class Ball {
     this.lastTouchedByPlayerId = null;
   }
 }
-
 class Player {
   constructor(id) {
     this.id = id;
@@ -35,7 +32,7 @@ class Brick {
     this.width = width;
     this.height = height;
     this.active = true;
-    this.type = 'normal'; // can be 'hard' or 'indestructible' later
+    this.type = 'normal';
   }
 }
 
@@ -60,218 +57,239 @@ class GameState {
   }
 }
 
-function loadLevel(levelNumber) {
+function loadLevel(levelNum) {
   try {
-    let newBricks = [];
-    // Level 1: Simple block
-    // Level 2: Hard bricks introduced
-    // Level 3: Indestructible bricks introduced
+    let bricks = [];
+
     for (let row = 0; row < 8; row++) {
-      let rowBricks = [];
+      let rowArr = [];
       for (let col = 0; col < 15; col++) {
-        let brickType = 'normal';
-        let active = true;
-        
-        if (levelNumber === 2 && (row + col) % 3 === 0) {
-          brickType = 'hard';
-        } else if (levelNumber === 3) {
+        let type = 'normal';
+
+        if (levelNum === 2 && (row + col) % 3 === 0) {
+          type = 'hard';
+        } else if (levelNum === 3) {
           if (row === 3 || row === 4) {
-            brickType = 'indestructible';
+            type = 'indestructible';
           } else if (col % 2 === 0) {
-            brickType = 'hard';
+            type = 'hard';
           }
         }
-        
-        let brick = new Brick(row, col, col * 640, 100 + row * 40, 600, 30);
-        brick.type = brickType;
-        brick.active = active;
-        rowBricks.push(brick);
+
+        let b = new Brick(row, col, col * 640, 100 + row * 40, 600, 30);
+        b.type = type;
+        b.active = true;
+        rowArr.push(b);
       }
-      newBricks.push(rowBricks);
+      bricks.push(rowArr);
     }
-    return newBricks;
-  } catch (error) {
-    console.log(error);
+
+    return bricks;
+  } catch (e) {
+    console.log(e);
     return [];
   }
 }
 
 function moveBall(ball) {
   try {
-    ball.x += ball.vx;
-    ball.y += ball.vy;
-  } catch (error) {
-    console.log(error);
+    ball.x = ball.x + ball.vx;
+    ball.y = ball.y + ball.vy;
+  } catch (e) {
+    console.log(e);
   }
 }
 
-function checkWallCollision(ball, gameState) {
+function checkWallCollision(ball, state) {
   try {
     if (ball.y - ball.radius <= 0) {
       ball.vy = Math.abs(ball.vy);
     }
+
     if (ball.x - ball.radius <= 0) {
       ball.vx = Math.abs(ball.vx);
-    }
-    else {
-      let totalWidth = (gameState.numScreens || 5) * 1920;
-      if (ball.x + ball.radius >= totalWidth) {
+    } else {
+      let width = (state.numScreens || 5) * 1920;
+      if (ball.x + ball.radius >= width) {
         ball.vx = -Math.abs(ball.vx);
       }
     }
-  } catch (error) {
-    console.log(error);
+  } catch (e) {
+    console.log(e);
   }
 }
 
 function checkPaddleCollision(ball, players) {
   try {
     for (let i = 0; i < players.length; i++) {
-      let player = players[i];
-      if (!player.connected) continue;
+      let p = players[i];
+      if (!p.connected) {
+        continue;
+      }
 
       let nextY = ball.y + ball.vy;
-      let paddleTop = player.paddleY;
+      let top = p.paddleY;
 
-      let withinVertical = (nextY + ball.radius >= paddleTop - 10) && (nextY <= paddleTop);
-      let withinHorizontal = (ball.x >= player.paddleX) && (ball.x <= player.paddleX + player.paddleWidth);
+      let hitY = (nextY + ball.radius >= top - 10) && (nextY <= top);
+      let hitX = (ball.x >= p.paddleX) && (ball.x <= p.paddleX + p.paddleWidth);
 
-      if (withinVertical && withinHorizontal) {
+      if (hitY && hitX) {
         ball.vy = -Math.abs(ball.vy);
 
-        let paddleCenter = player.paddleX + (player.paddleWidth / 2);
-        let offset = ball.x - paddleCenter;
-        
-        if (player.paddleWidth <= 0) return true; // prevent div by zero
-        let normalized = offset / (player.paddleWidth / 2);
+        let center = p.paddleX + (p.paddleWidth / 2);
+        let offset = ball.x - center;
 
-        if (normalized <= -0.8) {
+        if (p.paddleWidth <= 0) {
+          return true;
+        }
+
+        let norm = offset / (p.paddleWidth / 2);
+
+        if (norm <= -0.8) {
           ball.vx = -6;
-        } else if (normalized >= 0.8) {
+        } else if (norm >= 0.8) {
           ball.vx = 6;
         }
 
-        if (player.id) {
-          ball.lastTouchedByPlayerId = player.id;
+        if (p.id) {
+          ball.lastTouchedByPlayerId = p.id;
         }
+
         return true;
       }
     }
+
     return false;
-  } catch (error) {
-    console.log(error);
+  } catch (e) {
+    console.log(e);
     return false;
   }
 }
 
-function checkBrickCollision(ball, gameState) {
+function checkBrickCollision(ball, state) {
   try {
-    let bricks = gameState.bricks;
-    let players = gameState.players;
-    
+    let bricks = state.bricks;
+    let players = state.players;
+
     for (let r = 0; r < bricks.length; r++) {
       for (let c = 0; c < bricks[r].length; c++) {
         let brick = bricks[r][c];
-        if (!brick.active) continue;
+        if (!brick.active) {
+          continue;
+        }
 
-        let closestX = Math.max(brick.x, Math.min(ball.x, brick.x + brick.width));
-        let closestY = Math.max(brick.y, Math.min(ball.y, brick.y + brick.height));
-        let dx = ball.x - closestX;
-        let dy = ball.y - closestY;
-        let distanceSquared = (dx * dx) + (dy * dy);
+        let cx = Math.max(brick.x, Math.min(ball.x, brick.x + brick.width));
+        let cy = Math.max(brick.y, Math.min(ball.y, brick.y + brick.height));
+        let dx = ball.x - cx;
+        let dy = ball.y - cy;
+        let distSq = dx * dx + dy * dy;
 
-        if (distanceSquared <= (ball.radius * ball.radius)) {
+        if (distSq <= ball.radius * ball.radius) {
           ball.vy = -ball.vy;
-          
+
           if (brick.type === 'indestructible') {
             return true;
-          } else if (brick.type === 'hard') {
+          }
+
+          if (brick.type === 'hard') {
             brick.type = 'normal';
             return true;
-          } else {
-            brick.active = false;
-            
-            if (ball.lastTouchedByPlayerId) {
-              let player = players.find(p => p.id === ball.lastTouchedByPlayerId);
-              if (player) {
-                player.score += 100;
-              }
-            }
-            
-            if (Math.random() < 0.1) {
-              gameState.powerUps.push(new PowerUp('wide_paddle', brick.x + brick.width / 2, brick.y));
-            }
-            return true;
           }
+
+          brick.active = false;
+
+          if (ball.lastTouchedByPlayerId) {
+            let player = players.find((pl) => pl.id === ball.lastTouchedByPlayerId);
+            if (player) {
+              player.score += 100;
+            }
+          }
+
+          if (Math.random() < 0.1) {
+            state.powerUps.push(new PowerUp('wide_paddle', brick.x + brick.width / 2, brick.y));
+          }
+
+          return true;
         }
       }
     }
+
     return false;
-  } catch (error) {
-    console.log(error);
+  } catch (e) {
+    console.log(e);
     return false;
   }
 }
 
-function updatePowerUps(gameState) {
+function updatePowerUps(state) {
   try {
-    for (let i = gameState.powerUps.length - 1; i >= 0; i--) {
-      let p = gameState.powerUps[i];
-      if (!p.falling) continue;
-      
-      p.y += 5;
-      
-      if (p.y > 1080) {
-        gameState.powerUps.splice(i, 1);
+    for (let i = state.powerUps.length - 1; i >= 0; i--) {
+      let p = state.powerUps[i];
+      if (!p.falling) {
         continue;
       }
-      
-      for (let j = 0; j < gameState.players.length; j++) {
-        let player = gameState.players[j];
-        if (!player.connected) continue;
-        
-        let withinVertical = (p.y >= player.paddleY - 20) && (p.y <= player.paddleY + 20);
-        let withinHorizontal = (p.x >= player.paddleX) && (p.x <= player.paddleX + player.paddleWidth);
-        
-        if (withinVertical && withinHorizontal) {
+
+      p.y += 5;
+
+      if (p.y > 1080) {
+        state.powerUps.splice(i, 1);
+        continue;
+      }
+
+      for (let j = 0; j < state.players.length; j++) {
+        let player = state.players[j];
+        if (!player.connected) {
+          continue;
+        }
+
+        let hitY = (p.y >= player.paddleY - 20) && (p.y <= player.paddleY + 20);
+        let hitX = (p.x >= player.paddleX) && (p.x <= player.paddleX + player.paddleWidth);
+
+        if (hitY && hitX) {
           p.falling = false;
           p.active = true;
+
           if (player.id) {
             player.score += 500;
           }
-          gameState.powerUps.splice(i, 1);
+
+          state.powerUps.splice(i, 1);
           break;
         }
       }
     }
-  } catch (error) {
-    console.log(error);
+  } catch (e) {
+    console.log(e);
   }
 }
 
-function updateGameLoop(gameState) {
+function updateGameLoop(state) {
   try {
-    if (gameState.gameStatus !== 'playing') return;
+    if (state.gameStatus !== 'playing') {
+      return;
+    }
 
-    for (let i = 0; i < gameState.balls.length; i++) {
-      let ball = gameState.balls[i];
-      if (!ball.active) continue;
+    for (let i = 0; i < state.balls.length; i++) {
+      let ball = state.balls[i];
+      if (!ball.active) {
+        continue;
+      }
 
       moveBall(ball);
-      checkWallCollision(ball, gameState);
-      checkPaddleCollision(ball, gameState.players);
-      checkBrickCollision(ball, gameState);
+      checkWallCollision(ball, state);
+      checkPaddleCollision(ball, state.players);
+      checkBrickCollision(ball, state);
 
       if (ball.y - ball.radius >= 1080) {
         ball.active = false;
-        ball.x = ((gameState.numScreens || 5) * 1920) / 2;
+        ball.x = ((state.numScreens || 5) * 1920) / 2;
         ball.y = 500;
         ball.vx = 3;
         ball.vy = 4;
         ball.active = true;
 
         if (ball.lastTouchedByPlayerId) {
-          let player = gameState.players.find(p => p.id === ball.lastTouchedByPlayerId);
+          let player = state.players.find((pl) => pl.id === ball.lastTouchedByPlayerId);
           if (player && player.lives > 0) {
             player.lives -= 1;
           }
@@ -279,42 +297,40 @@ function updateGameLoop(gameState) {
       }
     }
 
-    updatePowerUps(gameState);
+    updatePowerUps(state);
 
-    // Check game over
     let totalLives = 0;
-    for (let i = 0; i < gameState.players.length; i++) {
-      if (gameState.players[i].connected) {
-        totalLives += gameState.players[i].lives;
+    for (let i = 0; i < state.players.length; i++) {
+      if (state.players[i].connected) {
+        totalLives += state.players[i].lives;
       }
     }
-    if (totalLives <= 0 && gameState.players.some(p => p.connected)) {
-      gameState.gameStatus = 'game_over';
+
+    if (totalLives <= 0 && state.players.some((p) => p.connected)) {
+      state.gameStatus = 'game_over';
       return;
     }
 
-    // Check level clear
-    let hasDestructibleBricks = false;
-    for (let r = 0; r < gameState.bricks.length; r++) {
-      for (let c = 0; c < gameState.bricks[r].length; c++) {
-        let brick = gameState.bricks[r][c];
+    let bricksLeft = false;
+    for (let r = 0; r < state.bricks.length; r++) {
+      for (let c = 0; c < state.bricks[r].length; c++) {
+        let brick = state.bricks[r][c];
         if (brick.active && brick.type !== 'indestructible') {
-          hasDestructibleBricks = true;
+          bricksLeft = true;
         }
       }
     }
-    
-    if (!hasDestructibleBricks) {
-      gameState.level++;
-      if (gameState.level > 3) {
-        gameState.gameStatus = 'win';
+
+    if (!bricksLeft) {
+      state.level++;
+      if (state.level > 3) {
+        state.gameStatus = 'win';
       } else {
-        gameState.bricks = loadLevel(gameState.level);
+        state.bricks = loadLevel(state.level);
       }
     }
-
-  } catch (error) {
-    console.log(error);
+  } catch (e) {
+    console.log(e);
   }
 }
 
@@ -332,4 +348,3 @@ module.exports = {
   updatePowerUps,
   updateGameLoop
 };
-
