@@ -39,7 +39,7 @@ class LGService {
     for (int i = 1; i <= _numScreens; i++) {
       String target = 'lg$i';
       await _sshService.execute(
-        'sshpass -p ${_sshService.username} ssh -o StrictHostKeyChecking=no ${_sshService.username}@$target "sudo reboot"',
+        'sshpass -p ${_sshService.password} ssh -o StrictHostKeyChecking=no ${_sshService.username}@$target "sudo reboot"',
       );
     }
   }
@@ -48,7 +48,7 @@ class LGService {
     for (int i = 1; i <= _numScreens; i++) {
       String target = 'lg$i';
       await _sshService.execute(
-        'sshpass -p ${_sshService.username} ssh -o StrictHostKeyChecking=no ${_sshService.username}@$target "sudo poweroff"',
+        'sshpass -p ${_sshService.password} ssh -o StrictHostKeyChecking=no ${_sshService.username}@$target "sudo poweroff"',
       );
     }
   }

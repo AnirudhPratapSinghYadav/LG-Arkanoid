@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../services/ssh_service.dart';
 import '../services/lg_service.dart';
 import '../utils/constants.dart';
@@ -30,11 +31,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _loadSavedSettings() async {
     final prefs = await SharedPreferences.getInstance();
+    const secureStorage = FlutterSecureStorage();
+    final savedPassword = await secureStorage.read(key: prefPassword);
+    
     setState(() {
       _hostController.text = prefs.getString(prefHost) ?? '';
       _portController.text = prefs.getString(prefPort) ?? '22';
       _usernameController.text = prefs.getString(prefUsername) ?? 'lg';
-      _passwordController.text = prefs.getString(prefPassword) ?? '';
+      _passwordController.text = savedPassword ?? '';
       _screensController.text =
           prefs.getInt(prefNumScreens)?.toString() ?? '5';
     });
@@ -42,10 +46,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _saveSettings() async {
     final prefs = await SharedPreferences.getInstance();
+    const secureStorage = FlutterSecureStorage();
+    
     await prefs.setString(prefHost, _hostController.text.trim());
     await prefs.setString(prefPort, _portController.text.trim());
     await prefs.setString(prefUsername, _usernameController.text.trim());
-    await prefs.setString(prefPassword, _passwordController.text.trim());
+    await secureStorage.write(key: prefPassword, value: _passwordController.text.trim());
     await prefs.setInt(
       prefNumScreens,
       int.tryParse(_screensController.text.trim()) ?? 5,

@@ -5,6 +5,7 @@ import '../services/game_service.dart';
 import '../widgets/connection_status.dart';
 import '../widgets/power_up_dialog.dart';
 import '../utils/constants.dart';
+import '../services/tts_service.dart';
 
 class ControllerScreen extends StatefulWidget {
   const ControllerScreen({super.key});
@@ -49,6 +50,15 @@ class _ControllerScreenState extends State<ControllerScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: ConnectionStatus(isConnected: service.connected),
             ),
+          ),
+          ListenableBuilder(
+            listenable: TTSService(),
+            builder: (context, _) {
+              return IconButton(
+                icon: Icon(TTSService().isMuted ? Icons.volume_off : Icons.volume_up),
+                onPressed: () => TTSService().toggleMute(),
+              );
+            },
           ),
           IconButton(
             icon: const Icon(Icons.settings),

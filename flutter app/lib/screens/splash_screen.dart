@@ -147,7 +147,7 @@ class _SplashScreenState extends State<SplashScreen>
                   ),
                   const SizedBox(height: 12),
                   const Text(
-                    'MULTIPLAYER PANORAMIC BRICK BREAKER',
+                    'LIQUID GALAXY EDITION',
                     style: TextStyle(
                       fontSize: 12,
                       letterSpacing: 3,
@@ -156,27 +156,6 @@ class _SplashScreenState extends State<SplashScreen>
                     ),
                   ),
                   const Spacer(),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.memory,
-                        color: Colors.tealAccent
-                            .withOpacity(0.5 + 0.5 * _glowAnimation.value),
-                        size: 24,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Powered by Gemini AI',
-                        style: TextStyle(
-                          color: Colors.tealAccent.withOpacity(0.8),
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 1.5,
-                        ),
-                      ),
-                    ],
-                  ),
                   const SizedBox(height: 30),
                   Container(
                     width: 250,

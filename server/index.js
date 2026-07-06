@@ -153,9 +153,14 @@ app.post('/api/deploy_lg', express.json(), (req, res) => {
   worldState.numScreens = parseInt(numScreens) || 5;
   
   if (masterIp && password) {
+    const ipv4Regex = /^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+    if (!ipv4Regex.test(masterIp)) {
+      return res.status(400).json({ error: 'Invalid IP address' });
+    }
+
     try {
       const deployScriptPath = path.join(__dirname, '..', 'deploy_to_rig.sh');
-      execFileSync('bash', [deployScriptPath, masterIp, username, password, worldState.numScreens]);
+      execFileSync('bash', [deployScriptPath, masterIp, username, password, worldState.numScreens.toString()]);
     } catch (err) {
       console.error('Failed to deploy to LG Rig:', err.message);
     }
@@ -165,7 +170,7 @@ app.post('/api/deploy_lg', express.json(), (req, res) => {
 });
 
 function generateToken() {
-  return crypto.randomBytes(32).toString('hex');
+  return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
 function timingSafeTokenCompare(provided, stored) {

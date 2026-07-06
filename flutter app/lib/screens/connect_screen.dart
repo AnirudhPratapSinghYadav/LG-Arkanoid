@@ -87,12 +87,12 @@ class _ConnectScreenState extends State<ConnectScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const Text(
-                    'UPLINK',
+                    'CONNECT TO SERVER',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 32,
                       fontWeight: FontWeight.w300,
-                      letterSpacing: 8,
+                      letterSpacing: 4,
                       color: Colors.white,
                     ),
                   ),
@@ -173,7 +173,7 @@ class _ConnectScreenState extends State<ConnectScreen> {
                                   ),
                                 )
                               : const Text(
-                                  'INITIALIZE LINK',
+                                  'CONNECT',
                                   style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w600,

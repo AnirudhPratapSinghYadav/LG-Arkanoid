@@ -21,6 +21,7 @@ class SSHService {
   String get host => _host;
   int get port => _port;
   String get username => _username;
+  String get password => _password;
 
   void init({
     required String host,

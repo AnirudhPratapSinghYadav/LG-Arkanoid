@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
+import 'tts_service.dart';
 
 class GameService extends ChangeNotifier {
   io.Socket? socket;
@@ -81,8 +82,16 @@ class GameService extends ChangeNotifier {
 
       socket!.on('commentary', (data) {
         final map = _asMap(data);
-        lastCommentary = map['text'] as String? ?? '';
-        lastCommentarySource = map['source'] as String? ?? 'fallback';
+        final newCommentary = map['text'] as String? ?? '';
+        
+        if (newCommentary.isNotEmpty && newCommentary != lastCommentary) {
+          lastCommentary = newCommentary;
+          lastCommentarySource = map['source'] as String? ?? 'fallback';
+          
+          if (lastCommentarySource == 'ai') {
+             TTSService().speak(lastCommentary);
+          }
+        }
         notifyListeners();
       });
 
