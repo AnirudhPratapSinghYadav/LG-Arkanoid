@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'game_service.dart';
+import '../services/game_service.dart';
+import '../utils/constants.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -52,9 +53,9 @@ class _SplashScreenState extends State<SplashScreen>
 
   Future<void> _bootstrap() async {
     const storage = FlutterSecureStorage();
-    final savedAddress = await storage.read(key: 'last_server_address');
-    final savedPort = await storage.read(key: 'last_server_port') ?? '8080';
-    final savedToken = await storage.read(key: 'last_session_token');
+    final savedAddress = await storage.read(key: prefServerAddress);
+    final savedPort = await storage.read(key: prefServerPort) ?? defaultServerPort;
+    final savedToken = await storage.read(key: prefSessionToken);
 
     bool connectSuccess = false;
 
@@ -80,7 +81,7 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF02090C),
+      backgroundColor: bgColor,
       body: AnimatedBuilder(
         animation: _animController,
         builder: (context, child) {
@@ -94,7 +95,7 @@ class _SplashScreenState extends State<SplashScreen>
                     radius: 1.5,
                     colors: [
                       Colors.teal.withOpacity(0.15 * _glowAnimation.value),
-                      const Color(0xFF02090C),
+                      bgColor,
                     ],
                   ),
                 ),

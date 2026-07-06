@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'game_service.dart';
+import 'services/game_service.dart';
 import 'app.dart';
 
 class DevHttpOverrides extends HttpOverrides {
@@ -18,7 +18,7 @@ void main() {
   runApp(
     ChangeNotifierProvider(
       create: (_) => GameService(),
-      child: const LGArkanoidApp(),
+      child: const ArkanoidApp(),
     ),
   );
 }

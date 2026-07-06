@@ -2,7 +2,8 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'game_service.dart';
+import '../services/game_service.dart';
+import '../utils/constants.dart';
 
 class ConnectScreen extends StatefulWidget {
   const ConnectScreen({super.key});
@@ -42,9 +43,9 @@ class _ConnectScreenState extends State<ConnectScreen> {
 
     if (ok) {
       const storage = FlutterSecureStorage();
-      await storage.write(key: 'last_server_address', value: address);
-      await storage.write(key: 'last_server_port', value: port);
-      await storage.write(key: 'last_session_token', value: token);
+      await storage.write(key: prefServerAddress, value: address);
+      await storage.write(key: prefServerPort, value: port);
+      await storage.write(key: prefSessionToken, value: token);
       service.joinGame(token);
       if (mounted) {
         Navigator.pushReplacementNamed(context, '/controller');
@@ -59,7 +60,7 @@ class _ConnectScreenState extends State<ConnectScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF02090C),
+      backgroundColor: bgColor,
       body: Stack(
         children: [
           Positioned(
@@ -185,12 +186,22 @@ class _ConnectScreenState extends State<ConnectScreen> {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  TextButton(
-                    onPressed: () => Navigator.pushNamed(context, '/status'),
-                    style:
-                        TextButton.styleFrom(foregroundColor: Colors.white54),
-                    child: const Text('Open Status View',
-                        style: TextStyle(letterSpacing: 1)),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.pushNamed(context, '/status'),
+                        style: TextButton.styleFrom(foregroundColor: Colors.white54),
+                        child: const Text('Status View',
+                            style: TextStyle(letterSpacing: 1)),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.pushNamed(context, '/settings'),
+                        style: TextButton.styleFrom(foregroundColor: Colors.tealAccent),
+                        child: const Text('LG Settings',
+                            style: TextStyle(letterSpacing: 1)),
+                      ),
+                    ],
                   ),
                 ],
               ),

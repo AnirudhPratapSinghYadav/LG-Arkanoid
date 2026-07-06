@@ -1,26 +1,25 @@
 import 'package:flutter/material.dart';
-import 'splash_screen.dart';
-import 'connect_screen.dart';
-import 'controller_screen.dart';
-import 'status_screen.dart';
+import 'screens/splash_screen.dart';
+import 'screens/connect_screen.dart';
+import 'screens/controller_screen.dart';
+import 'screens/status_screen.dart';
+import 'screens/settings_screen.dart';
+import 'utils/constants.dart';
 
-class LGArkanoidApp extends StatelessWidget {
-  const LGArkanoidApp({super.key});
+class ArkanoidApp extends StatelessWidget {
+  const ArkanoidApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'LG Arkanoid',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        brightness: Brightness.dark,
+      theme: ThemeData.dark().copyWith(
+        scaffoldBackgroundColor: bgColor,
+        primaryColor: Colors.teal,
         colorScheme: ColorScheme.dark(
           primary: Colors.teal,
           secondary: Colors.tealAccent,
-          surface: const Color(0xFF121212),
         ),
-        scaffoldBackgroundColor: const Color(0xFF0a0a0a),
-        useMaterial3: true,
       ),
       initialRoute: '/',
       routes: {
@@ -28,7 +27,9 @@ class LGArkanoidApp extends StatelessWidget {
         '/connect': (context) => const ConnectScreen(),
         '/controller': (context) => const ControllerScreen(),
         '/status': (context) => const StatusScreen(),
+        '/settings': (context) => const SettingsScreen(),
       },
+      debugShowCheckedModeBanner: false,
     );
   }
 }
