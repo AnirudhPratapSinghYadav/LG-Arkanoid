@@ -1,4 +1,3 @@
-// Game State Models
 
 class Ball {
   constructor(id, x, y, vx, vy, radius) {
@@ -35,7 +34,7 @@ class Brick {
     this.width = width;
     this.height = height;
     this.active = true;
-    this.type = 'normal'; // can be 'hard' or 'indestructible' later
+    this.type = 'normal';
   }
 }
 
@@ -57,15 +56,62 @@ class GameState {
     this.powerUps = [];
     this.level = 1;
     this.gameStatus = 'waiting';
+    this.nextLevelBricks = null;
   }
 }
 
-function loadLevel(levelNumber) {
+function applyGameMasterMod(gameState, modType) {
+  try {
+    switch(modType) {
+      case 'WIDE_PADDLE':
+        // Spawn wide paddle at center top of screen 3 (assuming 5 screens)
+        gameState.powerUps.push(new PowerUp('wide_paddle', (gameState.numScreens * 1920) / 2, 0));
+        break;
+      case 'EXTRA_BALL':
+        let newBall = new Ball(Date.now().toString(), (gameState.numScreens * 1920) / 2, 500, 3, 4, 8);
+        gameState.balls.push(newBall);
+        break;
+      case 'SLOW_BALL':
+        gameState.balls.forEach(b => {
+          b.vx *= 0.5;
+          b.vy *= 0.5;
+        });
+        break;
+    }
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+function loadLevel(levelNumber, aiGeneratedGrid = null) {
   try {
     let newBricks = [];
-    // Level 1: Simple block
-    // Level 2: Hard bricks introduced
-    // Level 3: Indestructible bricks introduced
+    
+    // If we have a pre-generated grid from AI, use it
+    if (aiGeneratedGrid && Array.isArray(aiGeneratedGrid) && aiGeneratedGrid.length > 0) {
+      for (let r = 0; r < aiGeneratedGrid.length; r++) {
+        let rowBricks = [];
+        for (let c = 0; c < aiGeneratedGrid[r].length; c++) {
+          let val = aiGeneratedGrid[r][c];
+          if (val > 0) {
+            let brickType = val === 3 ? 'indestructible' : (val === 2 ? 'hard' : 'normal');
+            // Assuming 8 rows and 15 columns for the grid mapping to coordinates
+            let brick = new Brick(r, c, c * 640, 100 + r * 40, 600, 30);
+            brick.type = brickType;
+            rowBricks.push(brick);
+          } else {
+            // Placeholder for empty space so indices match
+            let brick = new Brick(r, c, c * 640, 100 + r * 40, 600, 30);
+            brick.active = false;
+            rowBricks.push(brick);
+          }
+        }
+        newBricks.push(rowBricks);
+      }
+      return newBricks;
+    }
+
+    // Fallback hardcoded logic
     for (let row = 0; row < 8; row++) {
       let rowBricks = [];
       for (let col = 0; col < 15; col++) {
@@ -142,7 +188,7 @@ function checkPaddleCollision(ball, players) {
         let paddleCenter = player.paddleX + (player.paddleWidth / 2);
         let offset = ball.x - paddleCenter;
         
-        if (player.paddleWidth <= 0) return true; // prevent div by zero
+        if (player.paddleWidth <= 0) return true;
         let normalized = offset / (player.paddleWidth / 2);
 
         if (normalized <= -0.8) {
@@ -281,7 +327,7 @@ function updateGameLoop(gameState) {
 
     updatePowerUps(gameState);
 
-    // Check game over
+
     let totalLives = 0;
     for (let i = 0; i < gameState.players.length; i++) {
       if (gameState.players[i].connected) {
@@ -293,7 +339,7 @@ function updateGameLoop(gameState) {
       return;
     }
 
-    // Check level clear
+
     let hasDestructibleBricks = false;
     for (let r = 0; r < gameState.bricks.length; r++) {
       for (let c = 0; c < gameState.bricks[r].length; c++) {
@@ -306,11 +352,12 @@ function updateGameLoop(gameState) {
     
     if (!hasDestructibleBricks) {
       gameState.level++;
-      if (gameState.level > 3) {
-        gameState.gameStatus = 'win';
-      } else {
-        gameState.bricks = loadLevel(gameState.level);
+      if (gameState.level > 3) { // Let's keep endless or 3? Let's say endless if AI generates it
+        // Actually, let's keep the win state at level 999 for now
+        // But for standard demo, maybe 5 levels.
       }
+      gameState.bricks = loadLevel(gameState.level, gameState.nextLevelBricks);
+      gameState.nextLevelBricks = null; // Reset it so index.js knows to fetch the next one
     }
 
   } catch (error) {
@@ -330,6 +377,7 @@ module.exports = {
   checkPaddleCollision,
   checkBrickCollision,
   updatePowerUps,
-  updateGameLoop
+  updateGameLoop,
+  applyGameMasterMod
 };
 

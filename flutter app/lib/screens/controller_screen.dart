@@ -14,20 +14,13 @@ class ControllerScreen extends StatefulWidget {
 }
 
 class _ControllerScreenState extends State<ControllerScreen> {
-  double _paddleX = maxVirtualX / 2;
-
   void _onPanUpdate(DragUpdateDetails details) {
     final screenWidth = MediaQuery.of(context).size.width;
     final dx = details.delta.dx;
     final speed = maxVirtualX / screenWidth;
+    final deltaX = dx * speed;
 
-    setState(() {
-      _paddleX += dx * speed;
-      if (_paddleX < 0) _paddleX = 0;
-      if (_paddleX > maxVirtualX) _paddleX = maxVirtualX;
-    });
-
-    context.read<GameService>().sendPaddleMove(_paddleX);
+    context.read<GameService>().sendPaddleMove(deltaX);
   }
 
   @override

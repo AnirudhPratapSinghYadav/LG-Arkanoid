@@ -1,3 +1,4 @@
+require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 const express = require('express');
 const https = require('https');
 const http = require('http');
@@ -404,6 +405,54 @@ async function triggerCommentary(eventType, snapshot) {
   io.emit('commentary', { text, source, eventType });
 }
 
+let isGeneratingLevel = false;
+async function generateNextLevelAsync(targetLevel) {
+  if (isGeneratingLevel || worldState.nextLevelBricks) return;
+  isGeneratingLevel = true;
+  try {
+    const prompt = `You are a level designer for Arkanoid. Design a brick layout for level ${targetLevel}.
+Return ONLY a valid JSON 2D array of integers (8 rows by 15 columns).
+0 = empty, 1 = normal brick, 2 = hard brick, 3 = indestructible.
+Design a cool shape or pattern. Do not include markdown formatting or backticks.`;
+    const text = await callGemini(prompt);
+    let rawJson = text.replace(/```json/g, '').replace(/```/g, '').trim();
+    worldState.nextLevelBricks = JSON.parse(rawJson);
+    console.log(`Pre-fetched AI level ${targetLevel}`);
+  } catch (err) {
+    console.error('Failed to generate AI level:', err);
+    worldState.nextLevelBricks = null;
+  } finally {
+    isGeneratingLevel = false;
+  }
+}
+
+let isPollingGameMaster = false;
+async function pollGameMasterAsync() {
+  if (isPollingGameMaster) return;
+  isPollingGameMaster = true;
+  try {
+    const prompt = `You are the AI Game Master of Arkanoid. A player just lost a life.
+Current stats: Lives=${worldState.players.map(p => p.lives).join(',')}, Level=${worldState.level}.
+Decide on a modifier to help or punish them. Choose exactly one: WIDE_PADDLE, EXTRA_BALL, SLOW_BALL, NONE.
+Return a JSON object: {"modifier": "YOUR_CHOICE", "commentary": "Your 10 word snarky comment"}.
+Do not include markdown.`;
+    const text = await callGemini(prompt);
+    let rawJson = text.replace(/```json/g, '').replace(/```/g, '').trim();
+    let data = JSON.parse(rawJson);
+    
+    if (data.modifier && data.modifier !== 'NONE') {
+      gameEngine.applyGameMasterMod(worldState, data.modifier);
+    }
+    if (data.commentary) {
+      io.emit('commentary', { text: data.commentary, source: 'ai', eventType: 'game_master' });
+    }
+  } catch (err) {
+    console.error('Failed to poll Game Master:', err);
+  } finally {
+    isPollingGameMaster = false;
+  }
+}
+
 function validateMessage(player, timestamp, nonce) {
   const now = Date.now();
 
@@ -746,8 +795,20 @@ setInterval(() => {
   const beforeLives = worldState.players.map(p => p.lives);
   const beforeLevel = worldState.level;
   const beforeBallScreens = worldState.balls.map(b => getScreenIdForX(b.x));
+  const oldLives = worldState.players.map(p => p.lives).reduce((a, b) => a + b, 0);
 
   gameEngine.updateGameLoop(worldState);
+
+  const newLives = worldState.players.map(p => p.lives).reduce((a, b) => a + b, 0);
+  if (newLives < oldLives) {
+    triggerCommentary('life_lost', worldState);
+    pollGameMasterAsync();
+  }
+
+  // Pre-fetch next level if needed
+  if (!worldState.nextLevelBricks && !isGeneratingLevel) {
+    generateNextLevelAsync(worldState.level + 1);
+  }
 
   for (let i = 0; i < worldState.players.length; i++) {
     const p = worldState.players[i];

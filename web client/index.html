@@ -18,17 +18,20 @@
 <body>
 <script>
 
-const SCREEN_BOUNDARIES = [
-    { screenId: 1, virtualLeft: 0,    virtualRight: 1919 },
-    { screenId: 2, virtualLeft: 1920, virtualRight: 3839 },
-    { screenId: 3, virtualLeft: 3840, virtualRight: 5759 },
-    { screenId: 4, virtualLeft: 5760, virtualRight: 7679 },
-    { screenId: 5, virtualLeft: 7680, virtualRight: 9599 }
-];
-
 const urlParams = new URLSearchParams(window.location.search);
-const screenId = parseInt(urlParams.get('screenId'), 10) || 3;
-const screenBoundary = SCREEN_BOUNDARIES.find(s => s.screenId === screenId) || SCREEN_BOUNDARIES[2];
+const numScreens = parseInt(urlParams.get('numScreens'), 10) || 5;
+const screenId = parseInt(urlParams.get('screenId'), 10) || Math.ceil(numScreens / 2);
+
+let SCREEN_BOUNDARIES = [];
+for (let i = 1; i <= numScreens; i++) {
+    SCREEN_BOUNDARIES.push({
+        screenId: i,
+        virtualLeft: (i - 1) * 1920,
+        virtualRight: (i * 1920) - 1
+    });
+}
+
+const screenBoundary = SCREEN_BOUNDARIES.find(s => s.screenId === screenId) || SCREEN_BOUNDARIES[0];
 const virtualLeft = screenBoundary.virtualLeft;
 const serverUrl = urlParams.get('server') || window.location.origin;
 

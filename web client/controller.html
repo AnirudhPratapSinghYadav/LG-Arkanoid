@@ -231,25 +231,25 @@
 
             socket.on('connect', () => {
                 const nonce = Math.random().toString(36).substring(2, 15);
-                socket.emit('player_join', { token, timestamp: Date.now(), nonce });
+                socket.emit('player_join', { sessionToken: token, timestamp: Date.now(), nonce });
             });
 
-            socket.on('join_result', (data) => {
-                if (data.success) {
-                    isConnected = true;
-                    document.getElementById('joinArea').classList.add('hidden');
-                    document.getElementById('gameArea').classList.remove('hidden');
-                    document.getElementById('playerStatus').innerText = 'Player ' + data.playerNumber;
-                    setupTouchControls();
-                    
-                    // Initialize speech synthesis on user interaction
-                    if ('speechSynthesis' in window) {
-                        window.speechSynthesis.getVoices();
-                    }
-                } else {
-                    alert('Join failed: ' + data.message);
-                    socket.disconnect();
+            socket.on('join_confirmed', (data) => {
+                isConnected = true;
+                document.getElementById('joinArea').classList.add('hidden');
+                document.getElementById('gameArea').classList.remove('hidden');
+                document.getElementById('playerStatus').innerText = 'Player ' + data.playerNumber;
+                setupTouchControls();
+                
+                // Initialize speech synthesis on user interaction
+                if ('speechSynthesis' in window) {
+                    window.speechSynthesis.getVoices();
                 }
+            });
+
+            socket.on('join_rejected', (data) => {
+                alert('Join failed: ' + data.message);
+                socket.disconnect();
             });
 
             socket.on('commentary', (data) => {

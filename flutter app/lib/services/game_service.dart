@@ -114,11 +114,10 @@ class GameService extends ChangeNotifier {
     socket?.emit('player_join', {'sessionToken': sessionToken});
   }
 
-  void sendPaddleMove(double paddleVirtualX) {
+  void sendPaddleMove(double deltaX) {
     if (socket == null || !connected || playerId == null) return;
     socket!.emit('paddle_move', {
-      'playerId': playerId,
-      'x': paddleVirtualX.round(),
+      'deltaX': deltaX.round(),
       'timestamp': DateTime.now().millisecondsSinceEpoch,
       'nonce': generateNonce(),
     });
