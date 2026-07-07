@@ -149,26 +149,7 @@ app.get('/screen', (req, res) => {
   res.sendFile(path.join(webClientPath, 'index.html'));
 });
 
-app.post('/api/deploy_lg', express.json(), (req, res) => {
-  const { numScreens, masterIp, username, password } = req.body;
-  worldState.numScreens = parseInt(numScreens) || 5;
-  
-  if (masterIp && password) {
-    const ipv4Regex = /^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
-    if (!ipv4Regex.test(masterIp)) {
-      return res.status(400).json({ error: 'Invalid IP address' });
-    }
 
-    try {
-      const deployScriptPath = path.join(__dirname, '..', 'deploy_to_rig.sh');
-      execFileSync('bash', [deployScriptPath, masterIp, username, password, worldState.numScreens.toString()]);
-    } catch (err) {
-      console.error('Failed to deploy to LG Rig:', err.message);
-    }
-  }
-
-  res.json({ status: 'deployed', numScreens: worldState.numScreens });
-});
 
 function generateToken() {
   return Math.floor(100000 + Math.random() * 900000).toString();
@@ -203,8 +184,9 @@ function detectBoundary(ball) {
   if (!currentScreen) return null;
 
   const nextX = ball.x + ball.vx;
+  const numScreens = worldState.numScreens || 5;
 
-  if (nextX > currentScreen.virtualRight && currentScreenId !== 5) {
+  if (nextX > currentScreen.virtualRight && currentScreenId !== numScreens) {
     const arrivingScreenId = currentScreenId + 1;
     const arrivingScreen = getScreenById(arrivingScreenId);
     return {
@@ -559,7 +541,7 @@ function getWorldSnapshot() {
 
 io.on('connection', (socket) => {
   const screenId = parseInt(socket.handshake.query.screenId, 10);
-  if (screenId >= 1 && screenId <= 5) {
+  if (screenId >= 1 && screenId <= (worldState.numScreens || 5)) {
     socket.join(`screen-${screenId}`);
   }
 
