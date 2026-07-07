@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -25,15 +24,12 @@ class _ConnectScreenState extends State<ConnectScreen> {
 
     if (address.isEmpty || port.isEmpty || token.length != 6) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enter IP, port, and a 6 digit session token')),
+        const SnackBar(content: Text('Enter IP, port, and 6 digit token')),
       );
       return;
     }
 
     setState(() => _connecting = true);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Connecting')),
-    );
 
     final service = context.read<GameService>();
     final ok = await service.connect(address, port);
@@ -52,7 +48,7 @@ class _ConnectScreenState extends State<ConnectScreen> {
       }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Connection failed check IP and port')),
+        const SnackBar(content: Text('Connection failed')),
       );
     }
   }
@@ -61,161 +57,95 @@ class _ConnectScreenState extends State<ConnectScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: bgColor,
-      body: Stack(
-        children: [
-          Positioned(
-            top: -100,
-            right: -100,
-            child: Container(
-              width: 300,
-              height: 300,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.teal.withOpacity(0.1),
-                boxShadow: [
-                  BoxShadow(
-                      color: Colors.teal.withOpacity(0.1), blurRadius: 100),
-                ],
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text(
+                'LG Arkanoid',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
               ),
-            ),
-          ),
-          Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 32),
-              child: Column(
+              const SizedBox(height: 8),
+              const Text(
+                'Connect to Game Server',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.white54,
+                ),
+              ),
+              const SizedBox(height: 40),
+              _buildField(_ipController, 'Server IP'),
+              const SizedBox(height: 12),
+              _buildField(_portController, 'Port'),
+              const SizedBox(height: 12),
+              _buildField(_tokenController, 'Session Token (6 digits)',
+                  maxLength: 6),
+              const SizedBox(height: 24),
+              SizedBox(
+                height: 48,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.teal,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  onPressed: _connecting ? null : _connect,
+                  child: _connecting
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text('Connect', style: TextStyle(fontSize: 16)),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
                 mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Text(
-                    'CONNECT TO SERVER',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.w300,
-                      letterSpacing: 4,
-                      color: Colors.white,
+                  TextButton(
+                    onPressed: () =>
+                        Navigator.pushNamed(context, '/settings'),
+                    child: const Text(
+                      'LG Settings',
+                      style: TextStyle(color: Colors.tealAccent),
                     ),
                   ),
-                  const SizedBox(height: 48),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(24),
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                      child: Container(
-                        padding: const EdgeInsets.all(24),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.05),
-                          borderRadius: BorderRadius.circular(24),
-                          border: Border.all(
-                              color: Colors.white.withOpacity(0.1)),
-                        ),
-                        child: Column(
-                          children: [
-                            _buildInputField(
-                              controller: _ipController,
-                              label: 'Master Node IP',
-                              icon: Icons.dns_outlined,
-                            ),
-                            const SizedBox(height: 16),
-                            _buildInputField(
-                              controller: _portController,
-                              label: 'Port',
-                              icon: Icons.settings_ethernet,
-                            ),
-                            const SizedBox(height: 16),
-                            _buildInputField(
-                              controller: _tokenController,
-                              label: 'Session Token',
-                              icon: Icons.key_outlined,
-                              maxLength: 6,
-                            ),
-                          ],
-                        ),
-                      ),
+                  const SizedBox(width: 16),
+                  TextButton(
+                    onPressed: () =>
+                        Navigator.pushNamed(context, '/status'),
+                    child: const Text(
+                      'Debug',
+                      style: TextStyle(color: Colors.white54),
                     ),
-                  ),
-                  const SizedBox(height: 32),
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
-                    height: 56,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(28),
-                      gradient: LinearGradient(
-                        colors: _connecting
-                            ? [Colors.teal.shade800, Colors.teal.shade900]
-                            : [Colors.teal.shade400, Colors.teal.shade600],
-                      ),
-                      boxShadow: _connecting
-                          ? []
-                          : [
-                              BoxShadow(
-                                color: Colors.teal.withOpacity(0.3),
-                                blurRadius: 12,
-                                offset: const Offset(0, 4),
-                              )
-                            ],
-                    ),
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(28),
-                        onTap: _connecting ? null : _connect,
-                        child: Center(
-                          child: _connecting
-                              ? const SizedBox(
-                                  width: 24,
-                                  height: 24,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor:
-                                        AlwaysStoppedAnimation<Color>(
-                                            Colors.white),
-                                  ),
-                                )
-                              : const Text(
-                                  'CONNECT',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                    letterSpacing: 2,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      TextButton(
-                        onPressed: () => Navigator.pushNamed(context, '/status'),
-                        style: TextButton.styleFrom(foregroundColor: Colors.white54),
-                        child: const Text('Status View',
-                            style: TextStyle(letterSpacing: 1)),
-                      ),
-                      TextButton(
-                        onPressed: () => Navigator.pushNamed(context, '/settings'),
-                        style: TextButton.styleFrom(foregroundColor: Colors.tealAccent),
-                        child: const Text('LG Settings',
-                            style: TextStyle(letterSpacing: 1)),
-                      ),
-                    ],
                   ),
                 ],
               ),
-            ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildInputField({
-    required TextEditingController controller,
-    required String label,
-    required IconData icon,
+  Widget _buildField(
+    TextEditingController controller,
+    String label, {
     int? maxLength,
   }) {
     return TextField(
@@ -224,21 +154,19 @@ class _ConnectScreenState extends State<ConnectScreen> {
       style: const TextStyle(color: Colors.white),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
-        prefixIcon: Icon(icon, color: Colors.white.withOpacity(0.5)),
+        labelStyle: const TextStyle(color: Colors.white54),
         counterText: '',
         filled: true,
-        fillColor: Colors.black.withOpacity(0.2),
+        fillColor: const Color(0xFF1A1A2E),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(8),
           borderSide: BorderSide.none,
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(color: Colors.teal.withOpacity(0.5)),
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Colors.teal),
         ),
       ),
-      keyboardType: const TextInputType.numberWithOptions(decimal: true),
     );
   }
 }

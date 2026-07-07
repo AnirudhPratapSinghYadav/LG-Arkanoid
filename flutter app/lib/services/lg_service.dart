@@ -25,21 +25,28 @@ class LGService {
 
   Future<void> openBrowserOnScreens(String serverUrl) async {
     for (int i = 1; i <= _numScreens; i++) {
+      String target = 'lg$i';
+      String screenUrl = '$serverUrl/screen?screenId=$i';
       String command =
-          'export DISPLAY=:0; google-chrome --kiosk "$serverUrl/screen?screenId=$i" &';
+          'ssh -o StrictHostKeyChecking=no $target "export DISPLAY=:0; google-chrome --kiosk \\"$screenUrl\\" &"';
       await _sshService.execute(command);
     }
   }
 
   Future<void> closeBrowsers() async {
-    await _sshService.execute('pkill -f google-chrome');
+    for (int i = 1; i <= _numScreens; i++) {
+      String target = 'lg$i';
+      await _sshService.execute(
+        'ssh -o StrictHostKeyChecking=no $target "pkill -f google-chrome"',
+      );
+    }
   }
 
   Future<void> rebootRig() async {
     for (int i = 1; i <= _numScreens; i++) {
       String target = 'lg$i';
       await _sshService.execute(
-        'sshpass -p ${_sshService.password} ssh -o StrictHostKeyChecking=no ${_sshService.username}@$target "sudo reboot"',
+        'ssh -o StrictHostKeyChecking=no $target "sudo reboot"',
       );
     }
   }
@@ -48,7 +55,7 @@ class LGService {
     for (int i = 1; i <= _numScreens; i++) {
       String target = 'lg$i';
       await _sshService.execute(
-        'sshpass -p ${_sshService.password} ssh -o StrictHostKeyChecking=no ${_sshService.username}@$target "sudo poweroff"',
+        'ssh -o StrictHostKeyChecking=no $target "sudo poweroff"',
       );
     }
   }

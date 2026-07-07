@@ -13,64 +13,55 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
-  late AnimationController _animController;
-  late Animation<double> _glowAnimation;
-  late Animation<double> _bounceAnimation;
-  late Animation<double> _progressAnimation;
+  late AnimationController _controller;
+  late Animation<double> _progress;
 
   @override
   void initState() {
     super.initState();
-    _animController = AnimationController(
+    _controller = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 4),
+      duration: const Duration(seconds: 3),
     );
 
-    _glowAnimation = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween(begin: 0.0, end: 1.0), weight: 1),
-      TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.6), weight: 1),
-      TweenSequenceItem(tween: Tween(begin: 0.6, end: 1.0), weight: 1),
-      TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.0), weight: 1),
-    ]).animate(CurvedAnimation(parent: _animController, curve: Curves.easeInOut));
-
-    _bounceAnimation = Tween<double>(begin: -150.0, end: 150.0).animate(
-      CurvedAnimation(parent: _animController, curve: Curves.bounceOut),
+    _progress = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
     );
 
-    _progressAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _animController, curve: Curves.linear),
-    );
-
-    _animController.forward();
-    _bootstrap();
+    _controller.forward();
+    _tryAutoConnect();
   }
 
   @override
   void dispose() {
-    _animController.dispose();
+    _controller.dispose();
     super.dispose();
   }
 
-  Future<void> _bootstrap() async {
+  Future<void> _tryAutoConnect() async {
     const storage = FlutterSecureStorage();
     final savedAddress = await storage.read(key: prefServerAddress);
-    final savedPort = await storage.read(key: prefServerPort) ?? defaultServerPort;
+    final savedPort =
+        await storage.read(key: prefServerPort) ?? defaultServerPort;
     final savedToken = await storage.read(key: prefSessionToken);
 
-    bool connectSuccess = false;
+    bool success = false;
 
     if (savedAddress != null && savedAddress.isNotEmpty && mounted) {
       final service = context.read<GameService>();
-      connectSuccess = await service.connect(savedAddress, savedPort);
-      if (connectSuccess && mounted && savedToken != null && savedToken.isNotEmpty) {
+      success = await service.connect(savedAddress, savedPort);
+      if (success &&
+          mounted &&
+          savedToken != null &&
+          savedToken.isNotEmpty) {
         service.joinGame(savedToken);
       }
     }
 
-    await Future.delayed(const Duration(seconds: 4));
+    await Future.delayed(const Duration(seconds: 3));
 
     if (mounted) {
-      if (connectSuccess) {
+      if (success) {
         Navigator.pushReplacementNamed(context, '/controller');
       } else {
         Navigator.pushReplacementNamed(context, '/connect');
@@ -82,113 +73,57 @@ class _SplashScreenState extends State<SplashScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: bgColor,
-      body: AnimatedBuilder(
-        animation: _animController,
-        builder: (context, child) {
-          return Stack(
-            fit: StackFit.expand,
-            children: [
-              Container(
-                decoration: BoxDecoration(
-                  gradient: RadialGradient(
-                    center: Alignment.center,
-                    radius: 1.5,
-                    colors: [
-                      Colors.teal.withOpacity(0.15 * _glowAnimation.value),
-                      bgColor,
-                    ],
-                  ),
-                ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Spacer(flex: 3),
+            const Text(
+              'LG Arkanoid',
+              style: TextStyle(
+                fontSize: 42,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+                letterSpacing: 2,
               ),
-              Positioned(
-                top: MediaQuery.of(context).size.height * 0.45,
-                left: (MediaQuery.of(context).size.width / 2) +
-                    _bounceAnimation.value - 8,
-                child: Container(
-                  width: 16,
-                  height: 16,
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Liquid Galaxy Edition',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.teal,
+                letterSpacing: 2,
+              ),
+            ),
+            const Spacer(flex: 2),
+            AnimatedBuilder(
+              animation: _controller,
+              builder: (context, child) {
+                return Container(
+                  width: 200,
+                  height: 4,
                   decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.white,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.tealAccent
-                            .withOpacity(_glowAnimation.value),
-                        blurRadius: 20,
-                        spreadRadius: 5,
-                      )
-                    ],
+                    color: const Color(0xFF1A1A2E),
+                    borderRadius: BorderRadius.circular(2),
                   ),
-                ),
-              ),
-              Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const SizedBox(height: 120),
-                  Text(
-                    'LG Arkanoid',
-                    style: TextStyle(
-                      fontSize: 48,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.white,
-                      letterSpacing: 4,
-                      shadows: [
-                        Shadow(
-                          color: Colors.tealAccent
-                              .withOpacity(_glowAnimation.value),
-                          blurRadius: 30,
-                        ),
-                        const Shadow(
-                          color: Colors.teal,
-                          blurRadius: 10,
-                        ),
-                      ],
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Container(
+                      width: 200 * _progress.value,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.teal,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'LIQUID GALAXY EDITION',
-                    style: TextStyle(
-                      fontSize: 12,
-                      letterSpacing: 3,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.teal,
-                    ),
-                  ),
-                  const Spacer(),
-                  const SizedBox(height: 30),
-                  Container(
-                    width: 250,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Colors.white10,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                    child: Stack(
-                      children: [
-                        Container(
-                          width: 250 * _progressAnimation.value,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: Colors.tealAccent,
-                            borderRadius: BorderRadius.circular(2),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.tealAccent.withOpacity(0.8),
-                                blurRadius: 10,
-                              )
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 60),
-                ],
-              ),
-            ],
-          );
-        },
+                );
+              },
+            ),
+            const SizedBox(height: 60),
+          ],
+        ),
       ),
     );
   }
