@@ -57,6 +57,7 @@ const COMMENTARY_COOLDOWNS = {
   multi_ball: 0,
   score_milestone: 30000,
   victory: 0,
+  rank_takeover: 9000,
 };
 
 const PLAYER_SLOT_IDS = ['player1', 'player2', 'player3'];
@@ -88,6 +89,7 @@ function createInitialWorldState() {
     multi_ball: { lastCalledAt: 0 },
     score_milestone: { lastCalledAt: 0 },
     victory: { lastCalledAt: 0 },
+    rank_takeover: { lastCalledAt: 0 },
   };
   state.slowBallActive = false;
   state.originalBallSpeeds = null;
@@ -277,6 +279,32 @@ function triggerBoundaryHandoff(handoffResult, ball) {
 
 
 function broadcastGameState() {
+  const sortedPlayers = [...worldState.players].sort((a, b) => b.score - a.score);
+  let currentRank = 1;
+  let previousScore = null;
+  const ranks = {};
+
+  sortedPlayers.forEach((p, index) => {
+    if (previousScore !== null && p.score < previousScore) {
+      currentRank = index + 1;
+    }
+    ranks[p.id] = currentRank;
+    previousScore = p.score;
+  });
+
+  if (worldState.previousRanks) {
+    for (let p of worldState.players) {
+      if (p.connected && p.id && ranks[p.id] && worldState.previousRanks[p.id]) {
+        if (ranks[p.id] < worldState.previousRanks[p.id]) {
+          let snapshot = getWorldSnapshot();
+          snapshot.playerId = p.id;
+          triggerCommentary('rank_takeover', snapshot);
+        }
+      }
+    }
+  }
+  worldState.previousRanks = ranks;
+
   const payload = {
     balls: worldState.balls.map((b) => ({
       id: b.id,
@@ -303,9 +331,11 @@ function broadcastGameState() {
       score: p.score,
       lives: p.lives,
       connected: p.connected,
+      rank: ranks[p.id] || 1,
     })),
     currentLevel: worldState.currentLevel,
     gameActive: worldState.gameActive,
+    gameStartedAt: worldState.gameStartedAt,
   };
   io.emit('game_state', payload);
 }
@@ -322,6 +352,7 @@ function buildPrompt(eventType, snapshot) {
     multi_ball: `Multi ball just activated with two balls crossing the panoramic rig. Generate exactly 15 words of excited commentary.`,
     score_milestone: `A player just crossed a score milestone. Scores are ${scores}. Generate exactly 15 words of excited retro arcade announcer commentary.`,
     victory: `The game is over. Final scores are ${scores}. Generate exactly 15 words of triumphant retro arcade announcer commentary declaring the winner.`,
+    rank_takeover: `Player ${snapshot.playerId || 'someone'} just took the lead from their opponent. Scores are ${scores}. Generate exactly 15 words of excited, competitive retro arcade commentary announcing the lead change.`,
   };
   return templates[eventType] || templates.score_milestone;
 }
@@ -561,9 +592,11 @@ io.on('connection', (socket) => {
     worldState.gameStatus = 'playing';
     worldState.sessionId = crypto.randomUUID();
     worldState.sessionToken = generateToken();
+    worldState.gameStartedAt = Date.now();
     io.emit('game_started', {
       sessionToken: worldState.sessionToken,
       sessionId: worldState.sessionId,
+      gameStartedAt: worldState.gameStartedAt,
     });
     broadcastGameState();
   });
