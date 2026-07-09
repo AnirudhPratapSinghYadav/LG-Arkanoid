@@ -15,10 +15,10 @@ class ArkanoidApp extends StatelessWidget {
       title: 'LG Arkanoid',
       theme: ThemeData.dark().copyWith(
         scaffoldBackgroundColor: bgColor,
-        primaryColor: Colors.teal,
+        primaryColor: accentCyan,
         colorScheme: ColorScheme.dark(
-          primary: Colors.teal,
-          secondary: Colors.tealAccent,
+          primary: accentCyan,
+          secondary: accentCyan,
         ),
       ),
       initialRoute: '/',

@@ -4,14 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Arkanoid LG Controller</title>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
         body {
             margin: 0;
             padding: 0;
-            background: linear-gradient(135deg, #050510 0%, #1a0b2e 100%);
-            color: #fff;
-            font-family: 'Orbitron', sans-serif;
+            background: #0a0e14;
+            color: #e8f4f8;
+            font-family: 'JetBrains Mono', monospace;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -30,9 +30,9 @@
         }
 
         .icon-btn {
-            background: rgba(255, 0, 255, 0.1);
-            border: 2px solid #ff00ff;
-            color: #ff00ff;
+            background: #0d1117;
+            border: 2px solid #00e5ff;
+            color: #00e5ff;
             font-size: 24px;
             width: 50px;
             height: 50px;
@@ -41,82 +41,83 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 0 10px rgba(255, 0, 255, 0.5);
-            transition: all 0.2s;
+            box-shadow: 0 3px 0 rgba(0, 229, 255, 0.3);
+            transition: all 0.1s;
         }
 
         .icon-btn:active {
-            background: rgba(255, 0, 255, 0.4);
-            box-shadow: 0 0 20px rgba(255, 0, 255, 1);
+            transform: translateY(2px);
+            box-shadow: none;
         }
 
         .modal {
             display: none;
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.6);
-            backdrop-filter: blur(5px);
+            background: rgba(10, 14, 20, 0.8);
             justify-content: center;
             align-items: center;
             z-index: 1000;
         }
 
         .modal-content {
-            background: rgba(10, 10, 30, 0.9);
+            background: #0d1117;
             padding: 30px;
-            border-radius: 15px;
-            border: 2px solid #00ffff;
-            box-shadow: 0 0 25px rgba(0, 255, 255, 0.3);
+            border-radius: 3px;
+            border: 3px solid #00e5ff;
+            box-shadow: inset 0 0 0 1px rgba(0, 229, 255, 0.4);
             width: 80%;
             max-width: 400px;
             text-align: center;
         }
 
         h1, h2, h3 {
-            color: #00ffff;
-            text-shadow: 0 0 10px rgba(0, 255, 255, 0.7);
-            letter-spacing: 2px;
+            font-family: 'Press Start 2P', monospace;
+            color: #00e5ff;
+            font-size: 16px;
+            letter-spacing: 1px;
+            margin-bottom: 20px;
         }
 
         input {
             width: 100%;
             padding: 12px;
             margin: 10px 0;
-            background: rgba(0, 0, 0, 0.5);
-            border: 1px solid #ff00ff;
-            color: #fff;
-            font-size: 18px;
-            font-family: 'Orbitron', sans-serif;
+            background: #0d1117;
+            border: 2px solid #00e5ff;
+            color: #e8f4f8;
+            font-size: 16px;
+            font-family: 'JetBrains Mono', monospace;
             box-sizing: border-box;
-            border-radius: 5px;
+            border-radius: 3px;
             text-align: center;
         }
 
         input:focus {
             outline: none;
-            box-shadow: 0 0 15px rgba(255, 0, 255, 0.6);
+            box-shadow: 0 0 8px rgba(0, 229, 255, 0.6);
         }
 
         button.action-btn {
-            background: linear-gradient(90deg, #00ffff, #0088ff);
-            color: #000;
-            border: none;
+            background: #0d1117;
+            color: #00e5ff;
+            border: 2px solid #00e5ff;
             padding: 15px 30px;
-            font-size: 20px;
+            font-size: 14px;
             font-weight: bold;
-            font-family: 'Orbitron', sans-serif;
+            font-family: 'JetBrains Mono', monospace;
             cursor: pointer;
-            border-radius: 5px;
+            border-radius: 3px;
             margin-top: 15px;
             width: 100%;
             text-transform: uppercase;
-            box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
-            transition: all 0.2s;
+            box-shadow: 0 3px 0 rgba(0, 229, 255, 0.3);
+            transition: all 0.1s;
         }
 
         button.action-btn:active {
-            transform: scale(0.95);
-            box-shadow: 0 0 25px rgba(0, 255, 255, 1);
+            transform: translateY(2px);
+            box-shadow: none;
         }
 
         .hidden { display: none !important; }
@@ -141,16 +142,34 @@
         .touch-pad {
             width: 90%;
             height: 60vh;
-            background: rgba(0, 255, 255, 0.05);
-            border: 2px solid #00ffff;
-            border-radius: 20px;
+            background: transparent;
+            position: relative;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 24px;
-            color: rgba(0, 255, 255, 0.5);
             margin-top: 20px;
-            box-shadow: inset 0 0 30px rgba(0, 255, 255, 0.1);
+            overflow: hidden;
+        }
+
+        .touch-pad::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 2px;
+            background: rgba(0, 229, 255, 0.3);
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        #touchPuck {
+            width: 50px;
+            height: 50px;
+            background: #00e5ff;
+            border-radius: 50%;
+            position: relative;
+            z-index: 2;
+            box-shadow: 0 0 15px rgba(0, 229, 255, 0.4);
+            transform: translateX(0);
         }
     </style>
 </head>
@@ -170,7 +189,7 @@
     <div id="gameArea" class="hidden">
         <h2 id="playerStatus">Connected</h2>
         <div class="touch-pad" id="touchPad">
-            DRAG TO MOVE PADDLE
+            <div id="touchPuck"></div>
         </div>
     </div>
 
@@ -248,6 +267,18 @@
                 const deltaX = currentX - lastX;
                 
                 const rigDeltaX = deltaX * 10; 
+                
+                const puck = document.getElementById('touchPuck');
+                if (puck) {
+                    let currentTransform = puck.style.transform || 'translateX(0px)';
+                    let match = currentTransform.match(/translateX\(([^px]+)px\)/);
+                    let currentOffset = match ? parseFloat(match[1]) : 0;
+                    currentOffset += deltaX;
+                    
+                    const maxSlide = pad.clientWidth / 2 - 25;
+                    currentOffset = Math.max(-maxSlide, Math.min(maxSlide, currentOffset));
+                    puck.style.transform = `translateX(${currentOffset}px)`;
+                }
 
                 if (Math.abs(rigDeltaX) > 0) {
                     const nonce = Math.random().toString(36).substring(2, 15);
@@ -259,6 +290,11 @@
                 }
                 
                 lastX = currentX;
+            });
+
+            pad.addEventListener('touchend', () => {
+                const puck = document.getElementById('touchPuck');
+                if (puck) puck.style.transform = `translateX(0px)`;
             });
         }
     </script>

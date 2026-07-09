@@ -3,6 +3,9 @@ import 'package:provider/provider.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../services/game_service.dart';
 import '../utils/constants.dart';
+import '../widgets/lg_panel.dart';
+import '../widgets/lg_button.dart';
+import '../widgets/lg_text_field.dart';
 
 class ConnectScreen extends StatefulWidget {
   const ConnectScreen({super.key});
@@ -60,113 +63,93 @@ class _ConnectScreenState extends State<ConnectScreen> {
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 32),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Text(
-                'LG Arkanoid',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Connect to Game Server',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.white54,
-                ),
-              ),
-              const SizedBox(height: 40),
-              _buildField(_ipController, 'Server IP'),
-              const SizedBox(height: 12),
-              _buildField(_portController, 'Port'),
-              const SizedBox(height: 12),
-              _buildField(_tokenController, 'Session Token (6 digits)',
-                  maxLength: 6),
-              const SizedBox(height: 24),
-              SizedBox(
-                height: 48,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.teal,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
+          child: LgPanel(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SizedBox(height: 16),
+                const Text(
+                  'LG ARKANOID',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontFamily: 'PressStart2P',
+                    fontSize: 20,
+                    color: accentCyan,
                   ),
-                  onPressed: _connecting ? null : _connect,
-                  child: _connecting
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Connect to Game Server',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontFamily: 'JetBrainsMono',
+                    fontSize: 12,
+                    color: textColor,
+                  ),
+                ),
+                const SizedBox(height: 40),
+                LgTextField(
+                  controller: _ipController,
+                  label: 'Server IP',
+                ),
+                const SizedBox(height: 16),
+                LgTextField(
+                  controller: _portController,
+                  label: 'Port',
+                ),
+                const SizedBox(height: 16),
+                LgTextField(
+                  controller: _tokenController,
+                  label: 'Session Token (6 digits)',
+                  maxLength: 6,
+                ),
+                const SizedBox(height: 32),
+                _connecting
+                    ? const Center(
+                        child: SizedBox(
+                          width: 24,
+                          height: 24,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: Colors.white,
+                            color: accentCyan,
                           ),
-                        )
-                      : const Text('Connect', style: TextStyle(fontSize: 16)),
+                        ),
+                      )
+                    : LgButton(
+                        label: 'Connect',
+                        onPressed: _connect,
+                        accentColor: accentCyan,
+                      ),
+                const SizedBox(height: 32),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: LgButton(
+                        label: 'LG Settings',
+                        onPressed: () => Navigator.pushNamed(context, '/settings'),
+                        accentColor: accentCyan,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: LgButton(
+                        label: 'Debug',
+                        onPressed: () => Navigator.pushNamed(context, '/status'),
+                        accentColor: accentCyan,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  TextButton(
-                    onPressed: () =>
-                        Navigator.pushNamed(context, '/settings'),
-                    child: const Text(
-                      'LG Settings',
-                      style: TextStyle(color: Colors.tealAccent),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  TextButton(
-                    onPressed: () =>
-                        Navigator.pushNamed(context, '/status'),
-                    child: const Text(
-                      'Debug',
-                      style: TextStyle(color: Colors.white54),
-                    ),
-                  ),
-                ],
-              ),
-            ],
+                const SizedBox(height: 16),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildField(
-    TextEditingController controller,
-    String label, {
-    int? maxLength,
-  }) {
-    return TextField(
-      controller: controller,
-      maxLength: maxLength,
-      style: const TextStyle(color: Colors.white),
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: const TextStyle(color: Colors.white54),
-        counterText: '',
-        filled: true,
-        fillColor: const Color(0xFF1A1A2E),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide.none,
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: Colors.teal),
-        ),
-      ),
-    );
-  }
+
 }
