@@ -10,7 +10,7 @@ const gameEngine = require('./gameEngine.js');
 const { Server } = require('socket.io');
 const fetch = require('node-fetch');
 
-const PORT = 8080;
+const PORT = 3000;
 const CANVAS_HEIGHT = 1080;
 const BALL_RADIUS = 8;
 const TICK_MS = 16;
@@ -106,12 +106,14 @@ const certPath = path.join(__dirname, 'cert.pem');
 const keyPath = path.join(__dirname, 'key.pem');
 
 if (!fs.existsSync(certPath) || !fs.existsSync(keyPath)) {
-  console.log('Generating self-signed SSL certificate...');
+  console.log('Skipping SSL generation for local network debug...');
+  /*
   try {
     execFileSync('openssl', ['req', '-nodes', '-new', '-x509', '-keyout', keyPath, '-out', certPath, '-days', '365', '-subj', '/CN=LG-Arkanoid']);
   } catch (err) {
     console.error('Failed to generate cert via openssl. Falling back to HTTP.', err.message);
   }
+  */
 }
 
 let server;
@@ -131,7 +133,6 @@ const io = new Server(server, {
 });
 
 const webClientPath = path.join(__dirname, '..', 'web client');
-app.use(express.static(webClientPath));
 
 app.get('/health', (req, res) => {
   res.json({
@@ -148,6 +149,9 @@ app.get('/', (req, res) => {
 app.get('/screen', (req, res) => {
   res.sendFile(path.join(webClientPath, 'index.html'));
 });
+
+// Serve static files AFTER specific routes so index.html doesn't hijack '/'
+app.use(express.static(webClientPath));
 
 
 
