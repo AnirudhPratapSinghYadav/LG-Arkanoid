@@ -1,5 +1,7 @@
 import 'dart:math';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
 import 'tts_service.dart';
 
@@ -105,7 +107,8 @@ class GameService extends ChangeNotifier {
           lastCommentary = newCommentary;
           lastCommentarySource = map['source'] as String? ?? 'fallback';
           
-          if (lastCommentarySource == 'ai') {
+          if (lastCommentarySource == 'ai' || lastCommentarySource == 'gemini') {
+             HapticFeedback.mediumImpact();
              TTSService().speak(lastCommentary);
           }
         }

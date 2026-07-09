@@ -25,7 +25,7 @@ class _ConnectScreenState extends State<ConnectScreen> {
   Future<void> _connect() async {
     final address = _ipController.text.trim();
     final port = _portController.text.trim();
-    final token = _tokenController.text.trim().toLowerCase();
+    final token = _tokenController.text.trim().toUpperCase();
 
     if (address.isEmpty || port.isEmpty || token.length != 4) {
       ScaffoldMessenger.of(context).showSnackBar(

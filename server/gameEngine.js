@@ -230,7 +230,11 @@ function checkBrickCollision(ball, gameState) {
         let distanceSquared = (dx * dx) + (dy * dy);
 
         if (distanceSquared <= (ball.radius * ball.radius)) {
-          ball.vy = -ball.vy;
+          if (Math.abs(dx) > Math.abs(dy)) {
+            ball.vx = -ball.vx;
+          } else {
+            ball.vy = -ball.vy;
+          }
           
           if (brick.type === 'indestructible') {
             return true;
@@ -262,7 +266,7 @@ function checkBrickCollision(ball, gameState) {
   }
 }
 
-function updatePowerUps(gameState) {
+function updatePowerUps(gameState, applyPowerUpEffectCallback) {
   try {
     for (let i = gameState.powerUps.length - 1; i >= 0; i--) {
       let p = gameState.powerUps[i];
@@ -285,12 +289,23 @@ function updatePowerUps(gameState) {
         if (withinVertical && withinHorizontal) {
           p.falling = false;
           p.active = true;
+          p.activatedAt = Date.now();
           if (player.id) {
             player.score += 50;
+            if (applyPowerUpEffectCallback) {
+              applyPowerUpEffectCallback(player, p.type);
+            }
           }
-          gameState.powerUps.splice(i, 1);
           break;
         }
+      }
+    }
+
+    // Clean up old active powerups (they should last ~8 seconds based on timers)
+    for (let i = gameState.powerUps.length - 1; i >= 0; i--) {
+      let p = gameState.powerUps[i];
+      if (!p.falling && p.activatedAt && Date.now() - p.activatedAt > 10000) {
+        gameState.powerUps.splice(i, 1);
       }
     }
   } catch (error) {
@@ -298,9 +313,11 @@ function updatePowerUps(gameState) {
   }
 }
 
-function updateGameLoop(gameState) {
+function updateGameLoop(gameState, applyPowerUpEffectCallback) {
   try {
     if (gameState.gameStatus !== 'playing') return;
+
+    let lastFallenBallToucher = null;
 
     for (let i = 0; i < gameState.balls.length; i++) {
       let ball = gameState.balls[i];
@@ -313,23 +330,32 @@ function updateGameLoop(gameState) {
 
       if (ball.y - ball.radius >= 1080) {
         ball.active = false;
-        ball.x = ((gameState.numScreens || 5) * 1920) / 2;
-        ball.y = 500;
-        ball.vx = 3;
-        ball.vy = 4;
-        ball.active = true;
-
         if (ball.lastTouchedByPlayerId) {
-          let player = gameState.players.find(p => p.id === ball.lastTouchedByPlayerId);
-          if (player && player.lives > 0) {
-            player.lives -= 1;
-            player.score = Math.max(0, player.score - 10);
-          }
+          lastFallenBallToucher = ball.lastTouchedByPlayerId;
         }
       }
     }
 
-    updatePowerUps(gameState);
+    if (!gameState.balls.some(b => b.active)) {
+      let playerToDeduct = gameState.players.find(p => p.id === lastFallenBallToucher);
+      if (!playerToDeduct) {
+         playerToDeduct = gameState.players.find(p => p.connected);
+      }
+      if (playerToDeduct && playerToDeduct.lives > 0) {
+        playerToDeduct.lives -= 1;
+        playerToDeduct.score = Math.max(0, playerToDeduct.score - 10);
+      }
+      
+      let mainBall = gameState.balls[0];
+      mainBall.x = ((gameState.numScreens || 5) * 1920) / 2;
+      mainBall.y = 500;
+      mainBall.vx = 3;
+      mainBall.vy = 4;
+      mainBall.active = true;
+      mainBall.lastTouchedByPlayerId = null;
+    }
+
+    updatePowerUps(gameState, applyPowerUpEffectCallback);
 
 
     let totalLives = 0;
@@ -340,6 +366,7 @@ function updateGameLoop(gameState) {
     }
     if (totalLives <= 0 && gameState.players.some(p => p.connected)) {
       gameState.gameStatus = 'game_over';
+      gameState.gameActive = false;
       return;
     }
 
@@ -356,12 +383,15 @@ function updateGameLoop(gameState) {
     
     if (!hasDestructibleBricks) {
       gameState.level++;
-      if (gameState.level > 3) { // Let's keep endless or 3? Let's say endless if AI generates it
-        // Actually, let's keep the win state at level 999 for now
-        // But for standard demo, maybe 5 levels.
+      const MAX_LEVELS = 999;
+      if (gameState.level > MAX_LEVELS) {
+        gameState.gameStatus = 'win';
+        gameState.gameActive = false;
+        return;
       }
+      gameState.currentLevel = gameState.level;
       gameState.bricks = loadLevel(gameState.level, gameState.nextLevelBricks);
-      gameState.nextLevelBricks = null; // Reset it so index.js knows to fetch the next one
+      gameState.nextLevelBricks = null;
     }
 
   } catch (error) {
