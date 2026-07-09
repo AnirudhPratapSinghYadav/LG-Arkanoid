@@ -20,14 +20,16 @@ class _ConnectScreenState extends State<ConnectScreen> {
   final _tokenController = TextEditingController();
   bool _connecting = false;
 
+  bool _showAdvanced = false;
+
   Future<void> _connect() async {
     final address = _ipController.text.trim();
     final port = _portController.text.trim();
-    final token = _tokenController.text.trim();
+    final token = _tokenController.text.trim().toLowerCase();
 
-    if (address.isEmpty || port.isEmpty || token.length != 6) {
+    if (address.isEmpty || port.isEmpty || token.length != 4) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enter IP, port, and 6 digit token')),
+        const SnackBar(content: Text('Enter IP, port, and 4-letter token')),
       );
       return;
     }
@@ -82,29 +84,51 @@ class _ConnectScreenState extends State<ConnectScreen> {
                 ),
                 const SizedBox(height: 12),
                 const Text(
-                  'Connect to Game Server',
+                  'JOIN GAME',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontFamily: 'JetBrainsMono',
-                    fontSize: 12,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
                     color: textColor,
+                    letterSpacing: 2,
                   ),
                 ),
                 const SizedBox(height: 40),
                 LgTextField(
-                  controller: _ipController,
-                  label: 'Server IP',
-                ),
-                const SizedBox(height: 16),
-                LgTextField(
-                  controller: _portController,
-                  label: 'Port',
-                ),
-                const SizedBox(height: 16),
-                LgTextField(
                   controller: _tokenController,
-                  label: 'Session Token (6 digits)',
-                  maxLength: 6,
+                  label: 'Session Token (4 letters)',
+                  maxLength: 4,
+                ),
+                const SizedBox(height: 16),
+                Theme(
+                  data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                  child: ExpansionTile(
+                    title: const Text(
+                      'Advanced Server Settings',
+                      style: TextStyle(
+                        fontFamily: 'JetBrainsMono',
+                        fontSize: 12,
+                        color: textColor,
+                      ),
+                    ),
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8.0),
+                        child: LgTextField(
+                          controller: _ipController,
+                          label: 'Server IP',
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8.0),
+                        child: LgTextField(
+                          controller: _portController,
+                          label: 'Port',
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 32),
                 _connecting
@@ -119,31 +143,10 @@ class _ConnectScreenState extends State<ConnectScreen> {
                         ),
                       )
                     : LgButton(
-                        label: 'Connect',
+                        label: 'Join Game',
                         onPressed: _connect,
                         accentColor: accentCyan,
                       ),
-                const SizedBox(height: 32),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Expanded(
-                      child: LgButton(
-                        label: 'LG Settings',
-                        onPressed: () => Navigator.pushNamed(context, '/settings'),
-                        accentColor: accentCyan,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: LgButton(
-                        label: 'Debug',
-                        onPressed: () => Navigator.pushNamed(context, '/status'),
-                        accentColor: accentCyan,
-                      ),
-                    ),
-                  ],
-                ),
                 const SizedBox(height: 16),
               ],
             ),
@@ -152,6 +155,4 @@ class _ConnectScreenState extends State<ConnectScreen> {
       ),
     );
   }
-
-
 }
