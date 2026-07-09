@@ -499,8 +499,16 @@ const config = {
     banner: false
 };
 
-if (document.fonts && document.fonts.ready) {
-    document.fonts.ready.then(() => {
+if (document.fonts) {
+    Promise.all([
+        document.fonts.load('16px "VT323"'),
+        document.fonts.load('16px "Press Start 2P"'),
+        document.fonts.load('16px "JetBrains Mono"'),
+        document.fonts.load('bold 16px "JetBrains Mono"')
+    ]).then(() => {
+        const game = new Phaser.Game(config);
+    }).catch(err => {
+        console.error("Font preload failed", err);
         const game = new Phaser.Game(config);
     });
 } else {
