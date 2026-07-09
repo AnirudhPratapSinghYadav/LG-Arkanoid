@@ -126,6 +126,13 @@ class GameScene extends Phaser.Scene {
             align: 'center'
         }).setOrigin(0.5, 0.5);
 
+        this.sessionTokenText = this.add.text(960, 560, '', {
+            fontFamily: '"VT323"',
+            fontSize: '48px',
+            color: '#00e5ff',
+            align: 'center'
+        }).setOrigin(0.5, 0.5).setAlpha(0);
+
         const scanlineGraphics = this.make.graphics({x: 0, y: 0, add: false});
         scanlineGraphics.fillStyle(0xffffff, 0.15);
         scanlineGraphics.fillRect(0, 0, 8, 1);
@@ -492,7 +499,14 @@ const config = {
     banner: false
 };
 
-const game = new Phaser.Game(config);
+if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(() => {
+        const game = new Phaser.Game(config);
+    });
+} else {
+    // Fallback for older browsers
+    const game = new Phaser.Game(config);
+}
 </script>
 </body>
 </html>
