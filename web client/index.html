@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=1920, height=1080">
     <title>LG Arkanoid</title>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Press+Start+2P&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.80.1/phaser.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.8.0/socket.io.min.js"></script>
     <style>
@@ -81,6 +81,7 @@ class GameScene extends Phaser.Scene {
             fontStyle: 'bold'
         }).setOrigin(0.5, 0.5).setAlpha(0);
 
+        this.bubbleGraphics = this.add.graphics();
         this.commentaryText = this.add.text(1800, 50, '', {
             fontFamily: '"JetBrains Mono"',
             fontSize: '20px',
@@ -88,7 +89,7 @@ class GameScene extends Phaser.Scene {
             align: 'right'
         }).setOrigin(1, 0).setAlpha(0);
 
-        this.sessionTokenText = this.add.text(960, 540, '', {
+        this.sessionTokenText = this.add.text(960, 580, '', {
             fontFamily: '"Press Start 2P"',
             fontSize: '48px',
             color: '#00e5ff',
@@ -111,18 +112,19 @@ class GameScene extends Phaser.Scene {
             lineSpacing: 16
         });
 
-        this.startButton = this.add.text(960, 100, 'Press S to Start Game', {
+        this.aiTagText = this.add.text(40, 10, 'LEVEL DESIGNED BY GEMINI', {
             fontFamily: '"JetBrains Mono"',
-            fontSize: '28px',
+            fontSize: '14px',
+            color: '#00e5ff',
+            fontStyle: 'bold'
+        }).setAlpha(0);
+
+        this.startButton = this.add.text(960, 480, 'WAITING FOR RIG MASTER', {
+            fontFamily: '"VT323"',
+            fontSize: '64px',
             color: '#00e5ff',
             align: 'center'
         }).setOrigin(0.5, 0.5);
-
-        this.input.keyboard.on('keydown-S', () => {
-            if (this.socket && this.socket.connected) {
-                this.socket.emit('start_game');
-            }
-        });
 
         const scanlineGraphics = this.make.graphics({x: 0, y: 0, add: false});
         scanlineGraphics.fillStyle(0xffffff, 0.15);
@@ -236,6 +238,17 @@ class GameScene extends Phaser.Scene {
         } else {
             this.statusText.setAlpha(0);
             this.statusText.setText('');
+        }
+
+        if (this.currentState.gameStatus === 'playing') {
+            this.startButton.setAlpha(0);
+            this.sessionTokenText.setAlpha(0);
+        } else {
+            this.startButton.setAlpha(1);
+            if (this.currentState.sessionToken) {
+                this.sessionTokenText.setText('TOKEN: ' + this.currentState.sessionToken);
+                this.sessionTokenText.setAlpha(1);
+            }
         }
     }
 
@@ -413,16 +426,27 @@ class GameScene extends Phaser.Scene {
             }
 
             this.commentaryText.setText(message);
-            this.tweens.killTweensOf(this.commentaryText);
+            
+            this.bubbleGraphics.clear();
+            const bounds = this.commentaryText.getBounds();
+            const padX = 20;
+            const padY = 16;
+            this.bubbleGraphics.fillStyle(0x0d1117, 0.9);
+            this.bubbleGraphics.fillRoundedRect(bounds.x - padX, bounds.y - padY, bounds.width + padX * 2, bounds.height + padY * 2, 8);
+            this.bubbleGraphics.lineStyle(2, 0x00e5ff, 1);
+            this.bubbleGraphics.strokeRoundedRect(bounds.x - padX, bounds.y - padY, bounds.width + padX * 2, bounds.height + padY * 2, 8);
+            this.bubbleGraphics.setAlpha(0);
+
+            this.tweens.killTweensOf([this.commentaryText, this.bubbleGraphics]);
 
             this.tweens.add({
-                targets: this.commentaryText,
+                targets: [this.commentaryText, this.bubbleGraphics],
                 alpha: 1,
                 duration: 300,
                 ease: 'Power1',
                 onComplete: () => {
                     this.tweens.add({
-                        targets: this.commentaryText,
+                        targets: [this.commentaryText, this.bubbleGraphics],
                         alpha: 0,
                         duration: 300,
                         delay: 3000,
@@ -432,28 +456,29 @@ class GameScene extends Phaser.Scene {
             });
         });
 
+        this.socket.on('level_source', (data) => {
+            if (data.aiGenerated) {
+                this.tweens.killTweensOf(this.aiTagText);
+                this.tweens.add({
+                    targets: this.aiTagText,
+                    alpha: 1,
+                    duration: 300,
+                    ease: 'Power1',
+                    onComplete: () => {
+                        this.tweens.add({
+                            targets: this.aiTagText,
+                            alpha: 0,
+                            duration: 300,
+                            delay: 3000,
+                            ease: 'Power1'
+                        });
+                    }
+                });
+            }
+        });
+
         this.socket.on('game_started', (data) => {
-            const token = data.sessionToken || data.token || '';
-            this.sessionTokenText.setText(token);
-            this.tweens.killTweensOf(this.sessionTokenText);
-
-            this.tweens.add({
-                targets: this.sessionTokenText,
-                alpha: 1,
-                duration: 300,
-                ease: 'Power1',
-                onComplete: () => {
-                    this.tweens.add({
-                        targets: this.sessionTokenText,
-                        alpha: 0,
-                        duration: 500,
-                        delay: 10000,
-                        ease: 'Power1'
-                    });
-                }
-            });
-
-            this.startButton.setText('Game Active');
+            // State is now managed exclusively by checkStateChanges loop
         });
     }
 }

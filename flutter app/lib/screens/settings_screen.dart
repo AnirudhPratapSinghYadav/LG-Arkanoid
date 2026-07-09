@@ -154,9 +154,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
         title: const Text(
           'LG Settings',
           style: TextStyle(
-            fontFamily: 'PressStart2P',
-            fontSize: 14,
+            fontFamily: 'VT323',
+            fontSize: 24,
             color: accentCyan,
+            letterSpacing: 1,
+            height: 1.4,
           ),
         ),
       ),
@@ -198,9 +200,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   const Text(
                     'SSH CONNECTION',
                     style: TextStyle(
-                      fontFamily: 'PressStart2P',
-                      fontSize: 14,
+                      fontFamily: 'VT323',
+                      fontSize: 24,
                       color: accentCyan,
+                      letterSpacing: 1,
+                      height: 1.4,
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -279,9 +283,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   const Text(
                     'DEPLOY TO RIG',
                     style: TextStyle(
-                      fontFamily: 'PressStart2P',
-                      fontSize: 14,
+                      fontFamily: 'VT323',
+                      fontSize: 24,
                       color: accentCyan,
+                      letterSpacing: 1,
+                      height: 1.4,
                     ),
                   ),
                   const SizedBox(height: 20),

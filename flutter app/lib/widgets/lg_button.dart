@@ -42,26 +42,24 @@ class _LgButtonState extends State<LgButton> {
             color: const Color(0xFF0d1117),
             border: Border.all(color: widget.accentColor, width: 2),
             borderRadius: BorderRadius.circular(3),
-            boxShadow: _pressed || isDisabled
-                ? []
-                : [
-                    BoxShadow(
-                      color: widget.accentColor.withOpacity(0.3),
-                      offset: const Offset(0, 3),
-                      blurRadius: 0,
-                    ),
-                  ],
+            boxShadow: [
+              BoxShadow(
+                color: widget.accentColor.withOpacity(_pressed ? 0.6 : 0.35),
+                blurRadius: _pressed ? 18 : 12,
+              ),
+            ],
           ),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           child: Center(
             child: Text(
               widget.label.toUpperCase(),
               style: TextStyle(
-                fontFamily: 'JetBrainsMono',
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
+                fontFamily: 'VT323',
+                fontWeight: FontWeight.normal,
+                fontSize: 24,
                 color: widget.accentColor,
                 letterSpacing: 1,
+                height: 1.4,
               ),
             ),
           ),

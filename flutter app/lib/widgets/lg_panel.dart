@@ -14,8 +14,14 @@ class LgPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        border: Border.all(color: accentColor, width: 3),
+        border: Border.all(color: accentColor, width: 2), // Changed to 2 to match spec
         borderRadius: BorderRadius.circular(3),
+        boxShadow: [
+          BoxShadow(
+            color: accentColor.withOpacity(0.35),
+            blurRadius: 12,
+          ),
+        ],
       ),
       child: Padding(
         padding: const EdgeInsets.all(3),

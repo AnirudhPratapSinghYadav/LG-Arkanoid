@@ -540,6 +540,8 @@ function getWorldSnapshot() {
       connected: p.connected,
     })),
     currentLevel: worldState.currentLevel,
+    sessionToken: worldState.sessionToken,
+    gameStatus: worldState.gameStatus,
   };
 }
 
@@ -550,6 +552,11 @@ io.on('connection', (socket) => {
   }
 
   socket.on('start_game', () => {
+    const slotIndex = socketToPlayerIndex.get(socket.id);
+    if (slotIndex !== 0) {
+      socket.emit('join_rejected', { errorCode: 1007, message: 'Only the host (Player 1) can start the game' });
+      return;
+    }
     resetWorldForNewGame();
     worldState.gameStatus = 'playing';
     worldState.sessionId = crypto.randomUUID();
@@ -781,15 +788,9 @@ setInterval(() => {
   const beforeLives = worldState.players.map(p => p.lives);
   const beforeLevel = worldState.level;
   const beforeBallScreens = worldState.balls.map(b => getScreenIdForX(b.x));
-  const oldLives = worldState.players.map(p => p.lives).reduce((a, b) => a + b, 0);
+  const nextBricksBefore = worldState.nextLevelBricks;
 
   gameEngine.updateGameLoop(worldState);
-
-  const newLives = worldState.players.map(p => p.lives).reduce((a, b) => a + b, 0);
-  if (newLives < oldLives) {
-    triggerCommentary('life_lost', worldState);
-    pollGameMasterAsync();
-  }
 
   // Pre-fetch next level if needed
   if (!worldState.nextLevelBricks && !isGeneratingLevel) {
@@ -803,6 +804,7 @@ setInterval(() => {
     }
     if (p.lives < beforeLives[i]) {
       triggerCommentary('life_lost', getWorldSnapshot());
+      pollGameMasterAsync();
       if (p.lives === 0) {
         io.emit('player_eliminated', { playerId: p.id, playerNumber: i + 1 });
       }
@@ -811,6 +813,8 @@ setInterval(() => {
 
   if (worldState.level > beforeLevel) {
     triggerCommentary('level_cleared', getWorldSnapshot());
+    pollGameMasterAsync();
+    io.emit('level_source', { level: worldState.level, aiGenerated: nextBricksBefore !== null });
   } else if (worldState.gameStatus === 'win' && beforeLevel > 0) {
     triggerCommentary('victory', getWorldSnapshot());
   }

@@ -73,9 +73,11 @@ class _ConnectScreenState extends State<ConnectScreen> {
                   'LG ARKANOID',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontFamily: 'PressStart2P',
-                    fontSize: 20,
+                    fontFamily: 'VT323',
+                    fontSize: 40,
                     color: accentCyan,
+                    letterSpacing: 1,
+                    height: 1.4,
                   ),
                 ),
                 const SizedBox(height: 12),

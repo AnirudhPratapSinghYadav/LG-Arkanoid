@@ -20,9 +20,11 @@ void showPowerUpDialog(BuildContext context) {
               'ACTIVATE POWER UP',
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontFamily: 'PressStart2P',
-                fontSize: 14,
+                fontFamily: 'VT323',
+                fontSize: 24,
                 color: accentAmber,
+                letterSpacing: 1,
+                height: 1.4,
               ),
             ),
             const SizedBox(height: 24),
