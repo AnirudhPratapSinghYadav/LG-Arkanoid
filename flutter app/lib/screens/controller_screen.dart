@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../services/game_service.dart';
 import '../widgets/connection_status.dart';
@@ -19,6 +20,12 @@ class ControllerScreen extends StatefulWidget {
 class _ControllerScreenState extends State<ControllerScreen> {
   Timer? _moveTimer;
   bool _isButtonHeld = false;
+  double _puckPosition = 0;
+
+  void _onPanStart(DragStartDetails details) {
+    if (_isButtonHeld) return;
+    HapticFeedback.lightImpact();
+  }
 
   void _onPanUpdate(DragUpdateDetails details) {
     if (_isButtonHeld) return; // Prevent drag conflict
@@ -28,6 +35,19 @@ class _ControllerScreenState extends State<ControllerScreen> {
     final deltaX = dx * speed;
 
     context.read<GameService>().sendPaddleMove(deltaX);
+
+    setState(() {
+      _puckPosition += dx;
+      double maxVisual = (screenWidth - 32 - 24) / 2 - 30; // 16 padding, 12 inner padding, 30 half puck
+      if (_puckPosition > maxVisual) _puckPosition = maxVisual;
+      if (_puckPosition < -maxVisual) _puckPosition = -maxVisual;
+    });
+  }
+
+  void _onPanEnd(DragEndDetails details) {
+    setState(() {
+      _puckPosition = 0;
+    });
   }
 
   void _startHolding(double deltaX) {
@@ -45,6 +65,9 @@ class _ControllerScreenState extends State<ControllerScreen> {
     _isButtonHeld = false;
     _moveTimer?.cancel();
     _moveTimer = null;
+    setState(() {
+      _puckPosition = 0;
+    });
   }
 
   @override
@@ -134,6 +157,8 @@ class _ControllerScreenState extends State<ControllerScreen> {
                   ),
                 ),
               ),
+            if (service.latestGameState != null && service.latestGameState['players'] != null)
+              _buildLeaderboard(service),
             const Spacer(),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -143,9 +168,9 @@ class _ControllerScreenState extends State<ControllerScreen> {
                   if (service.playerNumber == 1) ...[
                     Expanded(
                       child: LgButton(
-                        label: 'Start Game',
+                        label: service.latestGameState?['gameStatus'] == 'playing' ? 'Restart Game' : 'Start Game',
                         onPressed: () => service.startGame(),
-                        accentColor: accentCyan,
+                        accentColor: service.latestGameState?['gameStatus'] == 'playing' ? Colors.redAccent : accentCyan,
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -162,29 +187,42 @@ class _ControllerScreenState extends State<ControllerScreen> {
             ),
             const Spacer(),
             GestureDetector(
+              onPanStart: _onPanStart,
               onPanUpdate: _onPanUpdate,
+              onPanEnd: _onPanEnd,
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: LgPanel(
                   accentColor: accentCyan,
-                  child: const SizedBox(
+                  child: SizedBox(
                     height: 120,
-                    child: Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.touch_app, size: 32, color: accentCyan),
-                          SizedBox(height: 8),
-                          Text(
-                            'SLIDE TO MOVE PADDLE',
-                            style: TextStyle(
-                              fontFamily: 'JetBrainsMono',
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Container(
+                          width: double.infinity,
+                          height: 2,
+                          color: accentCyan.withOpacity(0.3),
+                        ),
+                        Transform.translate(
+                          offset: Offset(_puckPosition, 0),
+                          child: Container(
+                            width: 60,
+                            height: 60,
+                            decoration: BoxDecoration(
                               color: accentCyan,
-                              fontSize: 12,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: accentCyan.withOpacity(0.5),
+                                  blurRadius: 15,
+                                  spreadRadius: 2,
+                                )
+                              ],
                             ),
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -270,6 +308,73 @@ class _ControllerScreenState extends State<ControllerScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildLeaderboard(GameService service) {
+    final players = List<Map<String, dynamic>>.from(service.latestGameState['players'] ?? []);
+    if (players.isEmpty) return const SizedBox.shrink();
+
+    players.sort((a, b) => (b['score'] as int? ?? 0).compareTo(a['score'] as int? ?? 0));
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: LgPanel(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text(
+              'LIVE STANDINGS',
+              style: TextStyle(
+                fontFamily: 'JetBrainsMono',
+                color: accentCyan,
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            ...players.map((p) {
+              final rank = p['rank'] ?? '-';
+              final pNum = p['playerNumber'] ?? '?';
+              final score = p['score'] ?? 0;
+              final isMe = p['id'] == service.playerId;
+              return Container(
+                margin: const EdgeInsets.symmetric(vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: isMe ? accentCyan.withOpacity(0.1) : Colors.transparent,
+                  borderRadius: BorderRadius.circular(4),
+                  border: isMe ? Border.all(color: accentCyan.withOpacity(0.3)) : null,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      '#$rank P$pNum ${isMe ? '(YOU)' : ''}',
+                      style: TextStyle(
+                        fontFamily: 'JetBrainsMono',
+                        color: isMe ? accentCyan : textColor,
+                        fontWeight: isMe ? FontWeight.bold : FontWeight.normal,
+                        fontSize: 12,
+                      ),
+                    ),
+                    Text(
+                      '$score',
+                      style: TextStyle(
+                        fontFamily: 'JetBrainsMono',
+                        color: isMe ? accentCyan : textColor,
+                        fontWeight: isMe ? FontWeight.bold : FontWeight.normal,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ],
+        ),
+      ),
     );
   }
 }

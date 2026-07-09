@@ -1,4 +1,3 @@
-import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 
@@ -34,7 +33,7 @@ class TTSService extends ChangeNotifier {
     await _tts.setSpeechRate(0.4);
     await _tts.setPitch(0.8);
 
-    if (!kIsWeb && (Platform.isIOS || Platform.isMacOS)) {
+    if (!kIsWeb && (defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.macOS)) {
       await _tts.setSharedInstance(true);
     }
   }

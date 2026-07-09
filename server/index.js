@@ -10,7 +10,7 @@ const gameEngine = require('./gameEngine.js');
 const { Server } = require('socket.io');
 const fetch = require('node-fetch');
 
-const PORT = 3000;
+const PORT = process.env.PORT || 8080;
 const CANVAS_HEIGHT = 1080;
 const BALL_RADIUS = 8;
 const TICK_MS = 16;
@@ -90,9 +90,15 @@ function createInitialWorldState() {
     score_milestone: { lastCalledAt: 0 },
     victory: { lastCalledAt: 0 },
     rank_takeover: { lastCalledAt: 0 },
+    game_master: { lastCalledAt: 0 },
   };
   state.slowBallActive = false;
+  state.slowBallTimer = null;
   state.originalBallSpeeds = null;
+  
+  state.currentLevel = state.level;
+  state.gameActive = false;
+  state.numScreens = process.env.NUM_SCREENS || 5;
   
   return state;
 }
@@ -158,7 +164,12 @@ app.use(express.static(webClientPath));
 
 
 function generateToken() {
-  return Math.floor(100000 + Math.random() * 900000).toString();
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let token = '';
+  for (let i = 0; i < 4; i++) {
+    token += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return token;
 }
 
 function timingSafeTokenCompare(provided, stored) {
@@ -182,98 +193,6 @@ function getScreenIdForX(x) {
 
 function getScreenById(screenId) {
   return getScreenBoundaries().find((s) => s.screenId === screenId);
-}
-
-function detectBoundary(ball) {
-  const currentScreenId = getScreenIdForX(ball.x);
-  const currentScreen = getScreenById(currentScreenId);
-  if (!currentScreen) return null;
-
-  const nextX = ball.x + ball.vx;
-  const numScreens = worldState.numScreens || 5;
-
-  if (nextX > currentScreen.virtualRight && currentScreenId !== numScreens) {
-    const arrivingScreenId = currentScreenId + 1;
-    const arrivingScreen = getScreenById(arrivingScreenId);
-    return {
-      departingScreenId: currentScreenId,
-      arrivingScreenId,
-      exitX: currentScreen.virtualRight,
-      exitY: ball.y,
-      entryX: arrivingScreen.virtualLeft,
-      entryY: ball.y,
-      velocityX: ball.vx,
-      velocityY: ball.vy,
-    };
-  }
-
-  if (nextX < currentScreen.virtualLeft && currentScreenId !== 1) {
-    const arrivingScreenId = currentScreenId - 1;
-    const arrivingScreen = getScreenById(arrivingScreenId);
-    return {
-      departingScreenId: currentScreenId,
-      arrivingScreenId,
-      exitX: currentScreen.virtualLeft,
-      exitY: ball.y,
-      entryX: arrivingScreen.virtualRight,
-      entryY: ball.y,
-      velocityX: ball.vx,
-      velocityY: ball.vy,
-    };
-  }
-
-  return null;
-}
-
-function triggerBoundaryHandoff(handoffResult, ball) {
-  const handoffId = `${handoffResult.departingScreenId}-${handoffResult.arrivingScreenId}-${Date.now()}`;
-
-  const exitPayload = {
-    handoffId,
-    ballId: ball.id,
-    screenId: handoffResult.departingScreenId,
-    exitX: handoffResult.exitX,
-    exitY: handoffResult.exitY,
-    velocityX: handoffResult.velocityX,
-    velocityY: handoffResult.velocityY,
-  };
-
-  const enterPayload = {
-    handoffId,
-    ballId: ball.id,
-    screenId: handoffResult.arrivingScreenId,
-    entryX: handoffResult.entryX,
-    entryY: handoffResult.entryY,
-    velocityX: handoffResult.velocityX,
-    velocityY: handoffResult.velocityY,
-  };
-
-  io.to(`screen-${handoffResult.departingScreenId}`).emit('boundary_exit', exitPayload);
-  io.to(`screen-${handoffResult.arrivingScreenId}`).emit('boundary_enter', enterPayload);
-
-  pendingHandoffs.set(handoffId, {
-    departingAck: false,
-    arrivingAck: false,
-    exitPayload,
-    enterPayload,
-    retried: false,
-  });
-
-  setTimeout(() => {
-    const pending = pendingHandoffs.get(handoffId);
-    if (!pending) return;
-
-    if (!pending.departingAck || !pending.arrivingAck) {
-      io.to(`screen-${pending.exitPayload.screenId}`).emit('boundary_exit', pending.exitPayload);
-      io.to(`screen-${pending.enterPayload.screenId}`).emit('boundary_enter', pending.enterPayload);
-      console.warn(`Boundary handoff ${handoffId} retry emitted (missing ack)`);
-      pending.retried = true;
-    }
-
-    setTimeout(() => pendingHandoffs.delete(handoffId), 100);
-  }, 16);
-
-  ball.x = handoffResult.entryX;
 }
 
 
@@ -337,7 +256,7 @@ function broadcastGameState() {
       rank: ranks[p.id] || 1,
     })),
     currentLevel: worldState.currentLevel,
-    gameActive: worldState.gameActive,
+    gameStatus: worldState.gameStatus,
     gameStartedAt: worldState.gameStartedAt,
   };
   io.emit('game_state', payload);
@@ -363,6 +282,7 @@ function buildPrompt(eventType, snapshot) {
 async function callGemini(prompt) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
+    console.warn('⚠️ GEMINI_API_KEY not set. Using fallback commentary.');
     throw new Error('No API key');
   }
 
@@ -409,6 +329,10 @@ async function triggerCommentary(eventType, snapshot) {
     return;
   }
 
+  if (limiter) {
+    limiter.lastCalledAt = Date.now();
+  }
+
   try {
     const prompt = buildPrompt(eventType, snapshot);
     text = await callGemini(prompt);
@@ -416,10 +340,6 @@ async function triggerCommentary(eventType, snapshot) {
   } catch (err) {
     text = FALLBACK_COMMENTARY[crypto.randomInt(0, FALLBACK_COMMENTARY.length)];
     source = 'fallback';
-  }
-
-  if (limiter) {
-    limiter.lastCalledAt = Date.now();
   }
 
   io.emit('commentary', { text, source, eventType, playerId: snapshot.playerId || null });
@@ -449,7 +369,11 @@ Design a cool shape or pattern. Do not include markdown formatting or backticks.
 let isPollingGameMaster = false;
 async function pollGameMasterAsync() {
   if (isPollingGameMaster) return;
+  const limiter = worldState.commentaryRateLimiter['game_master'];
+  if (limiter && Date.now() - limiter.lastCalledAt < 15000) return;
+  
   isPollingGameMaster = true;
+  if (limiter) limiter.lastCalledAt = Date.now();
   try {
     const prompt = `You are the AI Game Master of Arkanoid. A player just lost a life.
 Current stats: Lives=${worldState.players.map(p => p.lives).join(',')}, Level=${worldState.level}.
@@ -478,6 +402,10 @@ function validateMessage(player, timestamp, nonce) {
 
   if (typeof timestamp !== 'number' || typeof nonce !== 'string' || nonce.length > 32) {
     return { valid: false, errorCode: 1003 };
+  }
+
+  if (Math.abs(now - timestamp) > 3000) {
+    return { valid: false, errorCode: 1008 };
   }
 
   const recentDuplicate = player.lastNonces.some((entry) => entry.nonce === nonce);
@@ -553,6 +481,56 @@ function applyBombPowerUp() {
   }
 }
 
+function applyPowerUpEffect(player, powerUpType) {
+  if (powerUpType === 'wide_paddle') {
+    player.paddleWidth = 600;
+    if (player.widePaddleTimer) clearTimeout(player.widePaddleTimer);
+    player.widePaddleTimer = setTimeout(() => {
+      player.paddleWidth = 300;
+      player.widePaddleTimer = null;
+    }, 8000);
+  } else if (powerUpType === 'slow_ball') {
+    if (!worldState.slowBallActive) {
+      worldState.originalBallSpeeds = worldState.balls.map((b) => ({ vx: b.vx, vy: b.vy }));
+      for (const ball of worldState.balls) {
+        if (ball.active) {
+          ball.vx *= 0.5;
+          ball.vy *= 0.5;
+        }
+      }
+      worldState.slowBallActive = true;
+    }
+    if (worldState.slowBallTimer) clearTimeout(worldState.slowBallTimer);
+    worldState.slowBallTimer = setTimeout(() => {
+      if (worldState.originalBallSpeeds) {
+        worldState.balls.forEach((ball, i) => {
+          if (worldState.originalBallSpeeds[i]) {
+            ball.vx = worldState.originalBallSpeeds[i].vx;
+            ball.vy = worldState.originalBallSpeeds[i].vy;
+          }
+        });
+      }
+      worldState.slowBallActive = false;
+      worldState.originalBallSpeeds = null;
+      worldState.slowBallTimer = null;
+    }, 8000);
+  } else if (powerUpType === 'multi_ball') {
+    const sourceBall = worldState.balls.find(b => b.active);
+    const targetBall = worldState.balls.find(b => !b.active);
+    if (sourceBall && targetBall) {
+      targetBall.x = sourceBall.x;
+      targetBall.y = sourceBall.y;
+      targetBall.vx = -sourceBall.vx;
+      targetBall.vy = sourceBall.vy;
+      targetBall.active = true;
+      targetBall.lastTouchedByPlayerId = player.id;
+      triggerCommentary('multi_ball', getWorldSnapshot());
+    }
+  } else if (powerUpType === 'bomb') {
+    applyBombPowerUp();
+  }
+}
+
 function resetWorldForNewGame() {
   clearAllPowerUpTimers();
   worldState = createInitialWorldState();
@@ -593,6 +571,7 @@ io.on('connection', (socket) => {
     }
     resetWorldForNewGame();
     worldState.gameStatus = 'playing';
+    worldState.gameActive = true;
     worldState.sessionId = crypto.randomUUID();
     worldState.sessionToken = generateToken();
     worldState.gameStartedAt = Date.now();
@@ -607,7 +586,7 @@ io.on('connection', (socket) => {
   socket.on('player_join', (data) => {
     const { sessionToken } = data || {};
 
-    if (typeof sessionToken !== 'string' || sessionToken.length > 64) {
+    if (typeof sessionToken !== 'string' || sessionToken.length !== 4) {
       socket.emit('join_rejected', { errorCode: 1005, message: 'Invalid payload' });
       return;
     }
@@ -627,7 +606,7 @@ io.on('connection', (socket) => {
     player.connected = true;
     player.id = PLAYER_SLOT_IDS[slotIndex];
     player.socketId = socket.id;
-    player.paddleX = ((worldState.numScreens || 5) * 1920) / 2 - 100;
+    player.paddleX = ((worldState.numScreens || 5) * 1920) / 2 - 150;
     player.lastNonces = [];
     socketToPlayerIndex.set(socket.id, slotIndex);
 
@@ -718,53 +697,7 @@ io.on('connection', (socket) => {
       return;
     }
 
-    if (powerUpType === 'wide_paddle') {
-      player.paddleWidth = 600;
-      if (player.widePaddleTimer) clearTimeout(player.widePaddleTimer);
-      player.widePaddleTimer = setTimeout(() => {
-        player.paddleWidth = 300;
-        player.widePaddleTimer = null;
-      }, 8000);
-    } else if (powerUpType === 'slow_ball') {
-      if (!worldState.slowBallActive) {
-        worldState.originalBallSpeeds = worldState.balls.map((b) => ({ vx: b.vx, vy: b.vy }));
-        for (const ball of worldState.balls) {
-          if (ball.active) {
-            ball.vx *= 0.5;
-            ball.vy *= 0.5;
-          }
-        }
-        worldState.slowBallActive = true;
-      }
-      if (player.slowBallTimer) clearTimeout(player.slowBallTimer);
-      player.slowBallTimer = setTimeout(() => {
-        if (worldState.originalBallSpeeds) {
-          worldState.balls.forEach((ball, i) => {
-            if (worldState.originalBallSpeeds[i]) {
-              ball.vx = worldState.originalBallSpeeds[i].vx;
-              ball.vy = worldState.originalBallSpeeds[i].vy;
-            }
-          });
-        }
-        worldState.slowBallActive = false;
-        worldState.originalBallSpeeds = null;
-        player.slowBallTimer = null;
-      }, 8000);
-    } else if (powerUpType === 'multi_ball') {
-      const ball1 = worldState.balls[0];
-      const ball2 = worldState.balls[1];
-      if (ball1 && ball2 && !ball2.active) {
-        ball2.x = ball1.x;
-        ball2.y = ball1.y;
-        ball2.vx = -ball1.vx;
-        ball2.vy = ball1.vy;
-        ball2.active = true;
-        ball2.lastTouchedByPlayerId = player.id;
-        triggerCommentary('multi_ball', getWorldSnapshot());
-      }
-    } else if (powerUpType === 'bomb') {
-      applyBombPowerUp();
-    }
+    applyPowerUpEffect(player, powerUpType);
   });
 
   socket.on('boundary_ack', (data) => {
@@ -826,7 +759,7 @@ setInterval(() => {
   const beforeBallScreens = worldState.balls.map(b => getScreenIdForX(b.x));
   const nextBricksBefore = worldState.nextLevelBricks;
 
-  gameEngine.updateGameLoop(worldState);
+  gameEngine.updateGameLoop(worldState, applyPowerUpEffect);
 
   // Pre-fetch next level if needed
   if (!worldState.nextLevelBricks && !isGeneratingLevel) {
@@ -852,6 +785,7 @@ setInterval(() => {
   }
 
   if (worldState.level > beforeLevel) {
+    worldState.currentLevel = worldState.level;
     triggerCommentary('level_cleared', getWorldSnapshot());
     pollGameMasterAsync();
     io.emit('level_source', { level: worldState.level, aiGenerated: nextBricksBefore !== null });

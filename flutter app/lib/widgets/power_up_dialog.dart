@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../services/game_service.dart';
 import '../utils/constants.dart';
@@ -28,13 +29,13 @@ void showPowerUpDialog(BuildContext context) {
               ),
             ),
             const SizedBox(height: 24),
-            _powerUpButton(context, 'Wide Paddle', 'wide_paddle', accentCyan),
+            _powerUpButton(context, 'Wide Paddle', 'wide_paddle', accentCyan, Icons.swap_horiz),
             const SizedBox(height: 12),
-            _powerUpButton(context, 'Slow Ball', 'slow_ball', accentCyan),
+            _powerUpButton(context, 'Slow Ball', 'slow_ball', accentCyan, Icons.speed),
             const SizedBox(height: 12),
-            _powerUpButton(context, 'Multi Ball', 'multi_ball', accentAmber),
+            _powerUpButton(context, 'Multi Ball', 'multi_ball', accentAmber, Icons.control_point_duplicate),
             const SizedBox(height: 12),
-            _powerUpButton(context, 'Bomb', 'bomb', accentMagenta),
+            _powerUpButton(context, 'Bomb', 'bomb', accentMagenta, Icons.local_fire_department),
           ],
         ),
       ),
@@ -42,13 +43,34 @@ void showPowerUpDialog(BuildContext context) {
   );
 }
 
-Widget _powerUpButton(BuildContext context, String label, String type, Color accent) {
-  return LgButton(
-    label: label,
-    accentColor: accent,
-    onPressed: () {
+Widget _powerUpButton(BuildContext context, String label, String type, Color accent, IconData icon) {
+  return GestureDetector(
+    onTap: () {
+      HapticFeedback.lightImpact();
       context.read<GameService>().activatePowerUp(type);
       Navigator.pop(context);
     },
+    child: LgPanel(
+      accentColor: accent,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: accent, size: 28),
+            const SizedBox(width: 12),
+            Text(
+              label.toUpperCase(),
+              style: TextStyle(
+                fontFamily: 'VT323',
+                fontSize: 24,
+                color: accent,
+                letterSpacing: 1,
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
   );
 }

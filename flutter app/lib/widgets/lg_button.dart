@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class LgButton extends StatefulWidget {
   final String label;
@@ -29,7 +30,10 @@ class _LgButtonState extends State<LgButton> {
     return Opacity(
       opacity: effectiveOpacity,
       child: GestureDetector(
-        onTapDown: isDisabled ? null : (_) => setState(() => _pressed = true),
+        onTapDown: isDisabled ? null : (_) {
+          HapticFeedback.lightImpact();
+          setState(() => _pressed = true);
+        },
         onTapUp: isDisabled ? null : (_) {
           setState(() => _pressed = false);
           widget.onPressed?.call();
