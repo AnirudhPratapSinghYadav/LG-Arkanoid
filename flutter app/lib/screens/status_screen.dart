@@ -19,9 +19,11 @@ class StatusScreen extends StatelessWidget {
         title: const Text(
           'DEBUG STATUS',
           style: TextStyle(
-            fontFamily: 'PressStart2P',
-            fontSize: 14,
+            fontFamily: 'VT323',
+            fontSize: 24,
             color: accentCyan,
+            letterSpacing: 1,
+            height: 1.4,
           ),
         ),
       ),
@@ -98,9 +100,11 @@ class StatusScreen extends StatelessWidget {
           Text(
             title,
             style: const TextStyle(
-              fontFamily: 'PressStart2P',
+              fontFamily: 'VT323',
               color: accentCyan,
-              fontSize: 14,
+              fontSize: 24,
+              letterSpacing: 1,
+              height: 1.4,
             ),
           ),
           const SizedBox(height: 16),

@@ -30,7 +30,7 @@ class GameService extends ChangeNotifier {
     serverPort = port;
 
     try {
-      final url = 'https://$address:$port';
+      final url = 'http://$address:$port';
       socket = io.io(
         url,
         io.OptionBuilder()

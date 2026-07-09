@@ -36,9 +36,11 @@ class _ControllerScreenState extends State<ControllerScreen> {
         title: Text(
           'PLAYER ${service.playerNumber ?? "?"}',
           style: const TextStyle(
-            fontFamily: 'PressStart2P',
-            fontSize: 12,
+            fontFamily: 'VT323',
+            fontSize: 24,
             color: accentCyan,
+            letterSpacing: 1,
+            height: 1.4,
           ),
         ),
         actions: [
@@ -105,14 +107,16 @@ class _ControllerScreenState extends State<ControllerScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  Expanded(
-                    child: LgButton(
-                      label: 'Start Game',
-                      onPressed: () => service.startGame(),
-                      accentColor: accentCyan,
+                  if (service.playerNumber == 1) ...[
+                    Expanded(
+                      child: LgButton(
+                        label: 'Start Game',
+                        onPressed: () => service.startGame(),
+                        accentColor: accentCyan,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 16),
+                    const SizedBox(width: 16),
+                  ],
                   Expanded(
                     child: LgButton(
                       label: 'Power Ups',

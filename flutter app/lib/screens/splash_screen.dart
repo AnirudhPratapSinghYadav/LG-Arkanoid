@@ -81,10 +81,11 @@ class _SplashScreenState extends State<SplashScreen>
             const Text(
               'LG ARKANOID',
               style: TextStyle(
-                fontFamily: 'PressStart2P',
-                fontSize: 22,
+                fontFamily: 'VT323',
+                fontSize: 48,
                 color: accentCyan,
                 letterSpacing: 2,
+                height: 1.4,
               ),
             ),
             const SizedBox(height: 12),
