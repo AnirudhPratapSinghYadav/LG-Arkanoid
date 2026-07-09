@@ -45,7 +45,20 @@ class GameScene extends Phaser.Scene {
         this.currentState = null;
         this.boundaryBallOverrides = {};
         this.previousBricks = {};
+        this.previousScores = {};
+        this.previousLives = {};
         this.ballTrails = {};
+    }
+
+    drawStandardPanel(graphics, x, y, width, height, alpha = 1.0, borderColor = 0x00e5ff) {
+        graphics.fillStyle(0x0d1117, alpha);
+        graphics.fillRoundedRect(x, y, width, height, 4);
+        
+        graphics.lineStyle(3, borderColor, alpha);
+        graphics.strokeRoundedRect(x, y, width, height, 4);
+        
+        graphics.lineStyle(1, borderColor, alpha * 0.4);
+        graphics.strokeRoundedRect(x + 3, y + 3, width - 6, height - 6, 2);
     }
 
     create() {
@@ -81,13 +94,19 @@ class GameScene extends Phaser.Scene {
             fontStyle: 'bold'
         }).setOrigin(0.5, 0.5).setAlpha(0);
 
-        this.bubbleGraphics = this.add.graphics();
-        this.commentaryText = this.add.text(1800, 50, '', {
-            fontFamily: '"JetBrains Mono"',
-            fontSize: '20px',
-            color: '#e8f4f8',
-            align: 'right'
-        }).setOrigin(1, 0).setAlpha(0);
+        this.robotGraphics = this.add.graphics();
+        this.robots = [];
+        for (let i = 0; i < 3; i++) {
+            let robotText = this.add.text(0, 0, '', {
+                fontFamily: '"JetBrains Mono"',
+                fontSize: '16px',
+                color: '#e8f4f8',
+                align: 'center',
+                backgroundColor: '#0d1117',
+                padding: { x: 10, y: 5 }
+            }).setOrigin(0.5, 1).setAlpha(0);
+            this.robots.push({ text: robotText, opacityTarget: 0.7 });
+        }
 
         this.sessionTokenText = this.add.text(960, 580, '', {
             fontFamily: '"Press Start 2P"',
@@ -111,6 +130,22 @@ class GameScene extends Phaser.Scene {
             color: '#00e5ff',
             lineSpacing: 16
         });
+
+        this.timerPanelGraphics = this.add.graphics();
+        this.timerText = this.add.text(960, 40, '00:00', {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '32px',
+            color: '#ffffff',
+        }).setOrigin(0.5, 0);
+
+        this.leaderboardPanelGraphics = this.add.graphics();
+        this.leaderboardTexts = [];
+        for(let i = 0; i < 3; i++) {
+            this.leaderboardTexts.push(this.add.text(1880, 40 + (i * 40), '', {
+                fontFamily: '"Press Start 2P"',
+                fontSize: '24px'
+            }).setOrigin(1, 0));
+        }
 
         this.aiTagText = this.add.text(40, 10, 'LEVEL DESIGNED BY GEMINI', {
             fontFamily: '"JetBrains Mono"',
@@ -162,6 +197,8 @@ class GameScene extends Phaser.Scene {
 
     updateHUD() {
         this.hudPanelGraphics.clear();
+        this.timerPanelGraphics.clear();
+        this.leaderboardPanelGraphics.clear();
         
         if (!this.currentState || !this.currentState.players) {
             this.hudText.setText('');
@@ -209,6 +246,49 @@ class GameScene extends Phaser.Scene {
                 lineIdx++;
             }
         }
+        
+        this.aiTagText.setPosition(panelX, panelY + panelH + 5);
+
+        if (this.currentState.gameStartedAt && this.currentState.gameStatus === 'playing') {
+            const elapsed = Math.floor((Date.now() - this.currentState.gameStartedAt) / 1000);
+            const m = String(Math.floor(elapsed / 60)).padStart(2, '0');
+            const s = String(elapsed % 60).padStart(2, '0');
+            this.timerText.setText(`${m}:${s}`);
+        } else {
+            this.timerText.setText('00:00');
+        }
+        
+        const tBounds = this.timerText.getBounds();
+        this.drawStandardPanel(this.timerPanelGraphics, tBounds.x - 20, tBounds.y - 15, tBounds.width + 40, tBounds.height + 30);
+
+        let activePlayers = this.currentState.players.filter(p => p.connected).sort((a, b) => a.rank - b.rank);
+        let lbW = 0;
+        let lbH = activePlayers.length * 40;
+        let lbLines = 0;
+        
+        for (let i = 0; i < 3; i++) {
+            if (i < activePlayers.length) {
+                const p = activePlayers[i];
+                let colorHex = '#00e5ff';
+                if (p.playerNumber === 2) colorHex = '#ff2d78';
+                if (p.playerNumber === 3) colorHex = '#ffb800';
+                
+                this.leaderboardTexts[i].setText(`#${p.rank} P${p.playerNumber} ${p.score.toString().padStart(5, '0')}`);
+                this.leaderboardTexts[i].setColor(colorHex);
+                lbW = Math.max(lbW, this.leaderboardTexts[i].width);
+                lbLines++;
+                
+                if (this._rankSwapHighlightPids && this._rankSwapHighlightPids[p.id]) {
+                    this.drawStandardPanel(this.leaderboardPanelGraphics, 1880 - lbW - 20, 40 + (i * 40), lbW + 40, 40, 1.0, 0xffffff);
+                }
+            } else {
+                this.leaderboardTexts[i].setText('');
+            }
+        }
+        
+        if (lbLines > 0) {
+            this.drawStandardPanel(this.leaderboardPanelGraphics, 1880 - lbW - 20, 25, lbW + 40, (lbLines * 40) + 10);
+        }
     }
 
     checkStateChanges() {
@@ -227,6 +307,23 @@ class GameScene extends Phaser.Scene {
                     }
                     this.previousBricks[id] = brick.active;
                 }
+            }
+        }
+        
+        for (let i = 0; i < 3; i++) {
+            const p = this.currentState.players[i];
+            if (p && p.connected) {
+                const prevScore = this.previousScores[p.id] || 0;
+                const prevLives = this.previousLives[p.id] !== undefined ? this.previousLives[p.id] : p.lives;
+                
+                if (p.score > prevScore) {
+                    this.spawnFloatingText(`+${p.score - prevScore}`, p.paddleX - virtualLeft + (p.paddleWidth/2 || 100), 950, '#00ff00');
+                } else if (p.score < prevScore) {
+                    this.spawnFloatingText(`${p.score - prevScore}`, p.paddleX - virtualLeft + (p.paddleWidth/2 || 100), 950, '#ff0000');
+                }
+                
+                this.previousScores[p.id] = p.score;
+                this.previousLives[p.id] = p.lives;
             }
         }
         
@@ -257,6 +354,22 @@ class GameScene extends Phaser.Scene {
                 this.sessionTokenText.setAlpha(1);
             }
         }
+    }
+
+    spawnFloatingText(text, x, y, color) {
+        if (x < -200 || x > 2100) return; 
+        const t = this.add.text(x, y, text, {
+            fontFamily: '"Press Start 2P"',
+            fontSize: '28px',
+            color: color,
+        }).setOrigin(0.5, 0.5);
+        this.tweens.add({
+            targets: t,
+            y: y - 100,
+            alpha: 0,
+            duration: 600,
+            onComplete: () => t.destroy()
+        });
     }
 
     drawPowerUps() {
@@ -292,10 +405,25 @@ class GameScene extends Phaser.Scene {
                 const localX = brick.x - virtualLeft;
                 if (localX < -600 || localX > 2520) continue;
 
-                const color = ROW_COLORS[brick.row % ROW_COLORS.length];
+                const gap = 4;
+                const drawW = (brick.width || 140) - gap;
+                const drawH = (brick.height || 30) - gap;
+
+                let color;
+                if (brick.type === 'indestructible') {
+                    color = 0x666666; // Silver/Gray
+                } else if (brick.type === 'hard') {
+                    color = 0xffffff; // White
+                } else {
+                    const normalColors = [0x00e5ff, 0xff2d78, 0xffb800];
+                    color = normalColors[brick.row % 3];
+                }
                 
+                const drawX = localX + gap / 2;
+                const drawY = brick.y + gap / 2;
+
                 this.graphics.fillStyle(color, 1);
-                this.graphics.fillRect(localX, brick.y, 600, 30);
+                this.graphics.fillRect(drawX, drawY, drawW, drawH);
                 
                 const lightColor = Phaser.Display.Color.Interpolate.ColorWithColor(
                     Phaser.Display.Color.IntegerToColor(color),
@@ -303,7 +431,7 @@ class GameScene extends Phaser.Scene {
                     100, 40
                 );
                 this.graphics.fillStyle(Phaser.Display.Color.GetColor(lightColor.r, lightColor.g, lightColor.b), 1);
-                this.graphics.fillRect(localX, brick.y, 600, 2);
+                this.graphics.fillRect(drawX, drawY, drawW, 3);
                 
                 const darkColor = Phaser.Display.Color.Interpolate.ColorWithColor(
                     Phaser.Display.Color.IntegerToColor(color),
@@ -311,7 +439,7 @@ class GameScene extends Phaser.Scene {
                     100, 40
                 );
                 this.graphics.fillStyle(Phaser.Display.Color.GetColor(darkColor.r, darkColor.g, darkColor.b), 1);
-                this.graphics.fillRect(localX, brick.y + 28, 600, 2);
+                this.graphics.fillRect(drawX, drawY + drawH - 3, drawW, 3);
             }
         }
     }
@@ -352,11 +480,16 @@ class GameScene extends Phaser.Scene {
         const players = this.currentState.players;
         if (!players) return;
 
+        this.robotGraphics.clear();
+
         const entries = Array.isArray(players) ? players : Object.values(players);
 
         for (let i = 0; i < entries.length; i++) {
             const player = entries[i];
-            if (!player) continue;
+            if (!player || !player.connected) {
+                if (this.robots[i]) this.robots[i].text.setAlpha(0);
+                continue;
+            }
 
             const paddleX = player.paddleX !== undefined ? player.paddleX : player.x;
             const paddleWidth = player.paddleWidth !== undefined ? player.paddleWidth : player.width || 200;
@@ -365,10 +498,29 @@ class GameScene extends Phaser.Scene {
             if (paddleX === undefined) continue;
 
             const localX = paddleX - virtualLeft;
-            if (localX + paddleWidth < 0 || localX > 1920) continue;
-
+            const robotTargetX = localX + paddleWidth / 2;
+            const robotY = 950;
             const color = PADDLE_COLORS[(playerNumber - 1) % PADDLE_COLORS.length];
             
+            if (robotTargetX > -50 && robotTargetX < 1970) {
+                this.robotGraphics.fillStyle(0x0d1117, this.robots[i].opacityTarget);
+                this.robotGraphics.fillRoundedRect(robotTargetX - 25, robotY - 25, 50, 50, 8);
+                this.robotGraphics.lineStyle(2, color, this.robots[i].opacityTarget);
+                this.robotGraphics.strokeRoundedRect(robotTargetX - 25, robotY - 25, 50, 50, 8);
+                
+                this.robotGraphics.fillStyle(0x00e5ff, this.robots[i].opacityTarget);
+                this.robotGraphics.fillRect(robotTargetX - 12, robotY - 10, 8, 8);
+                this.robotGraphics.fillRect(robotTargetX + 4, robotY - 10, 8, 8);
+
+                if (this.robots[i].text.alpha > 0) {
+                    this.robots[i].text.setPosition(robotTargetX, robotY - 35);
+                }
+            } else {
+                this.robots[i].text.setPosition(-1000, -1000); // Hide text if offscreen
+            }
+
+            if (localX + paddleWidth < 0 || localX > 1920) continue;
+
             this.graphics.fillStyle(color, 0.3);
             this.graphics.fillRoundedRect(localX - 10, 1000 - 10, paddleWidth + 20, 40, 10);
             
@@ -432,32 +584,46 @@ class GameScene extends Phaser.Scene {
                 message += ' (offline)';
             }
 
-            this.commentaryText.setText(message);
+            let robotIdx = 0;
+            if (this.currentState && this.currentState.players) {
+                const idx = this.currentState.players.findIndex(p => p.id === data.playerId);
+                if (idx !== -1) robotIdx = idx;
+            }
             
-            this.bubbleGraphics.clear();
-            const bounds = this.commentaryText.getBounds();
-            const padX = 20;
-            const padY = 16;
-            this.bubbleGraphics.fillStyle(0x0d1117, 0.9);
-            this.bubbleGraphics.fillRoundedRect(bounds.x - padX, bounds.y - padY, bounds.width + padX * 2, bounds.height + padY * 2, 8);
-            this.bubbleGraphics.lineStyle(2, 0x00e5ff, 1);
-            this.bubbleGraphics.strokeRoundedRect(bounds.x - padX, bounds.y - padY, bounds.width + padX * 2, bounds.height + padY * 2, 8);
-            this.bubbleGraphics.setAlpha(0);
+            if (data.eventType === 'rank_takeover' && data.playerId) {
+                this._rankSwapHighlightPids = this._rankSwapHighlightPids || {};
+                this._rankSwapHighlightPids[data.playerId] = true;
+                setTimeout(() => {
+                    if (this._rankSwapHighlightPids) {
+                        this._rankSwapHighlightPids[data.playerId] = false;
+                    }
+                }, 1500);
+            }
 
-            this.tweens.killTweensOf([this.commentaryText, this.bubbleGraphics]);
-
+            const robot = this.robots[robotIdx];
+            if (!robot) return;
+            
+            robot.text.setText(message);
+            this.tweens.killTweensOf([robot]);
+            
             this.tweens.add({
-                targets: [this.commentaryText, this.bubbleGraphics],
-                alpha: 1,
+                targets: robot,
+                opacityTarget: 1,
                 duration: 300,
                 ease: 'Power1',
+                onUpdate: () => {
+                    robot.text.setAlpha((robot.opacityTarget - 0.7) / 0.3);
+                },
                 onComplete: () => {
                     this.tweens.add({
-                        targets: [this.commentaryText, this.bubbleGraphics],
-                        alpha: 0,
+                        targets: robot,
+                        opacityTarget: 0.7,
                         duration: 300,
-                        delay: 3000,
-                        ease: 'Power1'
+                        delay: 5000,
+                        ease: 'Power1',
+                        onUpdate: () => {
+                            robot.text.setAlpha((robot.opacityTarget - 0.7) / 0.3);
+                        }
                     });
                 }
             });

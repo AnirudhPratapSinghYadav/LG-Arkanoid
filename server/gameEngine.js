@@ -95,13 +95,15 @@ function loadLevel(levelNumber, aiGeneratedGrid = null) {
           let val = aiGeneratedGrid[r][c];
           if (val > 0) {
             let brickType = val === 3 ? 'indestructible' : (val === 2 ? 'hard' : 'normal');
-            // Assuming 8 rows and 15 columns for the grid mapping to coordinates
-            let brick = new Brick(r, c, c * 640, 100 + r * 40, 600, 30);
+            // Assuming 8 rows and 65 columns (13 per screen * 5 screens)
+            let xPos = 24 + c * 144;
+            let brick = new Brick(r, c, xPos, 100 + r * 40, 140, 30);
             brick.type = brickType;
             rowBricks.push(brick);
           } else {
             // Placeholder for empty space so indices match
-            let brick = new Brick(r, c, c * 640, 100 + r * 40, 600, 30);
+            let xPos = 24 + c * 144;
+            let brick = new Brick(r, c, xPos, 100 + r * 40, 140, 30);
             brick.active = false;
             rowBricks.push(brick);
           }
@@ -114,7 +116,7 @@ function loadLevel(levelNumber, aiGeneratedGrid = null) {
     // Fallback hardcoded logic
     for (let row = 0; row < 8; row++) {
       let rowBricks = [];
-      for (let col = 0; col < 15; col++) {
+      for (let col = 0; col < 65; col++) {
         let brickType = 'normal';
         let active = true;
         
@@ -128,7 +130,8 @@ function loadLevel(levelNumber, aiGeneratedGrid = null) {
           }
         }
         
-        let brick = new Brick(row, col, col * 640, 100 + row * 40, 600, 30);
+        let xPos = 24 + col * 144;
+        let brick = new Brick(row, col, xPos, 100 + row * 40, 140, 30);
         brick.type = brickType;
         brick.active = active;
         rowBricks.push(brick);
@@ -240,7 +243,7 @@ function checkBrickCollision(ball, gameState) {
             if (ball.lastTouchedByPlayerId) {
               let player = players.find(p => p.id === ball.lastTouchedByPlayerId);
               if (player) {
-                player.score += 100;
+                player.score += 10;
               }
             }
             
@@ -283,7 +286,7 @@ function updatePowerUps(gameState) {
           p.falling = false;
           p.active = true;
           if (player.id) {
-            player.score += 500;
+            player.score += 50;
           }
           gameState.powerUps.splice(i, 1);
           break;
@@ -320,6 +323,7 @@ function updateGameLoop(gameState) {
           let player = gameState.players.find(p => p.id === ball.lastTouchedByPlayerId);
           if (player && player.lives > 0) {
             player.lives -= 1;
+            player.score = Math.max(0, player.score - 10);
           }
         }
       }
