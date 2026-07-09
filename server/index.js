@@ -320,6 +320,9 @@ function broadcastGameState() {
         col: brick.col,
         x: brick.x,
         y: brick.y,
+        width: brick.width,
+        height: brick.height,
+        type: brick.type,
         active: brick.active,
       }))
     ),
@@ -402,7 +405,7 @@ async function triggerCommentary(eventType, snapshot) {
 
   if (limiter && cooldown > 0 && now - limiter.lastCalledAt < cooldown) {
     text = FALLBACK_COMMENTARY[crypto.randomInt(0, FALLBACK_COMMENTARY.length)];
-    io.emit('commentary', { text, source, eventType });
+    io.emit('commentary', { text, source, eventType, playerId: snapshot.playerId || null });
     return;
   }
 
@@ -419,7 +422,7 @@ async function triggerCommentary(eventType, snapshot) {
     limiter.lastCalledAt = Date.now();
   }
 
-  io.emit('commentary', { text, source, eventType });
+  io.emit('commentary', { text, source, eventType, playerId: snapshot.playerId || null });
 }
 
 let isGeneratingLevel = false;
@@ -833,10 +836,14 @@ setInterval(() => {
   for (let i = 0; i < worldState.players.length; i++) {
     const p = worldState.players[i];
     if (p.score > 0 && Math.floor(beforeScores[i] / 5000) < Math.floor(p.score / 5000)) {
-      triggerCommentary('score_milestone', getWorldSnapshot());
+      const snap = getWorldSnapshot();
+      snap.playerId = p.id;
+      triggerCommentary('score_milestone', snap);
     }
     if (p.lives < beforeLives[i]) {
-      triggerCommentary('life_lost', getWorldSnapshot());
+      const snap = getWorldSnapshot();
+      snap.playerId = p.id;
+      triggerCommentary('life_lost', snap);
       pollGameMasterAsync();
       if (p.lives === 0) {
         io.emit('player_eliminated', { playerId: p.id, playerNumber: i + 1 });

@@ -12,6 +12,7 @@ class GameService extends ChangeNotifier {
   String? sessionId;
   int score = 0;
   int lives = 3;
+  int rank = 0;
   String lastCommentary = '';
   String lastCommentarySource = 'fallback';
   bool connected = false;
@@ -68,6 +69,22 @@ class GameService extends ChangeNotifier {
         latestGameState = _asMap(data);
         if (playerId != null) {
           final players = latestGameState!['players'] as List<dynamic>? ?? [];
+          
+          final sortedPlayers = List<dynamic>.from(players)
+            ..sort((a, b) {
+              final aScore = _asMap(a)['score'] as int? ?? 0;
+              final bScore = _asMap(b)['score'] as int? ?? 0;
+              return bScore.compareTo(aScore);
+            });
+
+          for (int i = 0; i < sortedPlayers.length; i++) {
+            final pm = _asMap(sortedPlayers[i]);
+            if (pm['id'] == playerId) {
+              rank = i + 1;
+              break;
+            }
+          }
+
           for (final p in players) {
             final pm = _asMap(p);
             if (pm['id'] == playerId) {

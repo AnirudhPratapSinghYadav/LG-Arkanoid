@@ -394,6 +394,8 @@ class GameScene extends Phaser.Scene {
         const bricks = this.currentState.bricks;
         if (!bricks) return;
 
+        let loggedFirstBrick = false;
+
         for (let r = 0; r < bricks.length; r++) {
             const row = bricks[r];
             if (!row) continue;
@@ -402,12 +404,18 @@ class GameScene extends Phaser.Scene {
                 const brick = row[c];
                 if (!brick || !brick.active) continue;
 
+                if (!loggedFirstBrick) {
+                    console.log('brick dims', brick.width, brick.height, brick.y);
+                    loggedFirstBrick = true;
+                }
+
                 const localX = brick.x - virtualLeft;
                 if (localX < -600 || localX > 2520) continue;
 
-                const gap = 4;
-                const drawW = (brick.width || 140) - gap;
-                const drawH = (brick.height || 30) - gap;
+                const hGap = 6;
+                const vGap = 8;
+                const drawW = (brick.width || 140) - hGap;
+                const drawH = (brick.height || 30) - vGap;
 
                 let color;
                 if (brick.type === 'indestructible') {
@@ -419,11 +427,31 @@ class GameScene extends Phaser.Scene {
                     color = normalColors[brick.row % 3];
                 }
                 
-                const drawX = localX + gap / 2;
-                const drawY = brick.y + gap / 2;
+                const drawX = localX + hGap / 2;
+                const drawY = brick.y + vGap / 2;
 
                 this.graphics.fillStyle(color, 1);
                 this.graphics.fillRect(drawX, drawY, drawW, drawH);
+                
+                if (brick.type === 'indestructible') {
+                    this.graphics.lineStyle(2, 0x444444, 1);
+                    for (let i = -drawH; i < drawW; i += 10) {
+                        let x1 = i;
+                        let y1 = 0;
+                        let x2 = i + drawH;
+                        let y2 = drawH;
+                        
+                        if (x1 < 0) { y1 -= x1; x1 = 0; }
+                        if (x2 > drawW) { y2 -= (x2 - drawW); x2 = drawW; }
+                        
+                        if (x1 < drawW && x2 > 0) {
+                            this.graphics.beginPath();
+                            this.graphics.moveTo(drawX + x1, drawY + y1);
+                            this.graphics.lineTo(drawX + x2, drawY + y2);
+                            this.graphics.strokePath();
+                        }
+                    }
+                }
                 
                 const lightColor = Phaser.Display.Color.Interpolate.ColorWithColor(
                     Phaser.Display.Color.IntegerToColor(color),
