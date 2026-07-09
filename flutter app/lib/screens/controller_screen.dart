@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/game_service.dart';
@@ -16,13 +17,40 @@ class ControllerScreen extends StatefulWidget {
 }
 
 class _ControllerScreenState extends State<ControllerScreen> {
+  Timer? _moveTimer;
+  bool _isButtonHeld = false;
+
   void _onPanUpdate(DragUpdateDetails details) {
+    if (_isButtonHeld) return; // Prevent drag conflict
     final screenWidth = MediaQuery.of(context).size.width;
     final dx = details.delta.dx;
     final speed = maxVirtualX / screenWidth;
     final deltaX = dx * speed;
 
     context.read<GameService>().sendPaddleMove(deltaX);
+  }
+
+  void _startHolding(double deltaX) {
+    _isButtonHeld = true;
+    context.read<GameService>().sendPaddleMove(deltaX);
+    _moveTimer?.cancel();
+    _moveTimer = Timer.periodic(const Duration(milliseconds: 16), (_) {
+      if (mounted) {
+        context.read<GameService>().sendPaddleMove(deltaX);
+      }
+    });
+  }
+
+  void _stopHolding() {
+    _isButtonHeld = false;
+    _moveTimer?.cancel();
+    _moveTimer = null;
+  }
+
+  @override
+  void dispose() {
+    _moveTimer?.cancel();
+    super.dispose();
   }
 
   @override
@@ -79,6 +107,7 @@ class _ControllerScreenState extends State<ControllerScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
+                    _buildStat('RANK', '${service.rank}'),
                     _buildStat('SCORE', '${service.score}'),
                     _buildStat('LIVES', '${service.lives}'),
                   ],
@@ -159,6 +188,58 @@ class _ControllerScreenState extends State<ControllerScreen> {
                     ),
                   ),
                 ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      onTapDown: (_) => _startHolding(-25.0),
+                      onTapUp: (_) => _stopHolding(),
+                      onTapCancel: () => _stopHolding(),
+                      child: Container(
+                        height: 80,
+                        decoration: BoxDecoration(
+                          color: bgColor,
+                          border: Border.all(color: accentCyan, width: 2),
+                          borderRadius: BorderRadius.circular(8),
+                          boxShadow: [
+                            BoxShadow(
+                              color: accentCyan.withOpacity(0.2),
+                              blurRadius: 10,
+                            ),
+                          ],
+                        ),
+                        child: const Icon(Icons.chevron_left, size: 48, color: accentCyan),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: GestureDetector(
+                      onTapDown: (_) => _startHolding(25.0),
+                      onTapUp: (_) => _stopHolding(),
+                      onTapCancel: () => _stopHolding(),
+                      child: Container(
+                        height: 80,
+                        decoration: BoxDecoration(
+                          color: bgColor,
+                          border: Border.all(color: accentCyan, width: 2),
+                          borderRadius: BorderRadius.circular(8),
+                          boxShadow: [
+                            BoxShadow(
+                              color: accentCyan.withOpacity(0.2),
+                              blurRadius: 10,
+                            ),
+                          ],
+                        ),
+                        child: const Icon(Icons.chevron_right, size: 48, color: accentCyan),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 16),
