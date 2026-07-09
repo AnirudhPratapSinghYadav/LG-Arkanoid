@@ -79,21 +79,22 @@ class _SplashScreenState extends State<SplashScreen>
           children: [
             const Spacer(flex: 3),
             const Text(
-              'LG Arkanoid',
+              'LG ARKANOID',
               style: TextStyle(
-                fontSize: 42,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
+                fontFamily: 'PressStart2P',
+                fontSize: 22,
+                color: accentCyan,
                 letterSpacing: 2,
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             const Text(
-              'Liquid Galaxy Edition',
+              'LIQUID GALAXY EDITION',
               style: TextStyle(
-                fontSize: 14,
-                color: Colors.teal,
-                letterSpacing: 2,
+                fontFamily: 'JetBrainsMono',
+                fontSize: 12,
+                color: accentCyan,
+                letterSpacing: 4,
               ),
             ),
             const Spacer(flex: 2),
@@ -104,7 +105,7 @@ class _SplashScreenState extends State<SplashScreen>
                   width: 200,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF1A1A2E),
+                    color: panelFill,
                     borderRadius: BorderRadius.circular(2),
                   ),
                   child: Align(
@@ -113,7 +114,7 @@ class _SplashScreenState extends State<SplashScreen>
                       width: 200 * _progress.value,
                       height: 4,
                       decoration: BoxDecoration(
-                        color: Colors.teal,
+                        color: accentCyan,
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),

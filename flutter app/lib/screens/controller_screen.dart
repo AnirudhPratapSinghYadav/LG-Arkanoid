@@ -5,6 +5,8 @@ import '../widgets/connection_status.dart';
 import '../widgets/power_up_dialog.dart';
 import '../utils/constants.dart';
 import '../services/tts_service.dart';
+import '../widgets/lg_panel.dart';
+import '../widgets/lg_button.dart';
 
 class ControllerScreen extends StatefulWidget {
   const ControllerScreen({super.key});
@@ -30,10 +32,14 @@ class _ControllerScreenState extends State<ControllerScreen> {
     return Scaffold(
       backgroundColor: bgColor,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0A0A1A),
+        backgroundColor: bgColor,
         title: Text(
-          'Player ${service.playerNumber ?? "?"}',
-          style: const TextStyle(fontSize: 16),
+          'PLAYER ${service.playerNumber ?? "?"}',
+          style: const TextStyle(
+            fontFamily: 'PressStart2P',
+            fontSize: 12,
+            color: accentCyan,
+          ),
         ),
         actions: [
           Padding(
@@ -46,13 +52,14 @@ class _ControllerScreenState extends State<ControllerScreen> {
               return IconButton(
                 icon: Icon(
                   TTSService().isMuted ? Icons.volume_off : Icons.volume_up,
+                  color: accentCyan,
                 ),
                 onPressed: () => TTSService().toggleMute(),
               );
             },
           ),
           IconButton(
-            icon: const Icon(Icons.settings),
+            icon: const Icon(Icons.settings, color: accentCyan),
             onPressed: () => Navigator.pushNamed(context, '/settings'),
           ),
         ],
@@ -62,30 +69,33 @@ class _ControllerScreenState extends State<ControllerScreen> {
           children: [
             Padding(
               padding: const EdgeInsets.all(16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _buildStat('Score', '${service.score}'),
-                  _buildStat('Lives', '${service.lives}'),
-                ],
+              child: LgPanel(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildStat('SCORE', '${service.score}'),
+                    _buildStat('LIVES', '${service.lives}'),
+                  ],
+                ),
               ),
             ),
             if (service.lastCommentary.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF1A1A2E),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    service.lastCommentary,
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontStyle: FontStyle.italic,
-                    ),
+                child: LgPanel(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        service.lastCommentary,
+                        style: const TextStyle(
+                          fontFamily: 'JetBrainsMono',
+                          color: textColor,
+                          fontStyle: FontStyle.italic,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -95,29 +105,20 @@ class _ControllerScreenState extends State<ControllerScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  ElevatedButton(
-                    onPressed: () => service.startGame(),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.teal,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 14,
-                      ),
+                  Expanded(
+                    child: LgButton(
+                      label: 'Start Game',
+                      onPressed: () => service.startGame(),
+                      accentColor: accentCyan,
                     ),
-                    child: const Text('Start Game'),
                   ),
-                  ElevatedButton(
-                    onPressed: () => showPowerUpDialog(context),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.orange.shade800,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 14,
-                      ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: LgButton(
+                      label: 'Power Ups',
+                      onPressed: () => showPowerUpDialog(context),
+                      accentColor: accentAmber,
                     ),
-                    child: const Text('Power Ups'),
                   ),
                 ],
               ),
@@ -125,28 +126,29 @@ class _ControllerScreenState extends State<ControllerScreen> {
             const Spacer(),
             GestureDetector(
               onPanUpdate: _onPanUpdate,
-              child: Container(
-                margin: const EdgeInsets.all(16),
-                height: 140,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF1A1A2E),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.white12),
-                ),
-                child: const Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.touch_app, size: 40, color: Colors.white24),
-                      SizedBox(height: 8),
-                      Text(
-                        'Slide to move paddle',
-                        style: TextStyle(
-                          color: Colors.white24,
-                          fontSize: 14,
-                        ),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: LgPanel(
+                  accentColor: accentCyan,
+                  child: const SizedBox(
+                    height: 120,
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.touch_app, size: 32, color: accentCyan),
+                          SizedBox(height: 8),
+                          Text(
+                            'SLIDE TO MOVE PADDLE',
+                            style: TextStyle(
+                              fontFamily: 'JetBrainsMono',
+                              color: accentCyan,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ),
@@ -163,15 +165,19 @@ class _ControllerScreenState extends State<ControllerScreen> {
       children: [
         Text(
           label,
-          style: const TextStyle(color: Colors.white54, fontSize: 12),
+          style: const TextStyle(
+            fontFamily: 'JetBrainsMono',
+            color: textColor,
+            fontSize: 10,
+          ),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 8),
         Text(
           value,
           style: const TextStyle(
-            color: Colors.white,
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
+            fontFamily: 'PressStart2P',
+            color: accentCyan,
+            fontSize: 20,
           ),
         ),
       ],
