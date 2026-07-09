@@ -61,6 +61,10 @@ class _ControllerScreenState extends State<ControllerScreen> {
             },
           ),
           IconButton(
+            icon: const Icon(Icons.bug_report, color: accentCyan),
+            onPressed: () => Navigator.pushNamed(context, '/status'),
+          ),
+          IconButton(
             icon: const Icon(Icons.settings, color: accentCyan),
             onPressed: () => Navigator.pushNamed(context, '/settings'),
           ),

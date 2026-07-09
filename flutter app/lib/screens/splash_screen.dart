@@ -39,33 +39,9 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Future<void> _tryAutoConnect() async {
-    const storage = FlutterSecureStorage();
-    final savedAddress = await storage.read(key: prefServerAddress);
-    final savedPort =
-        await storage.read(key: prefServerPort) ?? defaultServerPort;
-    final savedToken = await storage.read(key: prefSessionToken);
-
-    bool success = false;
-
-    if (savedAddress != null && savedAddress.isNotEmpty && mounted) {
-      final service = context.read<GameService>();
-      success = await service.connect(savedAddress, savedPort);
-      if (success &&
-          mounted &&
-          savedToken != null &&
-          savedToken.isNotEmpty) {
-        service.joinGame(savedToken);
-      }
-    }
-
     await Future.delayed(const Duration(seconds: 3));
-
     if (mounted) {
-      if (success) {
-        Navigator.pushReplacementNamed(context, '/controller');
-      } else {
-        Navigator.pushReplacementNamed(context, '/connect');
-      }
+      Navigator.pushReplacementNamed(context, '/connect');
     }
   }
 
