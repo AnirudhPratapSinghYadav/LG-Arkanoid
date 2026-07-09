@@ -22,8 +22,8 @@ class GameService extends ChangeNotifier {
 
   final Random _random = Random();
 
-  String generateNonce() {
-    return List.generate(8, (_) => _random.nextInt(16).toRadixString(16)).join();
+  String generateNonce(){
+    return List.generate(8, (_)=>_random.nextInt(16).toRadixString(16)).join();
   }
 
   Future<bool> connect(String address, String port,
@@ -42,17 +42,17 @@ class GameService extends ChangeNotifier {
             .build(),
       );
 
-      socket!.onConnect((_) {
+      socket!.onConnect((_){
         connected = true;
         notifyListeners();
       });
 
-      socket!.onDisconnect((_) {
+      socket!.onDisconnect((_){
         connected = false;
         notifyListeners();
       });
 
-      socket!.on('join_confirmed', (data) {
+      socket!.on('join_confirmed', (data){
         final map = _asMap(data);
         playerId = map['playerId'] as String?;
         playerNumber = map['playerNumber'] as int?;
@@ -60,36 +60,36 @@ class GameService extends ChangeNotifier {
         notifyListeners();
       });
 
-      socket!.on('join_rejected', (data) {
+      socket!.on('join_rejected', (data){
         final map = _asMap(data);
         lastCommentary = 'Join rejected: ${map['message'] ?? map['errorCode']}';
         lastCommentarySource = 'fallback';
         notifyListeners();
       });
 
-      socket!.on('game_state', (data) {
+      socket!.on('game_state', (data){
         latestGameState = _asMap(data);
-        if (playerId != null) {
+        if(playerId!=null){
           final players = latestGameState!['players'] as List<dynamic>? ?? [];
           
           final sortedPlayers = List<dynamic>.from(players)
-            ..sort((a, b) {
+            ..sort((a, b){
               final aScore = _asMap(a)['score'] as int? ?? 0;
               final bScore = _asMap(b)['score'] as int? ?? 0;
               return bScore.compareTo(aScore);
             });
 
-          for (int i = 0; i < sortedPlayers.length; i++) {
+          for(int i = 0; i < sortedPlayers.length; i++){
             final pm = _asMap(sortedPlayers[i]);
-            if (pm['id'] == playerId) {
-              rank = i + 1;
+            if(pm['id']==playerId){
+              rank = i+1;
               break;
             }
           }
 
-          for (final p in players) {
+          for(final p in players){
             final pm = _asMap(p);
-            if (pm['id'] == playerId) {
+            if(pm['id']==playerId){
               score = pm['score'] as int? ?? 0;
               lives = pm['lives'] as int? ?? 0;
               break;
@@ -99,15 +99,15 @@ class GameService extends ChangeNotifier {
         notifyListeners();
       });
 
-      socket!.on('commentary', (data) {
+      socket!.on('commentary', (data){
         final map = _asMap(data);
         final newCommentary = map['text'] as String? ?? '';
         
-        if (newCommentary.isNotEmpty && newCommentary != lastCommentary) {
+        if(newCommentary.isNotEmpty && newCommentary!=lastCommentary){
           lastCommentary = newCommentary;
           lastCommentarySource = map['source'] as String? ?? 'fallback';
           
-          if (lastCommentarySource == 'ai' || lastCommentarySource == 'gemini') {
+          if(lastCommentarySource=='ai' || lastCommentarySource=='gemini'){
              HapticFeedback.mediumImpact();
              TTSService().speak(lastCommentary);
           }
@@ -118,24 +118,24 @@ class GameService extends ChangeNotifier {
       socket!.connect();
 
       final start = DateTime.now();
-      while (DateTime.now().difference(start) < timeout) {
+      while(DateTime.now().difference(start) < timeout){
         await Future.delayed(const Duration(milliseconds: 100));
-        if (connected) {
+        if(connected){
           return true;
         }
       }
       return false;
-    } catch (_) {
+    } catch(_){
       return false;
     }
   }
 
-  void joinGame(String sessionToken) {
+  void joinGame(String sessionToken){
     socket?.emit('player_join', {'sessionToken': sessionToken});
   }
 
-  void sendPaddleMove(double deltaX) {
-    if (socket == null || !connected || playerId == null) return;
+  void sendPaddleMove(double deltaX){
+    if(socket==null || !connected || playerId==null) return;
     socket!.emit('paddle_move', {
       'deltaX': deltaX.round(),
       'timestamp': DateTime.now().millisecondsSinceEpoch,
@@ -143,8 +143,8 @@ class GameService extends ChangeNotifier {
     });
   }
 
-  void activatePowerUp(String powerUpType) {
-    if (socket == null || !connected || playerId == null) return;
+  void activatePowerUp(String powerUpType){
+    if(socket==null || !connected || playerId==null) return;
     socket!.emit('power_up_activate', {
       'playerId': playerId,
       'powerUpType': powerUpType,
@@ -153,21 +153,21 @@ class GameService extends ChangeNotifier {
     });
   }
 
-  void startGame() {
-    if (socket == null || !connected) return;
+  void startGame(){
+    if(socket==null || !connected) return;
     socket!.emit('start_game');
   }
 
-  void disconnect() {
+  void disconnect(){
     socket?.dispose();
     socket = null;
     connected = false;
     notifyListeners();
   }
 
-  Map<String, dynamic> _asMap(dynamic data) {
-    if (data is Map<String, dynamic>) return data;
-    if (data is Map) return Map<String, dynamic>.from(data);
+  Map<String, dynamic> _asMap(dynamic data){
+    if(data is Map<String, dynamic>) return data;
+    if(data is Map) return Map<String, dynamic>.from(data);
     return {};
   }
 }
