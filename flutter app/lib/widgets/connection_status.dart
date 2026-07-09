@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/constants.dart';
 
 class ConnectionStatus extends StatelessWidget {
   final bool isConnected;
@@ -20,17 +21,19 @@ class ConnectionStatus extends StatelessWidget {
           height: 10,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: isConnected ? Colors.green : Colors.red,
+            color: isConnected ? accentCyan : accentMagenta,
           ),
         ),
         const SizedBox(width: 6),
         Text(
           label.isNotEmpty
               ? label
-              : (isConnected ? 'Connected' : 'Disconnected'),
+              : (isConnected ? 'CONNECTED' : 'DISCONNECTED'),
           style: TextStyle(
-            color: isConnected ? Colors.green : Colors.red,
+            color: isConnected ? accentCyan : accentMagenta,
             fontSize: 12,
+            fontFamily: 'JetBrainsMono',
+            fontWeight: FontWeight.bold,
           ),
         ),
       ],

@@ -4,6 +4,9 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../services/ssh_service.dart';
 import '../services/lg_service.dart';
 import '../utils/constants.dart';
+import '../widgets/lg_panel.dart';
+import '../widgets/lg_button.dart';
+import '../widgets/lg_text_field.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -147,192 +150,196 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Scaffold(
       backgroundColor: bgColor,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0A0A1A),
-        title: const Text('LG Settings'),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: Row(
-              children: [
-                Container(
-                  width: 10,
-                  height: 10,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: _sshConnected ? Colors.green : Colors.red,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  _sshConnected ? 'Connected' : 'Not Connected',
-                  style: TextStyle(
-                    color: _sshConnected ? Colors.green : Colors.red,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
+        backgroundColor: bgColor,
+        title: const Text(
+          'LG Settings',
+          style: TextStyle(
+            fontFamily: 'PressStart2P',
+            fontSize: 14,
+            color: accentCyan,
           ),
-        ],
+        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text(
-              'SSH Connection',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
+            LgPanel(
+              accentColor: _sshConnected ? accentCyan : accentMagenta,
+              child: Row(
+                children: [
+                  Container(
+                    width: 10,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: _sshConnected ? accentCyan : accentMagenta,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    _sshConnected ? 'CONNECTED TO RIG' : 'NOT CONNECTED',
+                    style: TextStyle(
+                      fontFamily: 'JetBrainsMono',
+                      fontWeight: FontWeight.bold,
+                      color: _sshConnected ? accentCyan : accentMagenta,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 16),
-            _buildField(_hostController, 'Master Node IP'),
-            const SizedBox(height: 10),
-            _buildField(_portController, 'SSH Port'),
-            const SizedBox(height: 10),
-            _buildField(_usernameController, 'Username'),
-            const SizedBox(height: 10),
-            _buildField(_passwordController, 'Password', obscure: true),
-            const SizedBox(height: 10),
-            _buildField(_screensController, 'Number of Screens'),
             const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildButton('Save', Colors.teal, _saveSettings),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _connecting
-                      ? const Center(
-                          child: SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.teal,
-                            ),
-                          ),
-                        )
-                      : _buildButton(
-                          'Connect', Colors.teal.shade700, _connectSSH),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _buildButton(
-                    'Disconnect',
-                    Colors.red.shade800,
-                    _sshConnected ? _disconnectSSH : null,
+            LgPanel(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Text(
+                    'SSH CONNECTION',
+                    style: TextStyle(
+                      fontFamily: 'PressStart2P',
+                      fontSize: 14,
+                      color: accentCyan,
+                    ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 32),
-            const Text(
-              'Deploy to Rig',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
+                  const SizedBox(height: 20),
+                  LgTextField(
+                    controller: _hostController,
+                    label: 'Master Node IP',
+                  ),
+                  const SizedBox(height: 16),
+                  LgTextField(
+                    controller: _portController,
+                    label: 'SSH Port',
+                  ),
+                  const SizedBox(height: 16),
+                  LgTextField(
+                    controller: _usernameController,
+                    label: 'Username',
+                  ),
+                  const SizedBox(height: 16),
+                  LgTextField(
+                    controller: _passwordController,
+                    label: 'Password',
+                    obscureText: true,
+                  ),
+                  const SizedBox(height: 16),
+                  LgTextField(
+                    controller: _screensController,
+                    label: 'Number of Screens',
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: LgButton(
+                          label: 'Save',
+                          onPressed: _saveSettings,
+                          accentColor: accentCyan,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _connecting
+                            ? const Center(
+                                child: SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: accentCyan,
+                                  ),
+                                ),
+                              )
+                            : LgButton(
+                                label: 'Connect',
+                                onPressed: _connectSSH,
+                                accentColor: accentCyan,
+                              ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: LgButton(
+                          label: 'Disconnect',
+                          onPressed: _sshConnected ? _disconnectSSH : null,
+                          accentColor: accentMagenta,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 16),
-            _buildField(_serverUrlController, 'Game Server URL'),
-            const SizedBox(height: 16),
-            _buildButton(
-              'Deploy Game to Screens',
-              Colors.teal.shade600,
-              _sshConnected ? _deployToRig : null,
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildButton(
-                    'Reboot Rig',
-                    Colors.orange.shade800,
-                    _sshConnected
-                        ? () async {
-                            await LGService().rebootRig();
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                    content: Text('Reboot sent')),
-                              );
-                            }
-                          }
-                        : null,
+            const SizedBox(height: 20),
+            LgPanel(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Text(
+                    'DEPLOY TO RIG',
+                    style: TextStyle(
+                      fontFamily: 'PressStart2P',
+                      fontSize: 14,
+                      color: accentCyan,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _buildButton(
-                    'Close Browsers',
-                    Colors.grey.shade800,
-                    _sshConnected
-                        ? () async {
-                            await LGService().closeBrowsers();
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                    content: Text('Browsers closed')),
-                              );
-                            }
-                          }
-                        : null,
+                  const SizedBox(height: 20),
+                  LgTextField(
+                    controller: _serverUrlController,
+                    label: 'Game Server URL',
                   ),
-                ),
-              ],
+                  const SizedBox(height: 24),
+                  LgButton(
+                    label: 'Deploy Game to Screens',
+                    onPressed: _sshConnected ? _deployToRig : null,
+                    accentColor: accentCyan,
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: LgButton(
+                          label: 'Reboot Rig',
+                          onPressed: _sshConnected
+                              ? () async {
+                                  await LGService().rebootRig();
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                          content: Text('Reboot sent')),
+                                    );
+                                  }
+                                }
+                              : null,
+                          accentColor: accentAmber,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: LgButton(
+                          label: 'Close Browsers',
+                          onPressed: _sshConnected
+                              ? () async {
+                                  await LGService().closeBrowsers();
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                          content: Text('Browsers closed')),
+                                    );
+                                  }
+                                }
+                              : null,
+                          accentColor: accentCyan,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildField(
-    TextEditingController controller,
-    String label, {
-    bool obscure = false,
-  }) {
-    return TextField(
-      controller: controller,
-      obscureText: obscure,
-      style: const TextStyle(color: Colors.white),
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: const TextStyle(color: Colors.white54),
-        filled: true,
-        fillColor: const Color(0xFF1A1A2E),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide.none,
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: Colors.teal),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildButton(
-      String text, Color color, VoidCallback? onPressed) {
-    return SizedBox(
-      height: 44,
-      child: ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: color,
-          foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
-        ),
-        onPressed: onPressed,
-        child: Text(text, style: const TextStyle(fontSize: 13)),
       ),
     );
   }

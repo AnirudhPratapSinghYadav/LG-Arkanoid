@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 
-const Color bgColor = Color(0xFF02090C);
-const Color cardColor = Color(0xFF1A1A2E);
+const Color bgColor = Color(0xFF0a0e14);
+const Color panelFill = Color(0xFF0d1117);
+const Color accentCyan = Color(0xFF00e5ff);
+const Color accentMagenta = Color(0xFFff2d78);
+const Color accentAmber = Color(0xFFffb800);
+const Color textColor = Color(0xFFe8f4f8);
 
 const String defaultServerPort = '8080';
 const int defaultSshPort = 22;
