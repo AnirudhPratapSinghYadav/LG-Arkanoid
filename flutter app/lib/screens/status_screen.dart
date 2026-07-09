@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/game_service.dart';
 import '../utils/constants.dart';
+import '../widgets/lg_panel.dart';
 
 class StatusScreen extends StatelessWidget {
   const StatusScreen({super.key});
@@ -14,8 +15,15 @@ class StatusScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: bgColor,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0A0A1A),
-        title: const Text('Debug'),
+        backgroundColor: bgColor,
+        title: const Text(
+          'DEBUG STATUS',
+          style: TextStyle(
+            fontFamily: 'PressStart2P',
+            fontSize: 14,
+            color: accentCyan,
+          ),
+        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -23,11 +31,11 @@ class StatusScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _buildCard(
-              'Connection',
+              'CONNECTION',
               [
                 _buildRow('Status',
                     service.connected ? 'CONNECTED' : 'DISCONNECTED',
-                    color: service.connected ? Colors.green : Colors.red),
+                    color: service.connected ? accentCyan : accentMagenta),
                 _buildRow('Server',
                     '${service.serverAddress}:${service.serverPort}'),
                 _buildRow('Player ID', service.playerId ?? 'None'),
@@ -39,15 +47,17 @@ class StatusScreen extends StatelessWidget {
             const SizedBox(height: 16),
             if (state != null)
               _buildCard(
-                'Game State',
+                'GAME STATE',
                 [
                   _buildRow('Status', state['status'] ?? 'Unknown'),
                   _buildRow(
                       'Screen Width', '${state['rigVirtualWidth'] ?? 0}'),
                   const SizedBox(height: 8),
-                  const Text('Balls',
+                  const Text('BALLS',
                       style: TextStyle(
-                          color: Colors.teal, fontWeight: FontWeight.bold)),
+                          fontFamily: 'JetBrainsMono',
+                          color: accentCyan,
+                          fontWeight: FontWeight.bold)),
                   ...?((state['balls'] as List<dynamic>?)?.map((b) =>
                       _buildRow(
                         'Ball ${b['id']?.toString().substring(0, 4)}',
@@ -57,19 +67,20 @@ class StatusScreen extends StatelessWidget {
               ),
             const SizedBox(height: 16),
             _buildCard(
-              'Last Commentary',
+              'LAST COMMENTARY',
               [
                 Text(
                   service.lastCommentary.isEmpty
                       ? 'No commentary yet'
                       : service.lastCommentary,
-                  style: const TextStyle(color: Colors.white70),
+                  style: const TextStyle(
+                      fontFamily: 'JetBrainsMono', color: textColor),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'Source: ${service.lastCommentarySource}',
                   style:
-                      const TextStyle(color: Colors.white38, fontSize: 12),
+                      const TextStyle(fontFamily: 'JetBrainsMono', color: textColor, fontSize: 10),
                 ),
               ],
             ),
@@ -80,24 +91,19 @@ class StatusScreen extends StatelessWidget {
   }
 
   Widget _buildCard(String title, List<Widget> children) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1A1A2E),
-        borderRadius: BorderRadius.circular(8),
-      ),
+    return LgPanel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
             title,
             style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
+              fontFamily: 'PressStart2P',
+              color: accentCyan,
+              fontSize: 14,
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           ...children,
         ],
       ),
@@ -110,13 +116,16 @@ class StatusScreen extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(color: Colors.white54)),
+          Text(label,
+              style: const TextStyle(
+                  fontFamily: 'JetBrainsMono', color: textColor, fontSize: 12)),
           Text(
             value,
             style: TextStyle(
-              color: color ?? Colors.white,
+              color: color ?? accentCyan,
               fontWeight: FontWeight.bold,
-              fontFamily: 'monospace',
+              fontFamily: 'JetBrainsMono',
+              fontSize: 12,
             ),
           ),
         ],

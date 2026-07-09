@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=1920, height=1080">
     <title>LG Arkanoid</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Press+Start+2P&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.80.1/phaser.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.8.0/socket.io.min.js"></script>
     <style>
@@ -35,8 +36,8 @@ const screenBoundary = SCREEN_BOUNDARIES.find(s => s.screenId === screenId) || S
 const virtualLeft = screenBoundary.virtualLeft;
 const serverUrl = urlParams.get('server') || window.location.origin;
 
-const ROW_COLORS = [0xff0000, 0xff8800, 0xffff00, 0x00ff00, 0x0088ff, 0xaa00ff];
-const PADDLE_COLORS = [0xff0000, 0x00ff00, 0x0088ff];
+const ROW_COLORS = [0x00e5ff, 0x0088aa, 0xff2d78, 0xffb800];
+const PADDLE_COLORS = [0x00e5ff, 0xff2d78, 0xffb800];
 
 class GameScene extends Phaser.Scene {
     constructor() {
@@ -49,10 +50,12 @@ class GameScene extends Phaser.Scene {
 
     create() {
         const bgGraphics = this.make.graphics({x: 0, y: 0, add: false});
-        bgGraphics.lineStyle(1, 0x004444, 0.5);
-        bgGraphics.strokeRect(0, 0, 64, 64);
-        bgGraphics.generateTexture('bg_grid', 64, 64);
-        this.bg = this.add.tileSprite(960, 540, 1920, 1080, 'bg_grid');
+        bgGraphics.fillStyle(0xffffff, 0.1);
+        for(let i=0; i<30; i++) {
+            bgGraphics.fillRect(Math.random() * 256, Math.random() * 256, Math.random() * 2 + 1, Math.random() * 2 + 1);
+        }
+        bgGraphics.generateTexture('bg_stars', 256, 256);
+        this.bg = this.add.tileSprite(960, 540, 1920, 1080, 'bg_stars');
 
         const pGraphics = this.make.graphics({x:0, y:0, add:false});
         pGraphics.fillStyle(0xffffff, 1);
@@ -71,45 +74,47 @@ class GameScene extends Phaser.Scene {
         this.trailGraphics = this.add.graphics();
         
         this.statusText = this.add.text(960, 540, '', {
-            fontFamily: 'monospace',
-            fontSize: '120px',
-            color: '#ff0000',
+            fontFamily: '"Press Start 2P"',
+            fontSize: '80px',
+            color: '#ff2d78',
             align: 'center',
             fontStyle: 'bold'
         }).setOrigin(0.5, 0.5).setAlpha(0);
 
         this.commentaryText = this.add.text(1800, 50, '', {
-            fontFamily: 'monospace',
+            fontFamily: '"JetBrains Mono"',
             fontSize: '20px',
-            color: '#ffffff',
+            color: '#e8f4f8',
             align: 'right'
         }).setOrigin(1, 0).setAlpha(0);
 
         this.sessionTokenText = this.add.text(960, 540, '', {
-            fontFamily: 'monospace',
-            fontSize: '72px',
-            color: '#00cccc',
+            fontFamily: '"Press Start 2P"',
+            fontSize: '48px',
+            color: '#00e5ff',
             align: 'center'
         }).setOrigin(0.5, 0.5).setAlpha(0);
 
         this.screenLabel = this.add.text(20, 20, 'Screen ' + screenId, {
-            fontFamily: 'monospace',
+            fontFamily: '"JetBrains Mono"',
             fontSize: '24px',
             color: '#888888'
         });
 
+        this.hudPanelGraphics = this.add.graphics();
+        this.hudBorderAlpha = 1.0;
+
         this.hudText = this.add.text(40, 40, '', {
-            fontFamily: 'monospace',
-            fontSize: '32px',
-            color: '#00cccc',
-            fontStyle: 'bold',
-            shadow: { offsetX: 2, offsetY: 2, color: '#000', blur: 4, fill: true }
+            fontFamily: '"Press Start 2P"',
+            fontSize: '24px',
+            color: '#00e5ff',
+            lineSpacing: 16
         });
 
         this.startButton = this.add.text(960, 100, 'Press S to Start Game', {
-            fontFamily: 'monospace',
+            fontFamily: '"JetBrains Mono"',
             fontSize: '28px',
-            color: '#00cccc',
+            color: '#00e5ff',
             align: 'center'
         }).setOrigin(0.5, 0.5);
 
@@ -118,6 +123,12 @@ class GameScene extends Phaser.Scene {
                 this.socket.emit('start_game');
             }
         });
+
+        const scanlineGraphics = this.make.graphics({x: 0, y: 0, add: false});
+        scanlineGraphics.fillStyle(0xffffff, 0.15);
+        scanlineGraphics.fillRect(0, 0, 8, 1);
+        scanlineGraphics.generateTexture('scanline', 8, 3);
+        this.scanlineOverlay = this.add.tileSprite(960, 540, 1920, 1080, 'scanline').setDepth(100);
 
         this.setupSocket();
     }
@@ -141,6 +152,8 @@ class GameScene extends Phaser.Scene {
     }
 
     updateHUD() {
+        this.hudPanelGraphics.clear();
+        
         if (!this.currentState || !this.currentState.players) {
             this.hudText.setText('');
             return;
@@ -151,11 +164,42 @@ class GameScene extends Phaser.Scene {
         for (let i = 0; i < 3; i++) {
             const p = this.currentState.players[i];
             if (p && p.connected) {
-                hudStr += `P${i+1} SCORE: ${p.score}  LIVES: ${p.lives}\n`;
+                hudStr += `P${i+1} SCORE: ${p.score.toString().padStart(5, '0')}          \n`;
             }
         }
         
         this.hudText.setText(hudStr);
+        
+        const bounds = this.hudText.getBounds();
+        const padX = 20;
+        const padY = 20;
+        const panelX = bounds.x - padX;
+        const panelY = bounds.y - padY;
+        const panelW = bounds.width + padX * 2;
+        const panelH = bounds.height + padY * 2;
+        
+        this.hudPanelGraphics.fillStyle(0x0d1117, 1);
+        this.hudPanelGraphics.fillRect(panelX, panelY, panelW, panelH);
+        
+        this.hudPanelGraphics.lineStyle(3, 0x00e5ff, this.hudBorderAlpha);
+        this.hudPanelGraphics.strokeRect(panelX, panelY, panelW, panelH);
+        
+        this.hudPanelGraphics.lineStyle(1, 0x00e5ff, this.hudBorderAlpha * 0.4);
+        this.hudPanelGraphics.strokeRect(panelX + 3, panelY + 3, panelW - 6, panelH - 6);
+
+        let lineIdx = 0;
+        for (let i = 0; i < 3; i++) {
+            const p = this.currentState.players[i];
+            if (p && p.connected) {
+                const startY = bounds.y + 40 + (lineIdx * 40) + 12; 
+                const startX = bounds.x + bounds.width - 60; 
+                this.hudPanelGraphics.fillStyle(0x00e5ff, 1);
+                for(let l = 0; l < Math.min(p.lives, 5); l++) {
+                    this.hudPanelGraphics.fillCircle(startX + (l * 14), startY, 5);
+                }
+                lineIdx++;
+            }
+        }
     }
 
     checkStateChanges() {
@@ -228,9 +272,26 @@ class GameScene extends Phaser.Scene {
                 const localX = brick.x - virtualLeft;
                 if (localX < -600 || localX > 2520) continue;
 
-                const color = ROW_COLORS[brick.row % 6];
+                const color = ROW_COLORS[brick.row % ROW_COLORS.length];
+                
                 this.graphics.fillStyle(color, 1);
                 this.graphics.fillRect(localX, brick.y, 600, 30);
+                
+                const lightColor = Phaser.Display.Color.Interpolate.ColorWithColor(
+                    Phaser.Display.Color.IntegerToColor(color),
+                    Phaser.Display.Color.IntegerToColor(0xffffff),
+                    100, 40
+                );
+                this.graphics.fillStyle(Phaser.Display.Color.GetColor(lightColor.r, lightColor.g, lightColor.b), 1);
+                this.graphics.fillRect(localX, brick.y, 600, 2);
+                
+                const darkColor = Phaser.Display.Color.Interpolate.ColorWithColor(
+                    Phaser.Display.Color.IntegerToColor(color),
+                    Phaser.Display.Color.IntegerToColor(0x000000),
+                    100, 40
+                );
+                this.graphics.fillStyle(Phaser.Display.Color.GetColor(darkColor.r, darkColor.g, darkColor.b), 1);
+                this.graphics.fillRect(localX, brick.y + 28, 600, 2);
             }
         }
     }
@@ -287,6 +348,10 @@ class GameScene extends Phaser.Scene {
             if (localX + paddleWidth < 0 || localX > 1920) continue;
 
             const color = PADDLE_COLORS[(playerNumber - 1) % PADDLE_COLORS.length];
+            
+            this.graphics.fillStyle(color, 0.3);
+            this.graphics.fillRoundedRect(localX - 10, 1000 - 10, paddleWidth + 20, 40, 10);
+            
             this.graphics.fillStyle(color, 1);
             this.graphics.fillRoundedRect(localX, 1000, paddleWidth, 20, 6);
         }
@@ -320,6 +385,13 @@ class GameScene extends Phaser.Scene {
                 onComplete: () => {
                     delete this.boundaryBallOverrides[ballId];
                 }
+            });
+
+            this.tweens.add({
+                targets: this,
+                hudBorderAlpha: 0,
+                duration: 150,
+                yoyo: true
             });
 
             this.socket.emit('boundary_ack', { ballId: ballId });
@@ -390,7 +462,7 @@ const config = {
     type: Phaser.AUTO,
     width: 1920,
     height: 1080,
-    backgroundColor: '#0a0a0a',
+    backgroundColor: '#0a0e14',
     scene: [GameScene],
     banner: false
 };
