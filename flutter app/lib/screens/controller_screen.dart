@@ -14,7 +14,7 @@ class ControllerScreen extends StatefulWidget {
   const ControllerScreen({super.key});
 
   @override
-  State<ControllerScreen> createState() => _ControllerScreenState();
+  State<ControllerScreen> createState()=>_ControllerScreenState();
 }
 
 class _ControllerScreenState extends State<ControllerScreen> {
@@ -22,62 +22,62 @@ class _ControllerScreenState extends State<ControllerScreen> {
   bool _isButtonHeld = false;
   double _puckPosition = 0;
 
-  void _onPanStart(DragStartDetails details) {
-    if (_isButtonHeld) return;
+  void _onPanStart(DragStartDetails details){
+    if(_isButtonHeld) return;
     HapticFeedback.lightImpact();
   }
 
-  void _onPanUpdate(DragUpdateDetails details) {
-    if (_isButtonHeld) return; // Prevent drag conflict
+  void _onPanUpdate(DragUpdateDetails details){
+    if(_isButtonHeld) return; // Prevent drag conflict
     final screenWidth = MediaQuery.of(context).size.width;
     final dx = details.delta.dx;
-    final speed = maxVirtualX / screenWidth;
-    final deltaX = dx * speed;
+    final speed = maxVirtualX/screenWidth;
+    final deltaX = dx*speed;
 
     context.read<GameService>().sendPaddleMove(deltaX);
 
-    setState(() {
+    setState((){
       _puckPosition += dx;
-      double maxVisual = (screenWidth - 32 - 24) / 2 - 30; // 16 padding, 12 inner padding, 30 half puck
-      if (_puckPosition > maxVisual) _puckPosition = maxVisual;
-      if (_puckPosition < -maxVisual) _puckPosition = -maxVisual;
+      double maxVisual = (screenWidth-32-24)/2-30; // 16 padding, 12 inner padding, 30 half puck
+      if(_puckPosition > maxVisual) _puckPosition = maxVisual;
+      if(_puckPosition < -maxVisual) _puckPosition = -maxVisual;
     });
   }
 
-  void _onPanEnd(DragEndDetails details) {
-    setState(() {
+  void _onPanEnd(DragEndDetails details){
+    setState((){
       _puckPosition = 0;
     });
   }
 
-  void _startHolding(double deltaX) {
+  void _startHolding(double deltaX){
     _isButtonHeld = true;
     context.read<GameService>().sendPaddleMove(deltaX);
     _moveTimer?.cancel();
-    _moveTimer = Timer.periodic(const Duration(milliseconds: 16), (_) {
-      if (mounted) {
+    _moveTimer = Timer.periodic(const Duration(milliseconds: 16), (_){
+      if(mounted){
         context.read<GameService>().sendPaddleMove(deltaX);
       }
     });
   }
 
-  void _stopHolding() {
+  void _stopHolding(){
     _isButtonHeld = false;
     _moveTimer?.cancel();
     _moveTimer = null;
-    setState(() {
+    setState((){
       _puckPosition = 0;
     });
   }
 
   @override
-  void dispose() {
+  void dispose(){
     _moveTimer?.cancel();
     super.dispose();
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context){
     final service = context.watch<GameService>();
 
     return Scaffold(
@@ -101,23 +101,23 @@ class _ControllerScreenState extends State<ControllerScreen> {
           ),
           ListenableBuilder(
             listenable: TTSService(),
-            builder: (context, _) {
+            builder: (context, _){
               return IconButton(
                 icon: Icon(
                   TTSService().isMuted ? Icons.volume_off : Icons.volume_up,
                   color: accentCyan,
                 ),
-                onPressed: () => TTSService().toggleMute(),
+                onPressed: ()=>TTSService().toggleMute(),
               );
             },
           ),
           IconButton(
             icon: const Icon(Icons.bug_report, color: accentCyan),
-            onPressed: () => Navigator.pushNamed(context, '/status'),
+            onPressed: ()=>Navigator.pushNamed(context, '/status'),
           ),
           IconButton(
             icon: const Icon(Icons.settings, color: accentCyan),
-            onPressed: () => Navigator.pushNamed(context, '/settings'),
+            onPressed: ()=>Navigator.pushNamed(context, '/settings'),
           ),
         ],
       ),
@@ -137,7 +137,7 @@ class _ControllerScreenState extends State<ControllerScreen> {
                 ),
               ),
             ),
-            if (service.lastCommentary.isNotEmpty)
+            if(service.lastCommentary.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: LgPanel(
@@ -157,7 +157,7 @@ class _ControllerScreenState extends State<ControllerScreen> {
                   ),
                 ),
               ),
-            if (service.latestGameState != null && service.latestGameState['players'] != null)
+            if(service.latestGameState!=null && service.latestGameState['players']!=null)
               _buildLeaderboard(service),
             const Spacer(),
             Padding(
@@ -165,12 +165,12 @@ class _ControllerScreenState extends State<ControllerScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  if (service.playerNumber == 1) ...[
+                  if(service.playerNumber==1) ...[
                     Expanded(
                       child: LgButton(
-                        label: service.latestGameState?['gameStatus'] == 'playing' ? 'Restart Game' : 'Start Game',
-                        onPressed: () => service.startGame(),
-                        accentColor: service.latestGameState?['gameStatus'] == 'playing' ? Colors.redAccent : accentCyan,
+                        label: service.latestGameState?['gameStatus']=='playing' ? 'Restart Game' : 'Start Game',
+                        onPressed: ()=>service.startGame(),
+                        accentColor: service.latestGameState?['gameStatus']=='playing' ? Colors.redAccent : accentCyan,
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -178,7 +178,7 @@ class _ControllerScreenState extends State<ControllerScreen> {
                   Expanded(
                     child: LgButton(
                       label: 'Power Ups',
-                      onPressed: () => showPowerUpDialog(context),
+                      onPressed: ()=>showPowerUpDialog(context),
                       accentColor: accentAmber,
                     ),
                   ),
@@ -234,9 +234,9 @@ class _ControllerScreenState extends State<ControllerScreen> {
                 children: [
                   Expanded(
                     child: GestureDetector(
-                      onTapDown: (_) => _startHolding(-25.0),
-                      onTapUp: (_) => _stopHolding(),
-                      onTapCancel: () => _stopHolding(),
+                      onTapDown: (_)=>_startHolding(-25.0),
+                      onTapUp: (_)=>_stopHolding(),
+                      onTapCancel: ()=>_stopHolding(),
                       child: Container(
                         height: 80,
                         decoration: BoxDecoration(
@@ -257,9 +257,9 @@ class _ControllerScreenState extends State<ControllerScreen> {
                   const SizedBox(width: 16),
                   Expanded(
                     child: GestureDetector(
-                      onTapDown: (_) => _startHolding(25.0),
-                      onTapUp: (_) => _stopHolding(),
-                      onTapCancel: () => _stopHolding(),
+                      onTapDown: (_)=>_startHolding(25.0),
+                      onTapUp: (_)=>_stopHolding(),
+                      onTapCancel: ()=>_stopHolding(),
                       child: Container(
                         height: 80,
                         decoration: BoxDecoration(
@@ -287,7 +287,7 @@ class _ControllerScreenState extends State<ControllerScreen> {
     );
   }
 
-  Widget _buildStat(String label, String value) {
+  Widget _buildStat(String label, String value){
     return Column(
       children: [
         Text(
@@ -311,11 +311,11 @@ class _ControllerScreenState extends State<ControllerScreen> {
     );
   }
 
-  Widget _buildLeaderboard(GameService service) {
+  Widget _buildLeaderboard(GameService service){
     final players = List<Map<String, dynamic>>.from(service.latestGameState['players'] ?? []);
-    if (players.isEmpty) return const SizedBox.shrink();
+    if(players.isEmpty) return const SizedBox.shrink();
 
-    players.sort((a, b) => (b['score'] as int? ?? 0).compareTo(a['score'] as int? ?? 0));
+    players.sort((a, b)=>(b['score'] as int? ?? 0).compareTo(a['score'] as int? ?? 0));
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -334,11 +334,11 @@ class _ControllerScreenState extends State<ControllerScreen> {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
-            ...players.map((p) {
+            ...players.map((p){
               final rank = p['rank'] ?? '-';
               final pNum = p['playerNumber'] ?? '?';
               final score = p['score'] ?? 0;
-              final isMe = p['id'] == service.playerId;
+              final isMe = p['id']==service.playerId;
               return Container(
                 margin: const EdgeInsets.symmetric(vertical: 2),
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),

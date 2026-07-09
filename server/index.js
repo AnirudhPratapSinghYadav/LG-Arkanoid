@@ -15,14 +15,14 @@ const CANVAS_HEIGHT = 1080;
 const BALL_RADIUS = 8;
 const TICK_MS = 16;
 
-function getScreenBoundaries() {
+function getScreenBoundaries(){
   const boundaries = [];
   const numScreens = worldState.numScreens || 5;
-  for (let i = 0; i < numScreens; i++) {
+  for(let i = 0; i < numScreens; i++){
     boundaries.push({
-      screenId: i + 1,
-      virtualLeft: i * 1920,
-      virtualRight: (i + 1) * 1920 - 1
+      screenId: i+1,
+      virtualLeft: i*1920,
+      virtualRight: (i+1)*1920-1
     });
   }
   return boundaries;
@@ -62,7 +62,7 @@ const COMMENTARY_COOLDOWNS = {
 
 const PLAYER_SLOT_IDS = ['player1', 'player2', 'player3'];
 
-function createInitialWorldState() {
+function createInitialWorldState(){
   const state = new gameEngine.GameState();
   
   state.balls = [
@@ -71,7 +71,7 @@ function createInitialWorldState() {
   ];
   state.balls[1].active = false;
   
-  for (let i = 0; i < 3; i++) {
+  for(let i = 0; i < 3; i++){
     let p = new gameEngine.Player(null);
     p.lastNonces = [];
     p.widePaddleTimer = null;
@@ -113,25 +113,25 @@ const app = express();
 const certPath = path.join(__dirname, 'cert.pem');
 const keyPath = path.join(__dirname, 'key.pem');
 
-if (!fs.existsSync(certPath) || !fs.existsSync(keyPath)) {
+if(!fs.existsSync(certPath) || !fs.existsSync(keyPath)){
   console.log('Skipping SSL generation for local network debug...');
   /*
   try {
     execFileSync('openssl', ['req', '-nodes', '-new', '-x509', '-keyout', keyPath, '-out', certPath, '-days', '365', '-subj', '/CN=LG-Arkanoid']);
-  } catch (err) {
+  } catch(err){
     console.error('Failed to generate cert via openssl. Falling back to HTTP.', err.message);
   }
   */
 }
 
 let server;
-if (fs.existsSync(certPath) && fs.existsSync(keyPath)) {
+if(fs.existsSync(certPath) && fs.existsSync(keyPath)){
   server = https.createServer({
     key: fs.readFileSync(keyPath),
     cert: fs.readFileSync(certPath)
   }, app);
   console.log('SSL certificate loaded. Running over HTTPS/WSS.');
-} else {
+}else{
   server = http.createServer(app);
 }
 
@@ -142,79 +142,75 @@ const io = new Server(server, {
 
 const webClientPath = path.join(__dirname, '..', 'web client');
 
-app.get('/health', (req, res) => {
+app.get('/health', (req, res)=>{
   res.json({
     status: 'ok',
-    gameActive: worldState.gameStatus === 'playing',
-    connectedPlayers: worldState.players.filter((p) => p.connected).length,
+    gameActive: worldState.gameStatus==='playing',
+    connectedPlayers: worldState.players.filter((p)=>p.connected).length,
   });
 });
 
-app.get('/', (req, res) => {
+app.get('/', (req, res)=>{
   res.sendFile(path.join(webClientPath, 'controller.html'));
 });
 
-app.get('/screen', (req, res) => {
+app.get('/screen', (req, res)=>{
   res.sendFile(path.join(webClientPath, 'index.html'));
 });
 
 // Serve static files AFTER specific routes so index.html doesn't hijack '/'
 app.use(express.static(webClientPath));
 
-
-
-function generateToken() {
+function generateToken(){
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   let token = '';
-  for (let i = 0; i < 4; i++) {
-    token += chars.charAt(Math.floor(Math.random() * chars.length));
+  for(let i = 0; i < 4; i++){
+    token += chars.charAt(Math.floor(Math.random()*chars.length));
   }
   return token;
 }
 
-function timingSafeTokenCompare(provided, stored) {
-  if (typeof provided !== 'string' || typeof stored !== 'string') {
+function timingSafeTokenCompare(provided, stored){
+  if(typeof provided!=='string' || typeof stored!=='string'){
     return false;
   }
   const a = Buffer.from(provided.padEnd(6, '0'));
   const b = Buffer.from(stored.padEnd(6, '0'));
-  if (a.length !== b.length) {
+  if(a.length!==b.length){
     return false;
   }
   return crypto.timingSafeEqual(a, b);
 }
 
-function getScreenIdForX(x) {
+function getScreenIdForX(x){
   const numScreens = worldState.numScreens || 5;
-  const maxRight = numScreens * 1920 - 1;
+  const maxRight = numScreens*1920-1;
   const clampedX = Math.max(0, Math.min(x, maxRight));
-  return Math.floor(clampedX / 1920) + 1;
+  return Math.floor(clampedX/1920)+1;
 }
 
-function getScreenById(screenId) {
-  return getScreenBoundaries().find((s) => s.screenId === screenId);
+function getScreenById(screenId){
+  return getScreenBoundaries().find((s)=>s.screenId===screenId);
 }
 
-
-
-function broadcastGameState() {
-  const sortedPlayers = [...worldState.players].sort((a, b) => b.score - a.score);
+function broadcastGameState(){
+  const sortedPlayers = [...worldState.players].sort((a, b)=>b.score-a.score);
   let currentRank = 1;
   let previousScore = null;
   const ranks = {};
 
-  sortedPlayers.forEach((p, index) => {
-    if (previousScore !== null && p.score < previousScore) {
-      currentRank = index + 1;
+  sortedPlayers.forEach((p, index)=>{
+    if(previousScore!==null && p.score < previousScore){
+      currentRank = index+1;
     }
     ranks[p.id] = currentRank;
     previousScore = p.score;
   });
 
-  if (worldState.previousRanks) {
-    for (let p of worldState.players) {
-      if (p.connected && p.id && ranks[p.id] && worldState.previousRanks[p.id]) {
-        if (ranks[p.id] < worldState.previousRanks[p.id]) {
+  if(worldState.previousRanks){
+    for(let p of worldState.players){
+      if(p.connected && p.id && ranks[p.id] && worldState.previousRanks[p.id]){
+        if(ranks[p.id] < worldState.previousRanks[p.id]){
           let snapshot = getWorldSnapshot();
           snapshot.playerId = p.id;
           triggerCommentary('rank_takeover', snapshot);
@@ -225,7 +221,7 @@ function broadcastGameState() {
   worldState.previousRanks = ranks;
 
   const payload = {
-    balls: worldState.balls.map((b) => ({
+    balls: worldState.balls.map((b)=>({
       id: b.id,
       x: b.x,
       y: b.y,
@@ -234,7 +230,7 @@ function broadcastGameState() {
       active: b.active,
     })),
     bricks: worldState.bricks.map((row) =>
-      row.map((brick) => ({
+      row.map((brick)=>({
         row: brick.row,
         col: brick.col,
         x: brick.x,
@@ -245,9 +241,9 @@ function broadcastGameState() {
         active: brick.active,
       }))
     ),
-    players: worldState.players.map((p, index) => ({
+    players: worldState.players.map((p, index)=>({
       id: p.id,
-      playerNumber: index + 1,
+      playerNumber: index+1,
       paddleX: p.paddleX,
       paddleWidth: p.paddleWidth,
       score: p.score,
@@ -262,15 +258,15 @@ function broadcastGameState() {
   io.emit('game_state', payload);
 }
 
-function buildPrompt(eventType, snapshot) {
+function buildPrompt(eventType, snapshot){
   const scores = snapshot.players
-    .filter((p) => p.connected)
-    .map((p, i) => `P${i + 1}:${p.score}`)
+    .filter((p)=>p.connected)
+    .map((p, i)=>`P${i+1}:${p.score}`)
     .join(', ');
 
   const templates = {
     level_cleared: `The player just cleared level ${snapshot.currentLevel}. Scores are ${scores}. Generate exactly 15 words of excited retro arcade announcer commentary. Do not mention brick colours. Do not predict future events.`,
-    life_lost: `A player just lost a life. Current lives are ${snapshot.players.map((p) => p.lives).join(', ')}. Generate exactly 15 words of tense retro arcade announcer commentary.`,
+    life_lost: `A player just lost a life. Current lives are ${snapshot.players.map((p)=>p.lives).join(', ')}. Generate exactly 15 words of tense retro arcade announcer commentary.`,
     multi_ball: `Multi ball just activated with two balls crossing the panoramic rig. Generate exactly 15 words of excited commentary.`,
     score_milestone: `A player just crossed a score milestone. Scores are ${scores}. Generate exactly 15 words of excited retro arcade announcer commentary.`,
     victory: `The game is over. Final scores are ${scores}. Generate exactly 15 words of triumphant retro arcade announcer commentary declaring the winner.`,
@@ -279,16 +275,16 @@ function buildPrompt(eventType, snapshot) {
   return templates[eventType] || templates.score_milestone;
 }
 
-async function callGemini(prompt) {
+async function callGemini(prompt){
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
+  if(!apiKey){
     console.warn('⚠️ GEMINI_API_KEY not set. Using fallback commentary.');
     throw new Error('No API key');
   }
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 5000);
+  const timeout = setTimeout(()=>controller.abort(), 5000);
 
   try {
     const response = await fetch(url, {
@@ -300,13 +296,13 @@ async function callGemini(prompt) {
       signal: controller.signal,
     });
 
-    if (!response.ok) {
+    if(!response.ok){
       throw new Error(`Gemini HTTP ${response.status}`);
     }
 
     const data = await response.json();
     const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!text) {
+    if(!text){
       throw new Error('Empty Gemini response');
     }
     return text.trim();
@@ -315,7 +311,7 @@ async function callGemini(prompt) {
   }
 }
 
-async function triggerCommentary(eventType, snapshot) {
+async function triggerCommentary(eventType, snapshot){
   const limiter = worldState.commentaryRateLimiter[eventType];
   const cooldown = COMMENTARY_COOLDOWNS[eventType] || 0;
   const now = Date.now();
@@ -323,13 +319,13 @@ async function triggerCommentary(eventType, snapshot) {
   let text = null;
   let source = 'fallback';
 
-  if (limiter && cooldown > 0 && now - limiter.lastCalledAt < cooldown) {
+  if(limiter && cooldown > 0 && now-limiter.lastCalledAt < cooldown){
     text = FALLBACK_COMMENTARY[crypto.randomInt(0, FALLBACK_COMMENTARY.length)];
     io.emit('commentary', { text, source, eventType, playerId: snapshot.playerId || null });
     return;
   }
 
-  if (limiter) {
+  if(limiter){
     limiter.lastCalledAt = Date.now();
   }
 
@@ -337,7 +333,7 @@ async function triggerCommentary(eventType, snapshot) {
     const prompt = buildPrompt(eventType, snapshot);
     text = await callGemini(prompt);
     source = 'gemini';
-  } catch (err) {
+  } catch(err){
     text = FALLBACK_COMMENTARY[crypto.randomInt(0, FALLBACK_COMMENTARY.length)];
     source = 'fallback';
   }
@@ -346,8 +342,8 @@ async function triggerCommentary(eventType, snapshot) {
 }
 
 let isGeneratingLevel = false;
-async function generateNextLevelAsync(targetLevel) {
-  if (isGeneratingLevel || worldState.nextLevelBricks) return;
+async function generateNextLevelAsync(targetLevel){
+  if(isGeneratingLevel || worldState.nextLevelBricks) return;
   isGeneratingLevel = true;
   try {
     const prompt = `You are a level designer for Arkanoid. Design a brick layout for level ${targetLevel}.
@@ -358,7 +354,7 @@ Design a cool shape or pattern. Do not include markdown formatting or backticks.
     let rawJson = text.replace(/```json/g, '').replace(/```/g, '').trim();
     worldState.nextLevelBricks = JSON.parse(rawJson);
     console.log(`Pre-fetched AI level ${targetLevel}`);
-  } catch (err) {
+  } catch(err){
     console.error('Failed to generate AI level:', err);
     worldState.nextLevelBricks = null;
   } finally {
@@ -367,16 +363,16 @@ Design a cool shape or pattern. Do not include markdown formatting or backticks.
 }
 
 let isPollingGameMaster = false;
-async function pollGameMasterAsync() {
-  if (isPollingGameMaster) return;
+async function pollGameMasterAsync(){
+  if(isPollingGameMaster) return;
   const limiter = worldState.commentaryRateLimiter['game_master'];
-  if (limiter && Date.now() - limiter.lastCalledAt < 15000) return;
+  if(limiter && Date.now()-limiter.lastCalledAt < 15000) return;
   
   isPollingGameMaster = true;
-  if (limiter) limiter.lastCalledAt = Date.now();
+  if(limiter) limiter.lastCalledAt = Date.now();
   try {
     const prompt = `You are the AI Game Master of Arkanoid. A player just lost a life.
-Current stats: Lives=${worldState.players.map(p => p.lives).join(',')}, Level=${worldState.level}.
+Current stats: Lives=${worldState.players.map(p=>p.lives).join(',')}, Level=${worldState.level}.
 Decide on a modifier to help or punish them. Choose exactly one: WIDE_PADDLE, EXTRA_BALL, SLOW_BALL, NONE.
 Return a JSON object: {"modifier": "YOUR_CHOICE", "commentary": "Your 10 word snarky comment"}.
 Do not include markdown.`;
@@ -384,127 +380,127 @@ Do not include markdown.`;
     let rawJson = text.replace(/```json/g, '').replace(/```/g, '').trim();
     let data = JSON.parse(rawJson);
     
-    if (data.modifier && data.modifier !== 'NONE') {
+    if(data.modifier && data.modifier!=='NONE'){
       gameEngine.applyGameMasterMod(worldState, data.modifier);
     }
-    if (data.commentary) {
+    if(data.commentary){
       io.emit('commentary', { text: data.commentary, source: 'ai', eventType: 'game_master' });
     }
-  } catch (err) {
+  } catch(err){
     console.error('Failed to poll Game Master:', err);
   } finally {
     isPollingGameMaster = false;
   }
 }
 
-function validateMessage(player, timestamp, nonce) {
+function validateMessage(player, timestamp, nonce){
   const now = Date.now();
 
-  if (typeof timestamp !== 'number' || typeof nonce !== 'string' || nonce.length > 32) {
+  if(typeof timestamp!=='number' || typeof nonce!=='string' || nonce.length > 32){
     return { valid: false, errorCode: 1003 };
   }
 
-  if (Math.abs(now - timestamp) > 3000) {
+  if(Math.abs(now-timestamp) > 3000){
     return { valid: false, errorCode: 1008 };
   }
 
-  const recentDuplicate = player.lastNonces.some((entry) => entry.nonce === nonce);
-  if (recentDuplicate) {
+  const recentDuplicate = player.lastNonces.some((entry)=>entry.nonce===nonce);
+  if(recentDuplicate){
     return { valid: false, errorCode: 1004 };
   }
 
   player.lastNonces.push({ nonce, time: now });
-  if (player.lastNonces.length > 100) {
+  if(player.lastNonces.length > 100){
     player.lastNonces.shift();
   }
 
   return { valid: true };
 }
 
-function findPlayerBySocket(socketId) {
+function findPlayerBySocket(socketId){
   const index = socketToPlayerIndex.get(socketId);
-  if (index === undefined) return null;
+  if(index===undefined) return null;
   return { player: worldState.players[index], index };
 }
 
-function clearPlayerTimers(player) {
-  if (player.widePaddleTimer) {
+function clearPlayerTimers(player){
+  if(player.widePaddleTimer){
     clearTimeout(player.widePaddleTimer);
     player.widePaddleTimer = null;
   }
-  if (player.slowBallTimer) {
+  if(player.slowBallTimer){
     clearTimeout(player.slowBallTimer);
     player.slowBallTimer = null;
   }
 }
 
-function applyBombPowerUp() {
-  const activeBall = worldState.balls.find((b) => b.active);
-  if (!activeBall) return;
+function applyBombPowerUp(){
+  const activeBall = worldState.balls.find((b)=>b.active);
+  if(!activeBall) return;
 
   let bestCluster = null;
   let bestDistance = Infinity;
 
-  for (let row = 0; row <= 5; row++) {
-    for (let col = 0; col <= 12; col++) {
+  for(let row = 0; row<=5; row++){
+    for(let col = 0; col<=12; col++){
       let activeCount = 0;
       let centerX = 0;
       let centerY = 0;
-      for (let dr = 0; dr < 3; dr++) {
-        for (let dc = 0; dc < 3; dc++) {
-          const brick = worldState.bricks[row + dr]?.[col + dc];
-          if (brick && brick.active) {
+      for(let dr = 0; dr < 3; dr++){
+        for(let dc = 0; dc < 3; dc++){
+          const brick = worldState.bricks[row+dr]?.[col+dc];
+          if(brick && brick.active){
             activeCount++;
-            centerX += brick.x + brick.width / 2;
-            centerY += brick.y + brick.height / 2;
+            centerX += brick.x+brick.width/2;
+            centerY += brick.y+brick.height/2;
           }
         }
       }
-      if (activeCount === 0) continue;
+      if(activeCount===0) continue;
       centerX /= activeCount;
       centerY /= activeCount;
-      const dist = Math.hypot(activeBall.x - centerX, activeBall.y - centerY);
-      if (dist < bestDistance) {
+      const dist = Math.hypot(activeBall.x-centerX, activeBall.y-centerY);
+      if(dist < bestDistance){
         bestDistance = dist;
         bestCluster = { row, col };
       }
     }
   }
 
-  if (!bestCluster) return;
+  if(!bestCluster) return;
 
-  for (let dr = 0; dr < 3; dr++) {
-    for (let dc = 0; dc < 3; dc++) {
-      const brick = worldState.bricks[bestCluster.row + dr]?.[bestCluster.col + dc];
-      if (brick) brick.active = false;
+  for(let dr = 0; dr < 3; dr++){
+    for(let dc = 0; dc < 3; dc++){
+      const brick = worldState.bricks[bestCluster.row+dr]?.[bestCluster.col+dc];
+      if(brick) brick.active = false;
     }
   }
 }
 
-function applyPowerUpEffect(player, powerUpType) {
-  if (powerUpType === 'wide_paddle') {
+function applyPowerUpEffect(player, powerUpType){
+  if(powerUpType==='wide_paddle'){
     player.paddleWidth = 600;
-    if (player.widePaddleTimer) clearTimeout(player.widePaddleTimer);
-    player.widePaddleTimer = setTimeout(() => {
+    if(player.widePaddleTimer) clearTimeout(player.widePaddleTimer);
+    player.widePaddleTimer = setTimeout(()=>{
       player.paddleWidth = 300;
       player.widePaddleTimer = null;
     }, 8000);
-  } else if (powerUpType === 'slow_ball') {
-    if (!worldState.slowBallActive) {
-      worldState.originalBallSpeeds = worldState.balls.map((b) => ({ vx: b.vx, vy: b.vy }));
-      for (const ball of worldState.balls) {
-        if (ball.active) {
+  }else if(powerUpType==='slow_ball'){
+    if(!worldState.slowBallActive){
+      worldState.originalBallSpeeds = worldState.balls.map((b)=>({ vx: b.vx, vy: b.vy }));
+      for(const ball of worldState.balls){
+        if(ball.active){
           ball.vx *= 0.5;
           ball.vy *= 0.5;
         }
       }
       worldState.slowBallActive = true;
     }
-    if (worldState.slowBallTimer) clearTimeout(worldState.slowBallTimer);
-    worldState.slowBallTimer = setTimeout(() => {
-      if (worldState.originalBallSpeeds) {
-        worldState.balls.forEach((ball, i) => {
-          if (worldState.originalBallSpeeds[i]) {
+    if(worldState.slowBallTimer) clearTimeout(worldState.slowBallTimer);
+    worldState.slowBallTimer = setTimeout(()=>{
+      if(worldState.originalBallSpeeds){
+        worldState.balls.forEach((ball, i)=>{
+          if(worldState.originalBallSpeeds[i]){
             ball.vx = worldState.originalBallSpeeds[i].vx;
             ball.vy = worldState.originalBallSpeeds[i].vy;
           }
@@ -514,10 +510,10 @@ function applyPowerUpEffect(player, powerUpType) {
       worldState.originalBallSpeeds = null;
       worldState.slowBallTimer = null;
     }, 8000);
-  } else if (powerUpType === 'multi_ball') {
-    const sourceBall = worldState.balls.find(b => b.active);
-    const targetBall = worldState.balls.find(b => !b.active);
-    if (sourceBall && targetBall) {
+  }else if(powerUpType==='multi_ball'){
+    const sourceBall = worldState.balls.find(b=>b.active);
+    const targetBall = worldState.balls.find(b=>!b.active);
+    if(sourceBall && targetBall){
       targetBall.x = sourceBall.x;
       targetBall.y = sourceBall.y;
       targetBall.vx = -sourceBall.vx;
@@ -526,26 +522,26 @@ function applyPowerUpEffect(player, powerUpType) {
       targetBall.lastTouchedByPlayerId = player.id;
       triggerCommentary('multi_ball', getWorldSnapshot());
     }
-  } else if (powerUpType === 'bomb') {
+  }else if(powerUpType==='bomb'){
     applyBombPowerUp();
   }
 }
 
-function resetWorldForNewGame() {
+function resetWorldForNewGame(){
   clearAllPowerUpTimers();
   worldState = createInitialWorldState();
   socketToPlayerIndex.clear();
 }
 
-function clearAllPowerUpTimers() {
-  for (const player of worldState.players) {
+function clearAllPowerUpTimers(){
+  for(const player of worldState.players){
     clearPlayerTimers(player);
   }
 }
 
-function getWorldSnapshot() {
+function getWorldSnapshot(){
   return {
-    players: worldState.players.map((p) => ({
+    players: worldState.players.map((p)=>({
       id: p.id,
       score: p.score,
       lives: p.lives,
@@ -557,15 +553,15 @@ function getWorldSnapshot() {
   };
 }
 
-io.on('connection', (socket) => {
+io.on('connection', (socket)=>{
   const screenId = parseInt(socket.handshake.query.screenId, 10);
-  if (screenId >= 1 && screenId <= (worldState.numScreens || 5)) {
+  if(screenId>=1 && screenId<=(worldState.numScreens || 5)){
     socket.join(`screen-${screenId}`);
   }
 
-  socket.on('start_game', () => {
+  socket.on('start_game', ()=>{
     const slotIndex = socketToPlayerIndex.get(socket.id);
-    if (slotIndex !== 0) {
+    if(slotIndex!==0){
       socket.emit('join_rejected', { errorCode: 1007, message: 'Only the host (Player 1) can start the game' });
       return;
     }
@@ -583,21 +579,21 @@ io.on('connection', (socket) => {
     broadcastGameState();
   });
 
-  socket.on('player_join', (data) => {
+  socket.on('player_join', (data)=>{
     const { sessionToken } = data || {};
 
-    if (typeof sessionToken !== 'string' || sessionToken.length !== 4) {
+    if(typeof sessionToken!=='string' || sessionToken.length!==4){
       socket.emit('join_rejected', { errorCode: 1005, message: 'Invalid payload' });
       return;
     }
 
-    if (!timingSafeTokenCompare(sessionToken, String(worldState.sessionToken || ''))) {
+    if(!timingSafeTokenCompare(sessionToken, String(worldState.sessionToken || ''))){
       socket.emit('join_rejected', { errorCode: 1001, message: 'Invalid session token' });
       return;
     }
 
-    const slotIndex = worldState.players.findIndex((p) => !p.connected);
-    if (slotIndex === -1) {
+    const slotIndex = worldState.players.findIndex((p)=>!p.connected);
+    if(slotIndex===-1){
       socket.emit('join_rejected', { errorCode: 1002, message: 'No paddle slots available' });
       return;
     }
@@ -606,32 +602,32 @@ io.on('connection', (socket) => {
     player.connected = true;
     player.id = PLAYER_SLOT_IDS[slotIndex];
     player.socketId = socket.id;
-    player.paddleX = ((worldState.numScreens || 5) * 1920) / 2 - 150;
+    player.paddleX = ((worldState.numScreens || 5)*1920)/2-150;
     player.lastNonces = [];
     socketToPlayerIndex.set(socket.id, slotIndex);
 
-    if (disconnectTimers.has(socket.id)) {
+    if(disconnectTimers.has(socket.id)){
       clearTimeout(disconnectTimers.get(socket.id));
       disconnectTimers.delete(socket.id);
     }
 
     socket.emit('join_confirmed', {
       playerId: player.id,
-      playerNumber: slotIndex + 1,
+      playerNumber: slotIndex+1,
       sessionId: worldState.sessionId,
     });
     broadcastGameState();
   });
 
-  socket.on('resume_request', (data) => {
+  socket.on('resume_request', (data)=>{
     const { playerId, sessionId } = data || {};
-    if (sessionId !== worldState.sessionId) {
+    if(sessionId!==worldState.sessionId){
       socket.emit('join_rejected', { errorCode: 1001, message: 'Session expired' });
       return;
     }
 
-    const slotIndex = worldState.players.findIndex((p) => p.id === playerId && !p.connected);
-    if (slotIndex === -1) {
+    const slotIndex = worldState.players.findIndex((p)=>p.id===playerId && !p.connected);
+    if(slotIndex===-1){
       socket.emit('join_rejected', { errorCode: 1002, message: 'Cannot resume this slot' });
       return;
     }
@@ -643,56 +639,56 @@ io.on('connection', (socket) => {
 
     socket.emit('join_confirmed', {
       playerId: player.id,
-      playerNumber: slotIndex + 1,
+      playerNumber: slotIndex+1,
       sessionId: worldState.sessionId,
     });
     broadcastGameState();
   });
 
-  socket.on('paddle_move', (data) => {
+  socket.on('paddle_move', (data)=>{
     const found = findPlayerBySocket(socket.id);
-    if (!found) return;
+    if(!found) return;
 
     const { player } = found;
     const { deltaX, timestamp, nonce } = data || {};
 
-    if (typeof deltaX !== 'number' || isNaN(deltaX)) {
+    if(typeof deltaX!=='number' || isNaN(deltaX)){
       socket.emit('error', { errorCode: 1005, message: 'Invalid payload' });
       return;
     }
 
     const validation = validateMessage(player, timestamp, nonce);
-    if (!validation.valid) {
+    if(!validation.valid){
       socket.emit('error', { errorCode: validation.errorCode });
       return;
     }
 
-    const maxRight = (worldState.numScreens || 5) * 1920;
+    const maxRight = (worldState.numScreens || 5)*1920;
     player.paddleX += deltaX;
-    player.paddleX = Math.max(0, Math.min(maxRight - 300, Math.round(player.paddleX)));
+    player.paddleX = Math.max(0, Math.min(maxRight-300, Math.round(player.paddleX)));
   });
 
-  socket.on('power_up_activate', (data) => {
+  socket.on('power_up_activate', (data)=>{
     const found = findPlayerBySocket(socket.id);
-    if (!found) return;
+    if(!found) return;
 
     const { player } = found;
     const { powerUpType, timestamp, nonce } = data || {};
 
-    if (typeof powerUpType !== 'string' || powerUpType.length > 20) {
+    if(typeof powerUpType!=='string' || powerUpType.length > 20){
       socket.emit('error', { errorCode: 1005, message: 'Invalid payload' });
       return;
     }
 
     const now = Date.now();
-    if (player.lastPowerUpTime && now - player.lastPowerUpTime < 5000) {
+    if(player.lastPowerUpTime && now-player.lastPowerUpTime < 5000){
       socket.emit('error', { errorCode: 1006, message: 'Power-up on cooldown' });
       return;
     }
     player.lastPowerUpTime = now;
 
     const validation = validateMessage(player, timestamp, nonce);
-    if (!validation.valid) {
+    if(!validation.valid){
       socket.emit('error', { errorCode: validation.errorCode });
       return;
     }
@@ -700,35 +696,35 @@ io.on('connection', (socket) => {
     applyPowerUpEffect(player, powerUpType);
   });
 
-  socket.on('boundary_ack', (data) => {
+  socket.on('boundary_ack', (data)=>{
     const { handoffId, screenId } = data || {};
     const pending = pendingHandoffs.get(handoffId);
-    if (!pending) return;
+    if(!pending) return;
 
-    if (screenId === pending.exitPayload.screenId) {
+    if(screenId===pending.exitPayload.screenId){
       pending.departingAck = true;
     }
-    if (screenId === pending.enterPayload.screenId) {
+    if(screenId===pending.enterPayload.screenId){
       pending.arrivingAck = true;
     }
   });
 
-  socket.on('disconnect', () => {
+  socket.on('disconnect', ()=>{
     const found = findPlayerBySocket(socket.id);
-    if (!found) return;
+    if(!found) return;
 
     const { player, index } = found;
-    const playerNumber = index + 1;
+    const playerNumber = index+1;
     const disconnectedSocketId = socket.id;
 
-    if (disconnectTimers.has(disconnectedSocketId)) {
+    if(disconnectTimers.has(disconnectedSocketId)){
       clearTimeout(disconnectTimers.get(disconnectedSocketId));
     }
 
-    const timer = setTimeout(() => {
+    const timer = setTimeout(()=>{
       disconnectTimers.delete(disconnectedSocketId);
 
-      if (player.socketId !== disconnectedSocketId) {
+      if(player.socketId!==disconnectedSocketId){
         return;
       }
 
@@ -750,54 +746,54 @@ io.on('connection', (socket) => {
   });
 });
 
-setInterval(() => {
-  if (worldState.gameStatus !== 'playing') return;
+setInterval(()=>{
+  if(worldState.gameStatus!=='playing') return;
 
-  const beforeScores = worldState.players.map(p => p.score);
-  const beforeLives = worldState.players.map(p => p.lives);
+  const beforeScores = worldState.players.map(p=>p.score);
+  const beforeLives = worldState.players.map(p=>p.lives);
   const beforeLevel = worldState.level;
-  const beforeBallScreens = worldState.balls.map(b => getScreenIdForX(b.x));
+  const beforeBallScreens = worldState.balls.map(b=>getScreenIdForX(b.x));
   const nextBricksBefore = worldState.nextLevelBricks;
 
   gameEngine.updateGameLoop(worldState, applyPowerUpEffect);
 
   // Pre-fetch next level if needed
-  if (!worldState.nextLevelBricks && !isGeneratingLevel) {
-    generateNextLevelAsync(worldState.level + 1);
+  if(!worldState.nextLevelBricks && !isGeneratingLevel){
+    generateNextLevelAsync(worldState.level+1);
   }
 
-  for (let i = 0; i < worldState.players.length; i++) {
+  for(let i = 0; i < worldState.players.length; i++){
     const p = worldState.players[i];
-    if (p.score > 0 && Math.floor(beforeScores[i] / 5000) < Math.floor(p.score / 5000)) {
+    if(p.score > 0 && Math.floor(beforeScores[i]/5000) < Math.floor(p.score/5000)){
       const snap = getWorldSnapshot();
       snap.playerId = p.id;
       triggerCommentary('score_milestone', snap);
     }
-    if (p.lives < beforeLives[i]) {
+    if(p.lives < beforeLives[i]){
       const snap = getWorldSnapshot();
       snap.playerId = p.id;
       triggerCommentary('life_lost', snap);
       pollGameMasterAsync();
-      if (p.lives === 0) {
-        io.emit('player_eliminated', { playerId: p.id, playerNumber: i + 1 });
+      if(p.lives===0){
+        io.emit('player_eliminated', { playerId: p.id, playerNumber: i+1 });
       }
     }
   }
 
-  if (worldState.level > beforeLevel) {
+  if(worldState.level > beforeLevel){
     worldState.currentLevel = worldState.level;
     triggerCommentary('level_cleared', getWorldSnapshot());
     pollGameMasterAsync();
-    io.emit('level_source', { level: worldState.level, aiGenerated: nextBricksBefore !== null });
-  } else if (worldState.gameStatus === 'win' && beforeLevel > 0) {
+    io.emit('level_source', { level: worldState.level, aiGenerated: nextBricksBefore!==null });
+  }else if(worldState.gameStatus==='win' && beforeLevel > 0){
     triggerCommentary('victory', getWorldSnapshot());
   }
 
-  worldState.balls.forEach((ball, i) => {
-    if (!ball.active) return;
+  worldState.balls.forEach((ball, i)=>{
+    if(!ball.active) return;
     const currentScreen = getScreenIdForX(ball.x);
     const oldScreen = beforeBallScreens[i];
-    if (currentScreen !== oldScreen) {
+    if(currentScreen!==oldScreen){
       const handoffId = `${oldScreen}-${currentScreen}-${Date.now()}`;
       
       const isMovingRight = oldScreen < currentScreen;
@@ -835,17 +831,17 @@ setInterval(() => {
         retried: false,
       });
 
-      setTimeout(() => {
+      setTimeout(()=>{
         const pending = pendingHandoffs.get(handoffId);
-        if (!pending) return;
+        if(!pending) return;
 
-        if (!pending.departingAck || !pending.arrivingAck) {
+        if(!pending.departingAck || !pending.arrivingAck){
           io.to(`screen-${pending.exitPayload.screenId}`).emit('boundary_exit', pending.exitPayload);
           io.to(`screen-${pending.enterPayload.screenId}`).emit('boundary_enter', pending.enterPayload);
           pending.retried = true;
         }
 
-        setTimeout(() => pendingHandoffs.delete(handoffId), 100);
+        setTimeout(()=>pendingHandoffs.delete(handoffId), 100);
       }, 16);
     }
   });
@@ -853,6 +849,6 @@ setInterval(() => {
   broadcastGameState();
 }, TICK_MS);
 
-server.listen(PORT, () => {
+server.listen(PORT, ()=>{
   console.log(`LG Arkanoid game server running on port ${PORT}`);
 });
