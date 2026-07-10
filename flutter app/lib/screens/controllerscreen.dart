@@ -40,6 +40,7 @@ class _ControllerScreenState extends State<ControllerScreen> {
       DeviceOrientation.landscapeLeft,
       DeviceOrientation.landscapeRight,
     ]);
+    _moveTimer?.cancel();
     super.dispose();
   }
 
@@ -91,11 +92,6 @@ class _ControllerScreenState extends State<ControllerScreen> {
     });
   }
 
-  @override
-  void dispose(){
-    _moveTimer?.cancel();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context){
@@ -178,7 +174,7 @@ class _ControllerScreenState extends State<ControllerScreen> {
                   ),
                 ),
               ),
-            if(service.latestGameState!=null && service.latestGameState['players']!=null)
+            if(service.latestGameState!=null && service.latestGameState!['players']!=null)
               _buildLeaderboard(service),
             const Spacer(),
             Padding(
@@ -186,7 +182,7 @@ class _ControllerScreenState extends State<ControllerScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  if((service.playerNumber - 1) == (service.latestGameState?['masterPlayerIndex'] ?? 0)) ...[
+                  if((service.playerNumber ?? 0) - 1 == (service.latestGameState?['masterPlayerIndex'] ?? 0)) ...[
                     if (service.latestGameState?['gameStatus'] != 'playing')
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -360,7 +356,7 @@ class _ControllerScreenState extends State<ControllerScreen> {
   }
 
   Widget _buildLeaderboard(GameService service){
-    final players = List<Map<String, dynamic>>.from(service.latestGameState['players'] ?? []);
+    final players = List<Map<String, dynamic>>.from(service.latestGameState?['players'] ?? []);
     if(players.isEmpty) return const SizedBox.shrink();
 
     players.sort((a, b)=>(b['score'] as int? ?? 0).compareTo(a['score'] as int? ?? 0));
