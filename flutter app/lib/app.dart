@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'screens/splash_screen.dart';
-import 'screens/connect_screen.dart';
-import 'screens/controller_screen.dart';
-import 'screens/status_screen.dart';
-import 'screens/settings_screen.dart';
+import 'screens/splashscreen.dart';
+import 'screens/connectscreen.dart';
+import 'screens/controllerscreen.dart';
+import 'screens/statusscreen.dart';
+import 'screens/settingsscreen.dart';
 import 'utils/constants.dart';
 
 class ArkanoidApp extends StatelessWidget {

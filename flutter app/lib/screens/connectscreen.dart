@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import '../services/game_service.dart';
+import '../services/gameservice.dart';
 import '../utils/constants.dart';
-import '../widgets/lg_panel.dart';
-import '../widgets/lg_button.dart';
-import '../widgets/lg_text_field.dart';
-import 'qr_scan_screen.dart';
+import '../widgets/lgpanel.dart';
+import '../widgets/lgbutton.dart';
+import '../widgets/lgtextfield.dart';
+import 'qrscanscreen.dart';
 
 class ConnectScreen extends StatefulWidget {
   const ConnectScreen({super.key});
