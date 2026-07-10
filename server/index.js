@@ -268,6 +268,8 @@ function broadcastGameState(){
     currentLevel: worldState.currentLevel,
     gameStatus: worldState.gameStatus,
     gameStartedAt: worldState.gameStartedAt,
+    lobbyStartedAt: worldState.lobbyStartedAt,
+    countdownStartedAt: worldState.countdownStartedAt,
   };
   io.emit('game_state', payload);
 }
@@ -566,6 +568,8 @@ function getWorldSnapshot(){
     currentLevel: worldState.currentLevel,
     sessionToken: worldState.sessionToken,
     gameStatus: worldState.gameStatus,
+    lobbyStartedAt: worldState.lobbyStartedAt,
+    countdownStartedAt: worldState.countdownStartedAt,
     masterPlayerIndex: worldState.masterPlayerIndex,
     lanIp: getLanIp(),
     port: PORT,
@@ -585,18 +589,44 @@ io.on('connection', (socket)=>{
       return;
     }
     resetWorldForNewGame();
-    worldState.gameStatus = 'playing';
-    worldState.gameActive = true;
+    worldState.gameStatus = 'lobby'; // Changed to lobby
+    worldState.gameActive = false;
     worldState.sessionId = crypto.randomUUID();
     worldState.sessionToken = generateToken();
-    worldState.gameStartedAt = Date.now();
+    worldState.lobbyStartedAt = Date.now();
     worldState.gameDurationSeconds = data?.durationSeconds || 180;
-    io.emit('game_started', {
+    io.emit('lobby_started', {
       sessionToken: worldState.sessionToken,
       sessionId: worldState.sessionId,
-      gameStartedAt: worldState.gameStartedAt,
       gameDurationSeconds: worldState.gameDurationSeconds,
     });
+    
+    // Automatically transition to countdown after 8 seconds of lobby
+    setTimeout(() => {
+        if (worldState.gameStatus === 'lobby' && worldState.sessionId) {
+            worldState.gameStatus = 'countdown';
+            worldState.countdownStartedAt = Date.now();
+            io.emit('countdown_started', { countdown: 5 });
+            broadcastGameState();
+            
+            // 5 second countdown before playing
+            setTimeout(() => {
+                if (worldState.gameStatus === 'countdown') {
+                    worldState.gameStatus = 'playing';
+                    worldState.gameActive = true;
+                    worldState.gameStartedAt = Date.now();
+                    io.emit('game_started', {
+                        sessionToken: worldState.sessionToken,
+                        sessionId: worldState.sessionId,
+                        gameStartedAt: worldState.gameStartedAt,
+                        gameDurationSeconds: worldState.gameDurationSeconds,
+                    });
+                    broadcastGameState();
+                }
+            }, 5000);
+        }
+    }, 8000);
+    
     broadcastGameState();
   });
 
@@ -615,7 +645,13 @@ io.on('connection', (socket)=>{
 
     const slotIndex = worldState.players.findIndex((p)=>!p.connected);
     if(slotIndex===-1){
-      socket.emit('join_rejected', { errorCode: 1002, message: 'No paddle slots available' });
+      // No slots available, join as spectator!
+      socket.emit('join_confirmed', {
+        playerId: 'spectator_' + socket.id.substring(0, 5),
+        playerNumber: 99,
+        isSpectator: true,
+        sessionId: worldState.sessionId,
+      });
       return;
     }
 
@@ -636,6 +672,7 @@ io.on('connection', (socket)=>{
     socket.emit('join_confirmed', {
       playerId: player.id,
       playerNumber: slotIndex+1,
+      isSpectator: false,
       sessionId: worldState.sessionId,
     });
     broadcastGameState();

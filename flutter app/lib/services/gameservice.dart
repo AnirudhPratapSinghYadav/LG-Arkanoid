@@ -19,6 +19,7 @@ class GameService extends ChangeNotifier {
   String lastCommentarySource = 'fallback';
   bool connected = false;
   Map<String, dynamic>? latestGameState;
+  void Function(bool isSpectator)? onJoinConfirmed;
 
   final Random _random = Random();
 
@@ -60,6 +61,8 @@ class GameService extends ChangeNotifier {
         playerId = map['playerId'] as String?;
         playerNumber = map['playerNumber'] as int?;
         sessionId = map['sessionId'] as String?;
+        bool isSpectator = map['isSpectator'] as bool? ?? false;
+        if (onJoinConfirmed != null) onJoinConfirmed!(isSpectator);
         notifyListeners();
       });
 

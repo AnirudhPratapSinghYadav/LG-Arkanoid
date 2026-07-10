@@ -21,7 +21,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       backgroundColor: bgDark,
       appBar: AppBar(
         backgroundColor: bgDark,
-        title: const Text(
+        title: Text(
           'GAME SETTINGS',
           style: TextStyle(
             fontFamily: GoogleFonts.inter().fontFamily,
@@ -41,7 +41,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Text(
+                  Text(
                     'ROBOT COMMENTARY',
                     style: TextStyle(
                       fontFamily: GoogleFonts.inter().fontFamily,
@@ -53,7 +53,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   const SizedBox(height: 16),
                   SwitchListTile(
-                    title: const Text(
+                    title: Text(
                       'Enable TTS Voice',
                       style: TextStyle(
                         fontFamily: GoogleFonts.inter().fontFamily,
