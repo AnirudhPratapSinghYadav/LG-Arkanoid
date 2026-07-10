@@ -21,6 +21,27 @@ class _ControllerScreenState extends State<ControllerScreen> {
   Timer? _moveTimer;
   bool _isButtonHeld = false;
   double _puckPosition = 0;
+  int _selectedDuration = 180;
+
+  @override
+  void initState() {
+    super.initState();
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
+  }
+
+  @override
+  void dispose() {
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
+    super.dispose();
+  }
 
   void _onPanStart(DragStartDetails details){
     if(_isButtonHeld) return;
@@ -165,11 +186,38 @@ class _ControllerScreenState extends State<ControllerScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  if(service.playerNumber==1) ...[
+                  if((service.playerNumber - 1) == (service.latestGameState?['masterPlayerIndex'] ?? 0)) ...[
+                    if (service.latestGameState?['gameStatus'] != 'playing')
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.black45,
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: accentCyan.withOpacity(0.3)),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<int>(
+                            value: _selectedDuration,
+                            dropdownColor: bgColor,
+                            icon: const Icon(Icons.arrow_drop_down, color: accentCyan),
+                            style: const TextStyle(fontFamily: 'JetBrainsMono', color: accentCyan, fontSize: 12),
+                            items: const [
+                              DropdownMenuItem(value: 180, child: Text('3 Min')),
+                              DropdownMenuItem(value: 300, child: Text('5 Min')),
+                              DropdownMenuItem(value: 600, child: Text('10 Min')),
+                            ],
+                            onChanged: (val) {
+                              if (val != null) setState(() => _selectedDuration = val);
+                            },
+                          ),
+                        ),
+                      ),
+                    if (service.latestGameState?['gameStatus'] != 'playing')
+                      const SizedBox(width: 8),
                     Expanded(
                       child: LgButton(
                         label: service.latestGameState?['gameStatus']=='playing' ? 'Restart Game' : 'Start Game',
-                        onPressed: ()=>service.startGame(),
+                        onPressed: ()=>service.startGame(_selectedDuration),
                         accentColor: service.latestGameState?['gameStatus']=='playing' ? Colors.redAccent : accentCyan,
                       ),
                     ),
@@ -336,7 +384,7 @@ class _ControllerScreenState extends State<ControllerScreen> {
             const SizedBox(height: 8),
             ...players.map((p){
               final rank = p['rank'] ?? '-';
-              final pNum = p['playerNumber'] ?? '?';
+              final name = p['name'] ?? 'Unknown';
               final score = p['score'] ?? 0;
               final isMe = p['id']==service.playerId;
               return Container(
@@ -351,7 +399,7 @@ class _ControllerScreenState extends State<ControllerScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      '#$rank P$pNum ${isMe ? '(YOU)' : ''}',
+                      '#$rank $name ${isMe ? '(YOU)' : ''}',
                       style: TextStyle(
                         fontFamily: 'JetBrainsMono',
                         color: isMe ? accentCyan : textColor,

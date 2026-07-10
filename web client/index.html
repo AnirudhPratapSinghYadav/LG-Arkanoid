@@ -7,16 +7,32 @@
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.80.1/phaser.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.8.0/socket.io.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         html, body {
             margin: 0;
             padding: 0;
-            background: #000;
             overflow: hidden;
+            background-color: #0a0e14;
+        }
+        #qrcode {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: none;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 0 20px rgba(0, 229, 255, 0.4);
+        }
+        .retro-glow {
+            text-shadow: 0 0 10px rgba(0, 229, 255, 0.8);
         }
     </style>
 </head>
 <body>
+    <div id="qrcode"></div>
 <script>
 
 const urlParams = new URLSearchParams(window.location.search);
@@ -48,6 +64,11 @@ class GameScene extends Phaser.Scene {
         this.previousScores = {};
         this.previousLives = {};
         this.ballTrails = {};
+        this.qrCodeObj = null;
+    }
+
+    preload() {
+        this.load.image('lg_logo', 'assets/lg-logo.png');
     }
 
     drawStandardPanel(graphics, x, y, width, height, alpha = 1.0, borderColor = 0x00e5ff) {
@@ -167,6 +188,9 @@ class GameScene extends Phaser.Scene {
             color: '#00e5ff',
             align: 'center'
         }).setOrigin(0.5, 0.5).setAlpha(0);
+        
+        this.logo = this.add.image(960, 420, 'lg_logo').setOrigin(0.5, 0.5).setAlpha(0);
+        this.logo.setScale(0.5);
 
         const scanlineGraphics = this.make.graphics({x: 0, y: 0, add: false});
         scanlineGraphics.fillStyle(0xffffff, 0.15);
@@ -220,7 +244,8 @@ class GameScene extends Phaser.Scene {
         for (let i = 0; i < 3; i++) {
             const p = this.currentState.players[i];
             if (p && p.connected) {
-                hudStr += `P${i+1} SCORE: ${p.score.toString().padStart(5, '0')}          \n`;
+                const name = p.name ? p.name.padEnd(12, ' ') : `P${i+1}`.padEnd(12, ' ');
+                hudStr += `${name} SCORE: ${p.score.toString().padStart(5, '0')}          \n`;
             }
         }
         
@@ -261,9 +286,13 @@ class GameScene extends Phaser.Scene {
 
         if (this.currentState.gameStartedAt && this.currentState.gameStatus === 'playing') {
             const elapsed = Math.floor((Date.now() - this.currentState.gameStartedAt) / 1000);
-            const m = String(Math.floor(elapsed / 60)).padStart(2, '0');
-            const s = String(elapsed % 60).padStart(2, '0');
+            const duration = this.currentState.gameDurationSeconds || 180;
+            const remaining = Math.max(0, duration - elapsed);
+            const m = String(Math.floor(remaining / 60)).padStart(2, '0');
+            const s = String(remaining % 60).padStart(2, '0');
             this.timerText.setText(`${m}:${s}`);
+            if (remaining <= 30) this.timerText.setColor('#ff0000');
+            else this.timerText.setColor('#ffffff');
         } else {
             this.timerText.setText('00:00');
         }
@@ -283,7 +312,8 @@ class GameScene extends Phaser.Scene {
                 if (p.playerNumber === 2) colorHex = '#ff2d78';
                 if (p.playerNumber === 3) colorHex = '#ffb800';
                 
-                this.leaderboardTexts[i].setText(`#${p.rank} P${p.playerNumber} ${p.score.toString().padStart(5, '0')}`);
+                const name = p.name || `P${p.playerNumber}`;
+                this.leaderboardTexts[i].setText(`#${p.rank} ${name} ${p.score.toString().padStart(5, '0')}`);
                 this.leaderboardTexts[i].setColor(colorHex);
                 lbW = Math.max(lbW, this.leaderboardTexts[i].width);
                 lbLines++;
@@ -313,8 +343,10 @@ class GameScene extends Phaser.Scene {
                         if (localX > -600 && localX < 2520) {
                             this.brickEmitter.setParticleTint(ROW_COLORS[r % 6]);
                             this.brickEmitter.emitParticleAt(localX + 300, brick.y + 15, 15);
+                            this.playBeep(600 + (6 - (r % 6)) * 100, 'square', 0.1, 0.05);
                             if (brick.type === 'hard' || brick.type === 'indestructible') {
                                 this.cameras.main.shake(150, 0.005);
+                                this.playBeep(200, 'sawtooth', 0.15, 0.1);
                             } else {
                                 this.cameras.main.shake(50, 0.002);
                             }
@@ -333,6 +365,11 @@ class GameScene extends Phaser.Scene {
                 
                 if (p.score > prevScore) {
                     this.spawnFloatingText(`+${p.score - prevScore}`, p.paddleX - virtualLeft + (p.paddleWidth/2 || 100), 950, '#00ff00');
+                    if (p.score - prevScore >= 50) {
+                        // Likely caught a powerup
+                        this.playBeep(1200, 'sine', 0.2, 0.1);
+                        this.playBeep(1600, 'sine', 0.3, 0.1);
+                    }
                 } else if (p.score < prevScore) {
                     this.spawnFloatingText(`${p.score - prevScore}`, p.paddleX - virtualLeft + (p.paddleWidth/2 || 100), 950, '#ff0000');
                 }
@@ -342,10 +379,29 @@ class GameScene extends Phaser.Scene {
             }
         }
         
+        if (this.currentState.balls) {
+            if (!this.previousBalls) this.previousBalls = [];
+            this.currentState.balls.forEach((ball, i) => {
+                const prev = this.previousBalls[i];
+                if (prev && ball.active && prev.active) {
+                    if (prev.vy > 0 && ball.vy < 0 && ball.y > 800) {
+                        this.playBeep(400, 'triangle', 0.1, 0.1);
+                    }
+                }
+                this.previousBalls[i] = { active: ball.active, vy: ball.vy, y: ball.y };
+            });
+        }
+        
         if (this.currentState.gameStatus === 'game_over') {
             if (this.statusText.text !== 'GAME OVER') {
                 this.statusText.setText('GAME OVER');
                 this.statusText.setColor('#ff0000');
+                this.tweens.add({ targets: this.statusText, alpha: 1, duration: 500 });
+            }
+        } else if (this.currentState.gameStatus === 'time_up') {
+            if (this.statusText.text !== 'TIME UP!') {
+                this.statusText.setText('TIME UP!');
+                this.statusText.setColor('#ffb800');
                 this.tweens.add({ targets: this.statusText, alpha: 1, duration: 500 });
             }
         } else if (this.currentState.gameStatus === 'win') {
@@ -362,11 +418,35 @@ class GameScene extends Phaser.Scene {
         if (this.currentState.gameStatus === 'playing') {
             this.startButton.setAlpha(0);
             this.sessionTokenText.setAlpha(0);
+            this.logo.setAlpha(0);
+            document.getElementById('qrcode').style.display = 'none';
         } else {
             this.startButton.setAlpha(1);
+            this.logo.setAlpha(1);
             if (this.currentState.sessionToken) {
                 this.sessionTokenText.setText('TOKEN: ' + this.currentState.sessionToken);
                 this.sessionTokenText.setAlpha(1);
+                
+                const qrDiv = document.getElementById('qrcode');
+                if (this.currentState.lanIp && !this.qrCodeObj) {
+                    const qrData = `LGARK|${this.currentState.lanIp}|${this.currentState.port}|${this.currentState.sessionToken}`;
+                    this.qrCodeObj = new QRCode(qrDiv, {
+                        text: qrData,
+                        width: 150,
+                        height: 150,
+                        colorDark : "#000000",
+                        colorLight : "#ffffff",
+                        correctLevel : QRCode.CorrectLevel.L
+                    });
+                }
+                
+                const urlParams = new URLSearchParams(window.location.search);
+                const screenId = parseInt(urlParams.get('screenId')) || 1;
+                if (screenId === 3) {
+                    qrDiv.style.display = 'block';
+                } else {
+                    qrDiv.style.display = 'none';
+                }
             }
         }
     }
@@ -736,6 +816,24 @@ class GameScene extends Phaser.Scene {
         this.socket.on('game_started', (data) => {
             // State is now managed exclusively by checkStateChanges loop
         });
+    }
+    playBeep(freq, type, duration, vol) {
+        if (!this.audioCtx) {
+            this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (this.audioCtx.state === 'suspended') {
+            this.audioCtx.resume();
+        }
+        const osc = this.audioCtx.createOscillator();
+        const gain = this.audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, this.audioCtx.currentTime);
+        gain.gain.setValueAtTime(vol, this.audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(this.audioCtx.destination);
+        osc.start();
+        osc.stop(this.audioCtx.currentTime + duration);
     }
 }
 

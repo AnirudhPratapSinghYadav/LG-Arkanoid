@@ -4,6 +4,7 @@ const https = require('https');
 const http = require('http');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 const { execFileSync } = require('child_process');
 const crypto = require('crypto');
 const gameEngine = require('./gameEngine.js');
@@ -26,6 +27,18 @@ function getScreenBoundaries(){
     });
   }
   return boundaries;
+}
+
+function getLanIp() {
+  const nets = os.networkInterfaces();
+  for (const name of Object.keys(nets)) {
+    for (const net of nets[name]) {
+      if (net.family === 'IPv4' && !net.internal) {
+        return net.address;
+      }
+    }
+  }
+  return '127.0.0.1';
 }
 
 const FALLBACK_COMMENTARY = [
@@ -83,6 +96,7 @@ function createInitialWorldState(){
   
   state.sessionId = null;
   state.sessionToken = null;
+  state.masterPlayerIndex = 0;
   state.commentaryRateLimiter = {
     level_cleared: { lastCalledAt: 0 },
     life_lost: { lastCalledAt: 0 },
@@ -261,16 +275,16 @@ function broadcastGameState(){
 function buildPrompt(eventType, snapshot){
   const scores = snapshot.players
     .filter((p)=>p.connected)
-    .map((p, i)=>`P${i+1}:${p.score}`)
+    .map((p, i)=>`${p.name || 'P'+(i+1)}:${p.score}`)
     .join(', ');
 
   const templates = {
-    level_cleared: `The player just cleared level ${snapshot.currentLevel}. Scores are ${scores}. Generate exactly 15 words of excited retro arcade announcer commentary. Do not mention brick colours. Do not predict future events.`,
-    life_lost: `A player just lost a life. Current lives are ${snapshot.players.map((p)=>p.lives).join(', ')}. Generate exactly 15 words of tense retro arcade announcer commentary.`,
+    level_cleared: `The player just cleared level ${snapshot.currentLevel}. Scores are ${scores}. Generate exactly 15 words of excited retro arcade announcer commentary mentioning player names. Do not mention brick colours. Do not predict future events.`,
+    life_lost: `A player just lost a life. Current lives are ${snapshot.players.map((p)=>`${p.name || p.id}: ${p.lives}`).join(', ')}. Generate exactly 15 words of tense retro arcade announcer commentary mentioning player names.`,
     multi_ball: `Multi ball just activated with two balls crossing the panoramic rig. Generate exactly 15 words of excited commentary.`,
-    score_milestone: `A player just crossed a score milestone. Scores are ${scores}. Generate exactly 15 words of excited retro arcade announcer commentary.`,
-    victory: `The game is over. Final scores are ${scores}. Generate exactly 15 words of triumphant retro arcade announcer commentary declaring the winner.`,
-    rank_takeover: `Player ${snapshot.playerId || 'someone'} just took the lead from their opponent. Scores are ${scores}. Generate exactly 15 words of excited, competitive retro arcade commentary announcing the lead change.`,
+    score_milestone: `A player just crossed a score milestone. Scores are ${scores}. Generate exactly 15 words of excited retro arcade announcer commentary mentioning player names.`,
+    victory: `The game is over. Final scores are ${scores}. Generate exactly 15 words of triumphant retro arcade announcer commentary declaring the winner by name.`,
+    rank_takeover: `Player ${snapshot.playerId || 'someone'} just took the lead from their opponent. Scores are ${scores}. Generate exactly 15 words of excited, competitive retro arcade commentary announcing the lead change and mentioning player names.`,
   };
   return templates[eventType] || templates.score_milestone;
 }
@@ -371,10 +385,11 @@ async function pollGameMasterAsync(){
   isPollingGameMaster = true;
   if(limiter) limiter.lastCalledAt = Date.now();
   try {
+    const playerStats = worldState.players.map(p => `${p.name || p.id}: ${p.lives} lives, ${p.score} score`).join(' | ');
     const prompt = `You are the AI Game Master of Arkanoid. A player just lost a life.
-Current stats: Lives=${worldState.players.map(p=>p.lives).join(',')}, Level=${worldState.level}.
+Current stats: ${playerStats}, Level=${worldState.level}.
 Decide on a modifier to help or punish them. Choose exactly one: WIDE_PADDLE, EXTRA_BALL, SLOW_BALL, NONE.
-Return a JSON object: {"modifier": "YOUR_CHOICE", "commentary": "Your 10 word snarky comment"}.
+Return a JSON object: {"modifier": "YOUR_CHOICE", "commentary": "Your 10 word snarky comment mentioning the player by name"}.
 Do not include markdown.`;
     const text = await callGemini(prompt);
     let rawJson = text.replace(/```json/g, '').replace(/```/g, '').trim();
@@ -543,6 +558,7 @@ function getWorldSnapshot(){
   return {
     players: worldState.players.map((p)=>({
       id: p.id,
+      name: p.name || 'Unknown',
       score: p.score,
       lives: p.lives,
       connected: p.connected,
@@ -550,6 +566,9 @@ function getWorldSnapshot(){
     currentLevel: worldState.currentLevel,
     sessionToken: worldState.sessionToken,
     gameStatus: worldState.gameStatus,
+    masterPlayerIndex: worldState.masterPlayerIndex,
+    lanIp: getLanIp(),
+    port: PORT,
   };
 }
 
@@ -559,10 +578,10 @@ io.on('connection', (socket)=>{
     socket.join(`screen-${screenId}`);
   }
 
-  socket.on('start_game', ()=>{
+  socket.on('start_game', (data)=>{
     const slotIndex = socketToPlayerIndex.get(socket.id);
-    if(slotIndex!==0){
-      socket.emit('join_rejected', { errorCode: 1007, message: 'Only the host (Player 1) can start the game' });
+    if(slotIndex!==worldState.masterPlayerIndex){
+      socket.emit('join_rejected', { errorCode: 1007, message: 'Only the host can start the game' });
       return;
     }
     resetWorldForNewGame();
@@ -571,16 +590,18 @@ io.on('connection', (socket)=>{
     worldState.sessionId = crypto.randomUUID();
     worldState.sessionToken = generateToken();
     worldState.gameStartedAt = Date.now();
+    worldState.gameDurationSeconds = data?.durationSeconds || 180;
     io.emit('game_started', {
       sessionToken: worldState.sessionToken,
       sessionId: worldState.sessionId,
       gameStartedAt: worldState.gameStartedAt,
+      gameDurationSeconds: worldState.gameDurationSeconds,
     });
     broadcastGameState();
   });
 
   socket.on('player_join', (data)=>{
-    const { sessionToken } = data || {};
+    const { sessionToken, playerName } = data || {};
 
     if(typeof sessionToken!=='string' || sessionToken.length!==4){
       socket.emit('join_rejected', { errorCode: 1005, message: 'Invalid payload' });
@@ -601,6 +622,7 @@ io.on('connection', (socket)=>{
     const player = worldState.players[slotIndex];
     player.connected = true;
     player.id = PLAYER_SLOT_IDS[slotIndex];
+    player.name = (typeof playerName === 'string' && playerName.trim().length > 0) ? playerName.trim().substring(0, 12) : `Player ${slotIndex + 1}`;
     player.socketId = socket.id;
     player.paddleX = ((worldState.numScreens || 5)*1920)/2-150;
     player.lastNonces = [];
@@ -733,6 +755,22 @@ io.on('connection', (socket)=>{
       player.socketId = null;
       player.lastNonces = [];
       clearPlayerTimers(player);
+      player.socketId = null;
+      player.name = null;
+      
+      if (index === worldState.masterPlayerIndex) {
+        let newMaster = -1;
+        for (let i = 0; i < worldState.players.length; i++) {
+          if (worldState.players[i].connected) {
+            newMaster = i;
+            break;
+          }
+        }
+        if (newMaster !== -1) {
+          worldState.masterPlayerIndex = newMaster;
+        }
+      }
+
       socketToPlayerIndex.delete(disconnectedSocketId);
 
       io.emit('player_disconnected', {
@@ -740,7 +778,7 @@ io.on('connection', (socket)=>{
         message: 'Player left the game',
       });
       broadcastGameState();
-    }, 5000);
+    }, 30000);
 
     disconnectTimers.set(disconnectedSocketId, timer);
   });
@@ -748,6 +786,14 @@ io.on('connection', (socket)=>{
 
 setInterval(()=>{
   if(worldState.gameStatus!=='playing') return;
+
+  if (worldState.gameStartedAt && worldState.gameDurationSeconds) {
+    if (Date.now() - worldState.gameStartedAt > worldState.gameDurationSeconds * 1000) {
+      worldState.gameStatus = 'time_up';
+      broadcastGameState();
+      return;
+    }
+  }
 
   const beforeScores = worldState.players.map(p=>p.score);
   const beforeLives = worldState.players.map(p=>p.lives);
@@ -770,6 +816,7 @@ setInterval(()=>{
       triggerCommentary('score_milestone', snap);
     }
     if(p.lives < beforeLives[i]){
+      p.score = Math.max(0, p.score - 10);
       const snap = getWorldSnapshot();
       snap.playerId = p.id;
       triggerCommentary('life_lost', snap);
