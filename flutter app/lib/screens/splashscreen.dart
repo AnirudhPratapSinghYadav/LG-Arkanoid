@@ -54,6 +54,8 @@ class _SplashScreenState extends State<SplashScreen>
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Spacer(flex: 3),
+            Image.asset('assets/app_icon.png', width: 100, height: 100),
+            const SizedBox(height: 24),
             const Text(
               'LG ARKANOID',
               style: TextStyle(
@@ -66,7 +68,7 @@ class _SplashScreenState extends State<SplashScreen>
             ),
             const SizedBox(height: 12),
             const Text(
-              'LIQUID GALAXY EDITION',
+              'POWERED BY GEMINI',
               style: TextStyle(
                 fontFamily: 'JetBrainsMono',
                 fontSize: 12,

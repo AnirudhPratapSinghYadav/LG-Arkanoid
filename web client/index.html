@@ -38,6 +38,7 @@
 const urlParams = new URLSearchParams(window.location.search);
 const numScreens = parseInt(urlParams.get('numScreens'), 10) || 5;
 const screenId = parseInt(urlParams.get('screenId'), 10) || Math.ceil(numScreens / 2);
+const isCenterScreen = screenId === Math.ceil(numScreens / 2);
 
 let SCREEN_BOUNDARIES = [];
 for (let i = 1; i <= numScreens; i++) {
@@ -421,32 +422,32 @@ class GameScene extends Phaser.Scene {
             this.logo.setAlpha(0);
             document.getElementById('qrcode').style.display = 'none';
         } else {
-            this.startButton.setAlpha(1);
-            this.logo.setAlpha(1);
-            if (this.currentState.sessionToken) {
-                this.sessionTokenText.setText('TOKEN: ' + this.currentState.sessionToken);
-                this.sessionTokenText.setAlpha(1);
-                
-                const qrDiv = document.getElementById('qrcode');
-                if (this.currentState.lanIp && !this.qrCodeObj) {
-                    const qrData = `LGARK|${this.currentState.lanIp}|${this.currentState.port}|${this.currentState.sessionToken}`;
-                    this.qrCodeObj = new QRCode(qrDiv, {
-                        text: qrData,
-                        width: 150,
-                        height: 150,
-                        colorDark : "#000000",
-                        colorLight : "#ffffff",
-                        correctLevel : QRCode.CorrectLevel.L
-                    });
-                }
-                
-                const urlParams = new URLSearchParams(window.location.search);
-                const screenId = parseInt(urlParams.get('screenId')) || 1;
-                if (screenId === 3) {
+            if (isCenterScreen) {
+                this.startButton.setAlpha(1);
+                this.logo.setAlpha(1);
+                if (this.currentState.sessionToken) {
+                    this.sessionTokenText.setText('TOKEN: ' + this.currentState.sessionToken);
+                    this.sessionTokenText.setAlpha(1);
+                    
+                    const qrDiv = document.getElementById('qrcode');
+                    if (this.currentState.lanIp && !this.qrCodeObj) {
+                        const qrData = `LGARK|${this.currentState.lanIp}|${this.currentState.port}|${this.currentState.sessionToken}`;
+                        this.qrCodeObj = new QRCode(qrDiv, {
+                            text: qrData,
+                            width: 150,
+                            height: 150,
+                            colorDark : "#000000",
+                            colorLight : "#ffffff",
+                            correctLevel : QRCode.CorrectLevel.L
+                        });
+                    }
                     qrDiv.style.display = 'block';
-                } else {
-                    qrDiv.style.display = 'none';
                 }
+            } else {
+                this.startButton.setAlpha(0);
+                this.logo.setAlpha(0);
+                this.sessionTokenText.setAlpha(0);
+                document.getElementById('qrcode').style.display = 'none';
             }
         }
     }

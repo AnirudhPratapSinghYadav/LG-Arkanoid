@@ -60,9 +60,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         fontSize: 14,
                       ),
                     ),
-                    value: tts.enabled,
+                    value: !tts.isMuted,
                     onChanged: (bool value) {
-                      tts.setEnabled(value);
+                      if (tts.isMuted == value) {
+                        tts.toggleMute();
+                      }
                     },
                     activeColor: accentCyan,
                     contentPadding: EdgeInsets.zero,

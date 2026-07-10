@@ -18,6 +18,8 @@ class _QrScanScreenState extends State<QrScanScreen> {
     super.dispose();
   }
 
+  bool _barcodeFound = false;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -33,10 +35,11 @@ class _QrScanScreenState extends State<QrScanScreen> {
           MobileScanner(
             controller: controller,
             onDetect: (capture) {
+              if (_barcodeFound) return;
               final List<Barcode> barcodes = capture.barcodes;
               for (final barcode in barcodes) {
                 if (barcode.rawValue != null && barcode.rawValue!.startsWith('LGARK|')) {
-                  controller.stop();
+                  _barcodeFound = true;
                   Navigator.of(context).pop(barcode.rawValue);
                   return;
                 }

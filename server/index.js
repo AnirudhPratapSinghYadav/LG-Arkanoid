@@ -816,7 +816,6 @@ setInterval(()=>{
       triggerCommentary('score_milestone', snap);
     }
     if(p.lives < beforeLives[i]){
-      p.score = Math.max(0, p.score - 10);
       const snap = getWorldSnapshot();
       snap.playerId = p.id;
       triggerCommentary('life_lost', snap);
