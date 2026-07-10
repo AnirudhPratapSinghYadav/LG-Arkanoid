@@ -44,6 +44,9 @@ class GameService extends ChangeNotifier {
 
       socket!.onConnect((_){
         connected = true;
+        if (playerId != null && sessionId != null) {
+          socket!.emit('resume_request', {'playerId': playerId, 'sessionId': sessionId});
+        }
         notifyListeners();
       });
 
@@ -90,8 +93,16 @@ class GameService extends ChangeNotifier {
           for(final p in players){
             final pm = _asMap(p);
             if(pm['id']==playerId){
-              score = pm['score'] as int? ?? 0;
-              lives = pm['lives'] as int? ?? 0;
+              int newScore = pm['score'] as int? ?? 0;
+              int newLives = pm['lives'] as int? ?? 0;
+              if (newScore - score >= 50) {
+                HapticFeedback.mediumImpact();
+              }
+              if (newLives < lives) {
+                HapticFeedback.heavyImpact();
+              }
+              score = newScore;
+              lives = newLives;
               break;
             }
           }
@@ -130,8 +141,11 @@ class GameService extends ChangeNotifier {
     }
   }
 
-  void joinGame(String sessionToken){
-    socket?.emit('player_join', {'sessionToken': sessionToken});
+  void joinGame(String sessionToken, String playerName){
+    socket?.emit('player_join', {
+      'sessionToken': sessionToken,
+      'playerName': playerName
+    });
   }
 
   void sendPaddleMove(double deltaX){
@@ -153,9 +167,9 @@ class GameService extends ChangeNotifier {
     });
   }
 
-  void startGame(){
+  void startGame(int durationSeconds){
     if(socket==null || !connected) return;
-    socket!.emit('start_game');
+    socket!.emit('start_game', {'durationSeconds': durationSeconds});
   }
 
   void disconnect(){

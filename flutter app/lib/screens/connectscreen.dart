@@ -6,6 +6,7 @@ import '../utils/constants.dart';
 import '../widgets/lg_panel.dart';
 import '../widgets/lg_button.dart';
 import '../widgets/lg_text_field.dart';
+import 'qr_scan_screen.dart';
 
 class ConnectScreen extends StatefulWidget {
   const ConnectScreen({super.key});
@@ -18,18 +19,36 @@ class _ConnectScreenState extends State<ConnectScreen> {
   final _ipController = TextEditingController(text: '192.168.');
   final _portController = TextEditingController(text: '8080');
   final _tokenController = TextEditingController();
+  final _nameController = TextEditingController();
   bool _connecting = false;
 
   bool _showAdvanced = false;
+
+  void _scanQr() async {
+    final result = await Navigator.of(context).push(
+      MaterialPageRoute(builder: (context) => const QrScanScreen()),
+    );
+    if (result != null && result is String) {
+      final parts = result.split('|');
+      if (parts.length >= 4 && parts[0] == 'LGARK') {
+        setState(() {
+          _ipController.text = parts[1];
+          _portController.text = parts[2];
+          _tokenController.text = parts[3];
+        });
+      }
+    }
+  }
 
   Future<void> _connect() async {
     final address = _ipController.text.trim();
     final port = _portController.text.trim();
     final token = _tokenController.text.trim().toUpperCase();
+    final name = _nameController.text.trim();
 
-    if (address.isEmpty || port.isEmpty || token.length != 4) {
+    if (address.isEmpty || port.isEmpty || token.length != 4 || name.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enter IP, port, and 4-letter token')),
+        const SnackBar(content: Text('Enter IP, port, token, and a name')),
       );
       return;
     }
@@ -47,7 +66,7 @@ class _ConnectScreenState extends State<ConnectScreen> {
       await storage.write(key: prefServerAddress, value: address);
       await storage.write(key: prefServerPort, value: port);
       await storage.write(key: prefSessionToken, value: token);
-      service.joinGame(token);
+      service.joinGame(token, name);
       if (mounted) {
         Navigator.pushReplacementNamed(context, '/controller');
       }
@@ -96,6 +115,12 @@ class _ConnectScreenState extends State<ConnectScreen> {
                 ),
                 const SizedBox(height: 40),
                 LgTextField(
+                  controller: _nameController,
+                  label: 'Player Name',
+                  maxLength: 12,
+                ),
+                const SizedBox(height: 16),
+                LgTextField(
                   controller: _tokenController,
                   label: 'Session Token (4 letters)',
                   maxLength: 4,
@@ -142,12 +167,27 @@ class _ConnectScreenState extends State<ConnectScreen> {
                           ),
                         ),
                       )
-                    : LgButton(
-                        label: 'Join Game',
-                        onPressed: _connect,
-                        accentColor: accentCyan,
-                      ),
-                const SizedBox(height: 16),
+                  )
+                  : Row(
+                      children: [
+                        Expanded(
+                          child: LgButton(
+                            label: 'Scan QR',
+                            onPressed: _scanQr,
+                            accentColor: accentAmber,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: LgButton(
+                            label: 'Join Game',
+                            onPressed: _connect,
+                            accentColor: accentCyan,
+                          ),
+                        ),
+                      ],
+                    ),
+              const SizedBox(height: 16),
               ],
             ),
           ),
