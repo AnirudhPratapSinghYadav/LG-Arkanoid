@@ -2,13 +2,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import '../services/game_service.dart';
-import '../widgets/connection_status.dart';
-import '../widgets/power_up_dialog.dart';
+import '../services/gameservice.dart';
+import '../widgets/connectionstatus.dart';
+import '../widgets/powerupdialog.dart';
 import '../utils/constants.dart';
-import '../services/tts_service.dart';
-import '../widgets/lg_panel.dart';
-import '../widgets/lg_button.dart';
+import '../services/ttsservice.dart';
+import '../widgets/lgpanel.dart';
+import '../widgets/lgbutton.dart';
 
 class ControllerScreen extends StatefulWidget {
   const ControllerScreen({super.key});

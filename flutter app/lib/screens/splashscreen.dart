@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import '../services/game_service.dart';
+import '../services/gameservice.dart';
 import '../utils/constants.dart';
 
 class SplashScreen extends StatefulWidget {

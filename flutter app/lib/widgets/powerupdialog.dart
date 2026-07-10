@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import '../services/game_service.dart';
+import '../services/gameservice.dart';
 import '../utils/constants.dart';
-import 'lg_panel.dart';
-import 'lg_button.dart';
+import 'lgpanel.dart';
+import 'lgbutton.dart';
 
 void showPowerUpDialog(BuildContext context) {
   showDialog(

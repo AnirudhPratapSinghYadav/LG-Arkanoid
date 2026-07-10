@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../services/game_service.dart';
+import '../services/gameservice.dart';
 import '../utils/constants.dart';
-import '../widgets/lg_panel.dart';
+import '../widgets/lgpanel.dart';
 
 class StatusScreen extends StatelessWidget {
   const StatusScreen({super.key});

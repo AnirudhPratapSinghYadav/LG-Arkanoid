@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../services/tts_service.dart';
+import '../services/ttsservice.dart';
 import '../utils/constants.dart';
-import '../widgets/lg_panel.dart';
+import '../widgets/lgpanel.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});

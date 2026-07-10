@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'services/game_service.dart';
+import 'services/gameservice.dart';
 import 'app.dart';
 
 class DevHttpOverrides extends HttpOverrides {

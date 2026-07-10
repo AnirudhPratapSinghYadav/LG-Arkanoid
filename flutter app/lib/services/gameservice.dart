@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
-import 'tts_service.dart';
+import 'ttsservice.dart';
 
 class GameService extends ChangeNotifier {
   io.Socket? socket;
