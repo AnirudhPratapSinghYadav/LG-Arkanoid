@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 
-const Color bgColor = Color(0xFF0a0e14);
-const Color panelFill = Color(0xFF0d1117);
-const Color accentCyan = Color(0xFF00e5ff);
-const Color accentMagenta = Color(0xFFff2d78);
-const Color accentAmber = Color(0xFFffb800);
-const Color textColor = Color(0xFFe8f4f8);
+const Color bgDark = Color(0xFF080B11);
+const Color cardFill = Color(0xFF10151D);
+const Color cardSecondary = Color(0xFF161D26);
+const Color borderLight = Color(0x14FFFFFF); // rgba(255, 255, 255, 0.08)
+const Color accentPrimary = Color(0xFF20C5FF);
+const Color accentSuccess = Color(0xFF4ADE80);
+const Color accentWarning = Color(0xFFF59E0B);
+const Color accentError = Color(0xFFEF4444);
+const Color textPrimary = Color(0xFFF4F7FA);
+const Color textSecondary = Color(0xFF9AA6B2);
 
 const String defaultServerPort = '8080';
 const int defaultSshPort = 22;

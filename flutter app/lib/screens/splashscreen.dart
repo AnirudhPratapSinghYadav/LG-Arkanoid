@@ -1,3 +1,4 @@
+import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -48,20 +49,27 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: bgColor,
+      backgroundColor: bgDark,
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Spacer(flex: 3),
-            Image.asset('assets/app_icon.png', width: 100, height: 100),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Image.asset('assets/app_icon.png', width: 72, height: 72),
+                const SizedBox(width: 32),
+                Image.asset('assets/lg-logo.png', height: 48, color: Colors.white),
+              ],
+            ),
             const SizedBox(height: 24),
             const Text(
               'LG ARKANOID',
               style: TextStyle(
-                fontFamily: 'VT323',
+                fontFamily: GoogleFonts.inter().fontFamily,
                 fontSize: 48,
-                color: accentCyan,
+                color: accentPrimary,
                 letterSpacing: 2,
                 height: 1.4,
               ),
@@ -70,9 +78,9 @@ class _SplashScreenState extends State<SplashScreen>
             const Text(
               'POWERED BY GEMINI',
               style: TextStyle(
-                fontFamily: 'JetBrainsMono',
+                fontFamily: GoogleFonts.inter().fontFamily,
                 fontSize: 12,
-                color: accentCyan,
+                color: accentPrimary,
                 letterSpacing: 4,
               ),
             ),
@@ -84,7 +92,7 @@ class _SplashScreenState extends State<SplashScreen>
                   width: 200,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: panelFill,
+                    color: cardFill,
                     borderRadius: BorderRadius.circular(2),
                   ),
                   child: Align(
@@ -93,7 +101,7 @@ class _SplashScreenState extends State<SplashScreen>
                       width: 200 * _progress.value,
                       height: 4,
                       decoration: BoxDecoration(
-                        color: accentCyan,
+                        color: accentPrimary,
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),

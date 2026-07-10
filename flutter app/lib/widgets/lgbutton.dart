@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../utils/constants.dart';
 
 class LgButton extends StatefulWidget {
   final String label;
   final VoidCallback? onPressed;
-  final Color accentColor;
+  final bool isPrimary;
   final bool disabled;
 
   const LgButton({
     super.key,
     required this.label,
     this.onPressed,
-    this.accentColor = const Color(0xFF00e5ff),
+    this.isPrimary = true,
     this.disabled = false,
   });
 
@@ -19,8 +21,22 @@ class LgButton extends StatefulWidget {
   State<LgButton> createState() => _LgButtonState();
 }
 
-class _LgButtonState extends State<LgButton> {
-  bool _pressed = false;
+class _LgButtonState extends State<LgButton> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 200));
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.98).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -31,39 +47,36 @@ class _LgButtonState extends State<LgButton> {
       opacity: effectiveOpacity,
       child: GestureDetector(
         onTapDown: isDisabled ? null : (_) {
-          HapticFeedback.lightImpact();
-          setState(() => _pressed = true);
+          HapticFeedback.selectionClick();
+          _controller.forward();
         },
         onTapUp: isDisabled ? null : (_) {
-          setState(() => _pressed = false);
+          _controller.reverse();
           widget.onPressed?.call();
         },
-        onTapCancel: isDisabled ? null : () => setState(() => _pressed = false),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 80),
-          transform: Matrix4.translationValues(0, _pressed ? 2 : 0, 0),
-          decoration: BoxDecoration(
-            color: const Color(0xFF0d1117),
-            border: Border.all(color: widget.accentColor, width: 2),
-            borderRadius: BorderRadius.circular(3),
-            boxShadow: [
-              BoxShadow(
-                color: widget.accentColor.withOpacity(_pressed ? 0.6 : 0.35),
-                blurRadius: _pressed ? 18 : 12,
-              ),
-            ],
+        onTapCancel: isDisabled ? null : () => _controller.reverse(),
+        child: AnimatedBuilder(
+          animation: _scaleAnimation,
+          builder: (context, child) => Transform.scale(
+            scale: _scaleAnimation.value,
+            child: child,
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-          child: Center(
-            child: Text(
-              widget.label.toUpperCase(),
-              style: TextStyle(
-                fontFamily: 'VT323',
-                fontWeight: FontWeight.normal,
-                fontSize: 24,
-                color: widget.accentColor,
-                letterSpacing: 1,
-                height: 1.4,
+          child: Container(
+            height: 56,
+            decoration: BoxDecoration(
+              color: widget.isPrimary ? accentPrimary : Colors.transparent,
+              border: Border.all(color: widget.isPrimary ? accentPrimary : Colors.white.withOpacity(0.12), width: 1.5),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Center(
+              child: Text(
+                widget.label,
+                style: GoogleFonts.inter(
+                  color: widget.isPrimary ? bgDark : textPrimary,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.5,
+                ),
               ),
             ),
           ),

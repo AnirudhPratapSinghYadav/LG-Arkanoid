@@ -1,3 +1,4 @@
+import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -115,31 +116,47 @@ class _ConnectScreenState extends State<ConnectScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: bgColor,
+      backgroundColor: bgDark,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.help_outline, color: accentCyan),
+            icon: const Icon(Icons.help_outline, color: accentPrimary),
             onPressed: () {
               showDialog(
                 context: context,
                 builder: (context) => AlertDialog(
-                  backgroundColor: panelFill,
+                  backgroundColor: cardFill,
                   shape: RoundedRectangleBorder(
-                    side: const BorderSide(color: accentCyan, width: 2),
+                    side: const BorderSide(color: accentPrimary, width: 2),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  title: const Text('ABOUT', style: TextStyle(color: accentCyan, fontFamily: 'PressStart2P', fontSize: 14)),
+                  title: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Image.asset('assets/app_icon.png', width: 40, height: 40),
+                          const SizedBox(width: 16),
+                          Image.asset('assets/lg-logo.png', height: 40, color: Colors.white),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      const Text('ABOUT US', style: TextStyle(color: accentPrimary, fontFamily: GoogleFonts.spaceGrotesk().fontFamily, fontSize: 16, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 8),
+                      const Divider(color: accentPrimary, thickness: 1),
+                    ],
+                  ),
                   content: const Text(
-                    'LG Arkanoid\n\nDeveloped by Anirudh Pratap Singh Yadav\nPowered by Gemini & Liquid Galaxy',
-                    style: TextStyle(color: textColor, fontFamily: 'JetBrainsMono'),
+                    'Author -> Anirudh Pratap Singh Yadav\n\nAbout Game -> LG Arkanoid brings classic brick-breaking action to the Liquid Galaxy!\n\nA Gemini Summer of Code Project.\n\nPowered by: Gemini & Liquid Galaxy',
+                    style: TextStyle(color: textPrimary, fontFamily: GoogleFonts.inter().fontFamily, fontSize: 12, height: 1.5),
+                    textAlign: TextAlign.center,
                   ),
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.pop(context),
-                      child: const Text('CLOSE', style: TextStyle(color: accentMagenta, fontFamily: 'JetBrainsMono', fontWeight: FontWeight.bold)),
+                      child: const Text('CLOSE', style: TextStyle(color: accentError, fontFamily: GoogleFonts.inter().fontFamily, fontWeight: FontWeight.bold)),
                     ),
                   ],
                 ),
@@ -168,9 +185,9 @@ class _ConnectScreenState extends State<ConnectScreen> {
                       'LG ARKANOID',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        fontFamily: 'VT323',
+                        fontFamily: GoogleFonts.inter().fontFamily,
                         fontSize: 40,
-                        color: accentCyan,
+                        color: accentPrimary,
                         letterSpacing: 1,
                         height: 1.4,
                       ),
@@ -180,10 +197,10 @@ class _ConnectScreenState extends State<ConnectScreen> {
                   'JOIN GAME',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontFamily: 'JetBrainsMono',
+                    fontFamily: GoogleFonts.inter().fontFamily,
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: textColor,
+                    color: textPrimary,
                     letterSpacing: 2,
                   ),
                 ),
@@ -206,9 +223,9 @@ class _ConnectScreenState extends State<ConnectScreen> {
                     title: const Text(
                       'Advanced Server Settings',
                       style: TextStyle(
-                        fontFamily: 'JetBrainsMono',
+                        fontFamily: GoogleFonts.inter().fontFamily,
                         fontSize: 12,
-                        color: textColor,
+                        color: textPrimary,
                       ),
                     ),
                     children: [
@@ -246,13 +263,13 @@ class _ConnectScreenState extends State<ConnectScreen> {
                               child: SizedBox(
                                 width: 24,
                                 height: 24,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: accentMagenta),
+                                child: CircularProgressIndicator(strokeWidth: 2, color: accentError),
                               ),
                             )
                           : LgButton(
                               label: 'Launch on Rig (SSH)',
                               onPressed: _launchRig,
-                              accentColor: accentMagenta,
+                              
                             ),
                       const SizedBox(height: 16),
                     ],
@@ -266,7 +283,7 @@ class _ConnectScreenState extends State<ConnectScreen> {
                           height: 24,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: accentCyan,
+                            color: accentPrimary,
                           ),
                         ),
                       )
@@ -276,7 +293,7 @@ class _ConnectScreenState extends State<ConnectScreen> {
                           child: LgButton(
                             label: 'Scan QR',
                             onPressed: _scanQr,
-                            accentColor: accentAmber,
+                            
                           ),
                         ),
                         const SizedBox(width: 16),
@@ -284,7 +301,7 @@ class _ConnectScreenState extends State<ConnectScreen> {
                           child: LgButton(
                             label: 'Join Game',
                             onPressed: _connect,
-                            accentColor: accentCyan,
+                            
                           ),
                         ),
                       ],
