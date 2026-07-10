@@ -55,7 +55,7 @@ const screenBoundary = SCREEN_BOUNDARIES.find(s => s.screenId === screenId) || S
 const virtualLeft = screenBoundary.virtualLeft;
 const serverUrl = urlParams.get('server') || window.location.origin;
 
-const ROW_COLORS = [0x00e5ff, 0x0088aa, 0xff2d78, 0xffb800];
+const ROW_COLORS = [0x3b82f6, 0xf97316, 0xa855f7, 0x22c55e, 0xeab308, 0xff2d78];
 const PADDLE_COLORS = [0x00e5ff, 0xff2d78, 0xffb800];
 
 class GameScene extends Phaser.Scene {
@@ -147,27 +147,54 @@ class GameScene extends Phaser.Scene {
         this.hudBorderAlpha = 1.0;
 
         this.hudText = this.add.text(40, 40, '', {
-            fontFamily: '"Space Grotesk"',
+            fontFamily: '"Inter"',
             fontSize: '24px',
-            color: '#00e5ff',
+            color: '#20c5ff',
             lineSpacing: 16
         });
+        if (screenId !== 1) this.hudText.setVisible(false);
 
         this.timerPanelGraphics = this.add.graphics();
         this.timerText = this.add.text(960, 40, '00:00', {
             fontFamily: '"Space Grotesk"',
-            fontSize: '32px',
+            fontSize: '48px',
             color: '#ffffff',
         }).setOrigin(0.5, 0);
+        if (!isCenterScreen) this.timerText.setVisible(false);
 
         this.leaderboardPanelGraphics = this.add.graphics();
         this.leaderboardTexts = [];
         for(let i = 0; i < 3; i++) {
-            this.leaderboardTexts.push(this.add.text(1880, 40 + (i * 40), '', {
+            let txt = this.add.text(1880, 80 + (i * 40), '', {
                 fontFamily: '"Space Grotesk"',
                 fontSize: '24px'
-            }).setOrigin(1, 0));
+            }).setOrigin(1, 0);
+            if (screenId !== numScreens) txt.setVisible(false);
+            this.leaderboardTexts.push(txt);
         }
+        
+        // Gemini AI Commentary Panel
+        this.geminiCardGraphics = this.add.graphics();
+        this.geminiText = this.add.text(1880, 240, '', {
+            fontFamily: '"Inter"',
+            fontSize: '18px',
+            color: '#f8fafc',
+            fontStyle: 'italic',
+            wordWrap: { width: 350, useAdvancedWrap: true }
+        }).setOrigin(1, 0);
+        
+        this.geminiTitle = this.add.text(1880, 210, '🤖 GEMINI AI', {
+            fontFamily: '"Space Grotesk"',
+            fontSize: '20px',
+            color: '#20c5ff',
+            fontWeight: 'bold'
+        }).setOrigin(1, 0);
+        
+        if (screenId !== numScreens) {
+            this.geminiText.setVisible(false);
+            this.geminiTitle.setVisible(false);
+        }
+
 
         this.aiTagText = this.add.text(40, 10, 'LEVEL DESIGNED BY GEMINI', {
             fontFamily: '"Inter"',
@@ -176,12 +203,31 @@ class GameScene extends Phaser.Scene {
             fontStyle: 'bold'
         }).setAlpha(0);
 
-        this.startButton = this.add.text(960, 480, 'WAITING FOR RIG MASTER', {
+        this.startButton = this.add.text(960, 480, 'LIQUID GALAXY\nARKANOID', {
             fontFamily: '"Space Grotesk"',
-            fontSize: '64px',
-            color: '#00e5ff',
-            align: 'center'
+            fontSize: '80px',
+            color: '#20c5ff',
+            align: 'center',
+            fontWeight: 'bold',
+            lineSpacing: 20
         }).setOrigin(0.5, 0.5);
+        this.subtitleText = this.add.text(960, 600, 'AI MULTIPLAYER EXPERIENCE', {
+            fontFamily: '"Inter"',
+            fontSize: '24px',
+            color: '#ffffff',
+            letterSpacing: 8
+        }).setOrigin(0.5, 0.5);
+        this.waitingSubText = this.add.text(960, 700, 'Waiting for Players...', {
+            fontFamily: '"Inter"',
+            fontSize: '20px',
+            color: '#888888',
+        }).setOrigin(0.5, 0.5);
+        
+        if (!isCenterScreen) {
+            this.startButton.setVisible(false);
+            this.subtitleText.setVisible(false);
+            this.waitingSubText.setVisible(false);
+        }
 
         this.sessionTokenText = this.add.text(960, 560, '', {
             fontFamily: '"Space Grotesk"',
@@ -220,7 +266,39 @@ class GameScene extends Phaser.Scene {
         this.graphics.clear();
         this.trailGraphics.clear();
         
-        if (!this.currentState) return;
+        if (!this.currentState || this.currentState.gameStatus === 'idle') {
+            this.drawAttractMode();
+            return;
+        } else {
+            if (this.attractModeGraphics) this.attractModeGraphics.clear();
+        }
+        
+        if (this.currentState.gameStatus === 'lobby') {
+            this.hideCountdownMode();
+            this.hideWinMode();
+            this.drawLobbyMode();
+            return;
+        } else {
+            this.hideLobbyMode();
+        }
+        
+        if (this.currentState.gameStatus === 'countdown') {
+            this.hideWinMode();
+            this.drawCountdownMode();
+            // Draw background stuff
+            this.drawBricks();
+            this.drawPaddles();
+            return;
+        } else {
+            this.hideCountdownMode();
+        }
+        
+        if (this.currentState.gameStatus === 'win' || this.currentState.gameStatus === 'time_up') {
+            this.drawWinMode();
+            return;
+        } else {
+            this.hideWinMode();
+        }
         
         this.checkStateChanges();
         this.drawBricks();
@@ -228,6 +306,172 @@ class GameScene extends Phaser.Scene {
         this.drawBalls();
         this.drawPaddles();
         this.updateHUD();
+    }
+
+    drawAttractMode() {
+        if (!this.attractModeGraphics) {
+            this.attractModeGraphics = this.add.graphics();
+            this.attractTime = 0;
+        }
+        this.attractModeGraphics.clear();
+        this.attractTime += 0.05;
+        
+        // Draw some orbiting particles
+        for(let i=0; i<15; i++) {
+            const angle = this.attractTime + (i * 0.4);
+            const radius = 200 + Math.sin(this.attractTime * 0.5 + i) * 50;
+            const px = 960 + Math.cos(angle) * radius;
+            const py = 540 + Math.sin(angle) * radius;
+            
+            this.attractModeGraphics.fillStyle(0x00e5ff, 0.5);
+            this.attractModeGraphics.fillCircle(px, py, 4);
+        }
+    }
+
+    
+    drawLobbyMode() {
+        if (!this.lobbyModeGraphics) {
+            this.lobbyModeGraphics = this.add.graphics();
+            this.lobbyTexts = [];
+            
+            this.lobbyTitle = this.add.text(960, 200, 'LIQUID GALAXY\nARKANOID', {
+                fontFamily: '"Space Grotesk"', fontSize: '64px', color: '#20c5ff', align: 'center', fontWeight: 'bold'
+            }).setOrigin(0.5, 0.5);
+            
+            this.lobbySubTitle = this.add.text(960, 300, 'MULTIPLAYER LOBBY', {
+                fontFamily: '"Inter"', fontSize: '24px', color: '#ffffff', letterSpacing: 8
+            }).setOrigin(0.5, 0.5);
+            
+            for (let i = 0; i < 3; i++) {
+                let txt = this.add.text(960, 450 + (i * 60), '', {
+                    fontFamily: '"Inter"', fontSize: '32px', color: '#ffffff'
+                }).setOrigin(0.5, 0.5);
+                this.lobbyTexts.push(txt);
+            }
+            
+            this.lobbyStatus = this.add.text(960, 700, 'Game starts shortly...', {
+                fontFamily: '"Inter"', fontSize: '24px', color: '#4ade80'
+            }).setOrigin(0.5, 0.5);
+            
+            if (!isCenterScreen) {
+                this.lobbyTitle.setVisible(false);
+                this.lobbySubTitle.setVisible(false);
+                this.lobbyStatus.setVisible(false);
+                this.lobbyTexts.forEach(t => t.setVisible(false));
+            }
+        }
+        
+        if (isCenterScreen) {
+            this.lobbyTitle.setVisible(true);
+            this.lobbySubTitle.setVisible(true);
+            this.lobbyStatus.setVisible(true);
+            
+            let players = this.currentState.players || [];
+            for (let i = 0; i < 3; i++) {
+                this.lobbyTexts[i].setVisible(true);
+                if (players[i] && players[i].connected) {
+                    this.lobbyTexts[i].setText(`🟢 ${players[i].name || 'Player ' + (i+1)}`);
+                    this.lobbyTexts[i].setColor('#4ade80');
+                } else {
+                    this.lobbyTexts[i].setText(`⚪ Waiting for player...`);
+                    this.lobbyTexts[i].setColor('#888888');
+                }
+            }
+        }
+    }
+    
+    hideLobbyMode() {
+        if (this.lobbyTitle) {
+            this.lobbyTitle.setVisible(false);
+            this.lobbySubTitle.setVisible(false);
+            this.lobbyStatus.setVisible(false);
+            this.lobbyTexts.forEach(t => t.setVisible(false));
+        }
+    }
+
+    drawCountdownMode() {
+        if (!this.countdownText) {
+            this.countdownText = this.add.text(960, 540, '', {
+                fontFamily: '"Space Grotesk"', fontSize: '200px', color: '#ff2d78', fontWeight: 'bold'
+            }).setOrigin(0.5, 0.5);
+        }
+        
+        if (isCenterScreen) {
+            this.countdownText.setVisible(true);
+            let elapsed = Date.now() - (this.currentState.countdownStartedAt || Date.now());
+            let remain = 5 - Math.floor(elapsed / 1000);
+            if (remain > 0) {
+                this.countdownText.setText(remain.toString());
+                // Animate scale
+                let scale = 1 + (elapsed % 1000) / 1000 * 0.5;
+                this.countdownText.setScale(scale);
+                this.countdownText.setAlpha(1 - (elapsed % 1000) / 1000);
+            } else {
+                this.countdownText.setText('START!');
+                this.countdownText.setScale(1);
+                this.countdownText.setAlpha(1);
+            }
+        } else {
+            this.countdownText.setVisible(false);
+        }
+    }
+    
+    hideCountdownMode() {
+        if (this.countdownText) this.countdownText.setVisible(false);
+    }
+
+    drawWinMode() {
+        if (!this.winTitle) {
+            this.winTitle = this.add.text(960, 300, '🏆 WINNER', {
+                fontFamily: '"Space Grotesk"', fontSize: '100px', color: '#eab308', fontWeight: 'bold'
+            }).setOrigin(0.5, 0.5);
+            
+            this.winName = this.add.text(960, 450, '', {
+                fontFamily: '"Space Grotesk"', fontSize: '150px', color: '#ffffff', fontWeight: 'bold'
+            }).setOrigin(0.5, 0.5);
+            
+            this.winConfetti = this.add.particles(0, 0, 'particle', {
+                x: 960, y: -50,
+                speed: { min: 200, max: 800 },
+                angle: { min: 45, max: 135 },
+                gravityY: 1000,
+                scale: { start: 1, end: 0 },
+                lifespan: 4000,
+                emitting: false
+            });
+            this.winConfettiEmitted = false;
+        }
+        
+        if (isCenterScreen) {
+            this.winTitle.setVisible(true);
+            this.winName.setVisible(true);
+            
+            // Find winner
+            let winner = [...(this.currentState.players || [])].sort((a,b) => b.score - a.score)[0];
+            if (winner) {
+                this.winName.setText(winner.name.toUpperCase());
+            }
+            
+            if (!this.winConfettiEmitted) {
+                this.winConfetti.start();
+                this.winConfettiEmitted = true;
+                
+                // Cinematic Zoom
+                this.cameras.main.pan(960, 450, 2000, 'Sine.easeInOut');
+                this.cameras.main.zoomTo(1.2, 2000, 'Sine.easeInOut');
+            }
+        }
+    }
+    
+    hideWinMode() {
+        if (this.winTitle) {
+            this.winTitle.setVisible(false);
+            this.winName.setVisible(false);
+            if (this.winConfetti) this.winConfetti.stop();
+            this.winConfettiEmitted = false;
+            this.cameras.main.pan(960, 540, 1000, 'Linear');
+            this.cameras.main.zoomTo(1, 1000, 'Linear');
+        }
     }
 
     updateHUD() {
@@ -253,21 +497,15 @@ class GameScene extends Phaser.Scene {
         this.hudText.setText(hudStr);
         
         const bounds = this.hudText.getBounds();
-        const padX = 20;
-        const padY = 20;
-        const panelX = bounds.x - padX;
-        const panelY = bounds.y - padY;
-        const panelW = bounds.width + padX * 2;
-        const panelH = bounds.height + padY * 2;
-        
-        this.hudPanelGraphics.fillStyle(0x0d1117, 1);
-        this.hudPanelGraphics.fillRect(panelX, panelY, panelW, panelH);
-        
-        this.hudPanelGraphics.lineStyle(3, 0x00e5ff, this.hudBorderAlpha);
-        this.hudPanelGraphics.strokeRect(panelX, panelY, panelW, panelH);
-        
-        this.hudPanelGraphics.lineStyle(1, 0x00e5ff, this.hudBorderAlpha * 0.4);
-        this.hudPanelGraphics.strokeRect(panelX + 3, panelY + 3, panelW - 6, panelH - 6);
+        if (screenId === 1) {
+            const padX = 20;
+            const padY = 20;
+            const panelX = bounds.x - padX;
+            const panelY = bounds.y - padY;
+            const panelW = bounds.width + padX * 2;
+            const panelH = bounds.height + padY * 2;
+            this.drawStandardPanel(this.hudPanelGraphics, panelX, panelY, panelW, panelH);
+        }
 
         let lineIdx = 0;
         for (let i = 0; i < 3; i++) {
@@ -275,9 +513,11 @@ class GameScene extends Phaser.Scene {
             if (p && p.connected) {
                 const startY = bounds.y + 40 + (lineIdx * 40) + 12; 
                 const startX = bounds.x + bounds.width - 60; 
-                this.hudPanelGraphics.fillStyle(0x00e5ff, 1);
-                for(let l = 0; l < Math.min(p.lives, 5); l++) {
-                    this.hudPanelGraphics.fillCircle(startX + (l * 14), startY, 5);
+                if (screenId === 1) {
+                    this.hudPanelGraphics.fillStyle(0x4ade80, 1); // Green lives
+                    for(let l = 0; l < Math.min(p.lives, 5); l++) {
+                        this.hudPanelGraphics.fillCircle(startX + (l * 14), startY, 5);
+                    }
                 }
                 lineIdx++;
             }
@@ -298,8 +538,25 @@ class GameScene extends Phaser.Scene {
             this.timerText.setText('00:00');
         }
         
-        const tBounds = this.timerText.getBounds();
-        this.drawStandardPanel(this.timerPanelGraphics, tBounds.x - 20, tBounds.y - 15, tBounds.width + 40, tBounds.height + 30);
+        if (isCenterScreen && this.currentState.gameStartedAt && this.currentState.gameStatus === 'playing') {
+            const tBounds = this.timerText.getBounds();
+            this.drawStandardPanel(this.timerPanelGraphics, tBounds.x - 30, tBounds.y - 15, tBounds.width + 60, tBounds.height + 30);
+        }
+
+        // Rig Health Panel
+        if (isCenterScreen) {
+            if (!this.rigHealthText) {
+                this.rigHealthGraphics = this.add.graphics();
+                this.rigHealthText = this.add.text(960, 1040, '', {
+                    fontFamily: '"Inter"', fontSize: '14px', color: '#888888', align: 'center'
+                }).setOrigin(0.5, 1);
+            }
+            
+            let playersCount = this.currentState.players.filter(p => p.connected).length;
+            this.rigHealthText.setText(`DISPLAYS: ${numScreens}/${numScreens}  |  FPS: ${Math.round(this.game.loop.actualFps)}  |  PLAYERS: ${playersCount}/3  |  SERVER: HEALTHY`);
+            this.rigHealthText.setVisible(true);
+        }
+
 
         let activePlayers = this.currentState.players.filter(p => p.connected).sort((a, b) => a.rank - b.rank);
         let lbW = 0;
@@ -319,16 +576,31 @@ class GameScene extends Phaser.Scene {
                 lbW = Math.max(lbW, this.leaderboardTexts[i].width);
                 lbLines++;
                 
-                if (this._rankSwapHighlightPids && this._rankSwapHighlightPids[p.id]) {
-                    this.drawStandardPanel(this.leaderboardPanelGraphics, 1880 - lbW - 20, 40 + (i * 40), lbW + 40, 40, 1.0, 0xffffff);
+                if (screenId === numScreens && this._rankSwapHighlightPids && this._rankSwapHighlightPids[p.id]) {
+                    this.drawStandardPanel(this.leaderboardPanelGraphics, 1880 - lbW - 20, 80 + (i * 40), lbW + 40, 40, 1.0, 0xffffff);
                 }
             } else {
                 this.leaderboardTexts[i].setText('');
             }
         }
         
-        if (lbLines > 0) {
-            this.drawStandardPanel(this.leaderboardPanelGraphics, 1880 - lbW - 20, 25, lbW + 40, (lbLines * 40) + 10);
+        if (screenId === numScreens && lbLines > 0) {
+            // Draw Leaderboard title
+            this.leaderboardPanelGraphics.fillStyle(0x20c5ff, 1);
+            this.add.text(1880, 40, '🏆 LEADERBOARD', { fontFamily: '"Space Grotesk"', fontSize: '20px', color: '#20c5ff', fontWeight: 'bold' }).setOrigin(1, 0).setDepth(2);
+            
+            this.drawStandardPanel(this.leaderboardPanelGraphics, 1880 - Math.max(lbW, 180) - 20, 25, Math.max(lbW, 180) + 40, (lbLines * 40) + 70);
+            
+            // Draw Gemini Panel
+            let aiText = "Analyzing game data...";
+            // We'll hook into server commentary if available, otherwise mock it for demo
+            if (this.currentState.lastCommentary) {
+                aiText = `"${this.currentState.lastCommentary}"`;
+            }
+            this.geminiText.setText(aiText);
+            
+            const gBounds = this.geminiText.getBounds();
+            this.drawStandardPanel(this.leaderboardPanelGraphics, 1880 - 350 - 20, 195, 350 + 40, gBounds.height + 60);
         }
     }
 
@@ -342,7 +614,7 @@ class GameScene extends Phaser.Scene {
                     if (this.previousBricks[id] && !brick.active) {
                         const localX = brick.x - virtualLeft;
                         if (localX > -600 && localX < 2520) {
-                            this.brickEmitter.setParticleTint(ROW_COLORS[r % 6]);
+                            this.brickEmitter.setParticleTint(ROW_COLORS[r % ROW_COLORS.length]);
                             this.brickEmitter.emitParticleAt(localX + 300, brick.y + 15, 15);
                             this.playBeep(600 + (6 - (r % 6)) * 100, 'square', 0.1, 0.05);
                             if (brick.type === 'hard' || brick.type === 'indestructible') {

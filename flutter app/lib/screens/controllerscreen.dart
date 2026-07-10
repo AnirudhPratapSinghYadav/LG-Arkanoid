@@ -10,6 +10,7 @@ import '../utils/constants.dart';
 import '../services/ttsservice.dart';
 import '../widgets/lgpanel.dart';
 import '../widgets/lgbutton.dart';
+import 'dart:math';
 
 class ControllerScreen extends StatefulWidget {
   const ControllerScreen({super.key});
@@ -19,8 +20,6 @@ class ControllerScreen extends StatefulWidget {
 }
 
 class _ControllerScreenState extends State<ControllerScreen> {
-  Timer? _moveTimer;
-  bool _isButtonHeld = false;
   double _puckPosition = 0;
   int _selectedDuration = 180;
 
@@ -41,27 +40,20 @@ class _ControllerScreenState extends State<ControllerScreen> {
       DeviceOrientation.landscapeLeft,
       DeviceOrientation.landscapeRight,
     ]);
-    _moveTimer?.cancel();
     super.dispose();
   }
 
-  void _onPanStart(DragStartDetails details){
-    if(_isButtonHeld) return;
-    HapticFeedback.lightImpact();
-  }
-
   void _onPanUpdate(DragUpdateDetails details){
-    if(_isButtonHeld) return; // Prevent drag conflict
     final screenWidth = MediaQuery.of(context).size.width;
     final dx = details.delta.dx;
     final speed = maxVirtualX/screenWidth;
-    final deltaX = dx*speed;
+    final deltaX = dx * speed * 2.0; // Boosted sensitivity for large slider
 
     context.read<GameService>().sendPaddleMove(deltaX);
 
     setState((){
       _puckPosition += dx;
-      double maxVisual = (screenWidth-32-24)/2-30; // 16 padding, 12 inner padding, 30 half puck
+      double maxVisual = (screenWidth - 32) / 2 - 40; 
       if(_puckPosition > maxVisual) _puckPosition = maxVisual;
       if(_puckPosition < -maxVisual) _puckPosition = -maxVisual;
     });
@@ -73,256 +65,240 @@ class _ControllerScreenState extends State<ControllerScreen> {
     });
   }
 
-  void _startHolding(double deltaX){
-    _isButtonHeld = true;
-    context.read<GameService>().sendPaddleMove(deltaX);
-    _moveTimer?.cancel();
-    _moveTimer = Timer.periodic(const Duration(milliseconds: 16), (_){
-      if(mounted){
-        context.read<GameService>().sendPaddleMove(deltaX);
-      }
-    });
+  String _formatTime(int seconds) {
+    if (seconds <= 0) return "00:00";
+    final m = seconds ~/ 60;
+    final s = seconds % 60;
+    return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
   }
-
-  void _stopHolding(){
-    _isButtonHeld = false;
-    _moveTimer?.cancel();
-    _moveTimer = null;
-    setState((){
-      _puckPosition = 0;
-    });
-  }
-
 
   @override
   Widget build(BuildContext context){
     final service = context.watch<GameService>();
+    final gameState = service.latestGameState;
+    final isPlaying = gameState != null && gameState['gameStatus'] == 'playing';
+    final timeLeft = gameState != null ? (gameState['timeLeft'] as int? ?? 0) : 0;
 
     return Scaffold(
       backgroundColor: bgDark,
-      appBar: AppBar(
-        backgroundColor: bgDark,
-        title: Text(
-          'PLAYER ${service.playerNumber ?? "?"}',
-          style: TextStyle(
-            fontFamily: GoogleFonts.inter().fontFamily,
-            fontSize: 24,
-            color: accentPrimary,
-            letterSpacing: 1,
-            height: 1.4,
-          ),
-        ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: ConnectionStatus(isConnected: service.connected),
-          ),
-          ListenableBuilder(
-            listenable: TTSService(),
-            builder: (context, _){
-              return IconButton(
-                icon: Icon(
-                  TTSService().isMuted ? Icons.volume_off : Icons.volume_up,
-                  color: accentPrimary,
-                ),
-                onPressed: ()=>TTSService().toggleMute(),
-              );
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.bug_report, color: accentPrimary),
-            onPressed: ()=>Navigator.pushNamed(context, '/status'),
-          ),
-          IconButton(
-            icon: const Icon(Icons.settings, color: accentPrimary),
-            onPressed: ()=>Navigator.pushNamed(context, '/settings'),
-          ),
-        ],
-      ),
       body: SafeArea(
         child: Column(
           children: [
+            // Top App Bar
             Padding(
-              padding: const EdgeInsets.all(16),
-              child: LgPanel(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildStat('RANK', '${service.rank}'),
-                    _buildStat('SCORE', '${service.score}'),
-                    _buildStat('LIVES', '${service.lives}'),
-                  ],
-                ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('PLAYER ${service.playerNumber ?? "?"}', style: GoogleFonts.inter(fontSize: 12, color: textSecondary)),
+                      Row(
+                        children: [
+                          Container(width: 8, height: 8, decoration: BoxDecoration(shape: BoxShape.circle, color: service.connected ? accentSuccess : accentError)),
+                          const SizedBox(width: 6),
+                          Text(service.connected ? 'ONLINE' : 'OFFLINE', style: GoogleFonts.inter(fontSize: 14, color: textPrimary, fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      ListenableBuilder(
+                        listenable: TTSService(),
+                        builder: (context, _) => IconButton(
+                          icon: Icon(TTSService().isMuted ? Icons.volume_off : Icons.volume_up, color: accentPrimary),
+                          onPressed: () => TTSService().toggleMute(),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.settings, color: accentPrimary),
+                        onPressed: ()=>Navigator.pushNamed(context, '/settings'),
+                      ),
+                    ],
+                  )
+                ],
               ),
             ),
-            if(service.lastCommentary.isNotEmpty)
+            
+            // HUD Dashboard
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(color: cardFill, borderRadius: BorderRadius.circular(12), border: Border.all(color: borderLight)),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('LIVES', style: GoogleFonts.inter(fontSize: 10, color: textSecondary)),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: List.generate(3, (index) => Icon(
+                              index < service.lives ? Icons.favorite : Icons.favorite_border,
+                              color: accentError,
+                              size: 16,
+                            )),
+                          ),
+                          const SizedBox(height: 12),
+                          Text('SCORE', style: GoogleFonts.inter(fontSize: 10, color: textSecondary)),
+                          Text('${service.score}', style: GoogleFonts.spaceGrotesk(fontSize: 20, color: accentPrimary, fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(color: cardFill, borderRadius: BorderRadius.circular(12), border: Border.all(color: borderLight)),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Text('TIME', style: GoogleFonts.inter(fontSize: 10, color: textSecondary)),
+                          const SizedBox(height: 4),
+                          Text(_formatTime(timeLeft), style: GoogleFonts.spaceGrotesk(fontSize: 28, color: textPrimary, fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            if (service.lastCommentary.isNotEmpty)
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: LgPanel(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                padding: const EdgeInsets.all(16),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(color: cardFill, borderRadius: BorderRadius.circular(8), border: Border.all(color: accentPrimary.withOpacity(0.3))),
+                  child: Row(
                     children: [
-                      Text(
-                        service.lastCommentary,
-                        style: TextStyle(
-                          fontFamily: GoogleFonts.inter().fontFamily,
-                          color: textPrimary,
-                          fontStyle: FontStyle.italic,
-                          fontSize: 12,
+                      const Icon(Icons.smart_toy, color: accentPrimary, size: 20),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          '"${service.lastCommentary}"',
+                          style: GoogleFonts.inter(fontSize: 12, color: textPrimary, fontStyle: FontStyle.italic),
                         ),
                       ),
                     ],
                   ),
                 ),
               ),
-            if(service.latestGameState!=null && service.latestGameState!['players']!=null)
-              _buildLeaderboard(service),
-            const Spacer(),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  if((service.playerNumber ?? 0) - 1 == (service.latestGameState?['masterPlayerIndex'] ?? 0)) ...[
-                    if (service.latestGameState?['gameStatus'] != 'playing')
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        decoration: BoxDecoration(
-                          color: Colors.black45,
-                          borderRadius: BorderRadius.circular(4),
-                          border: Border.all(color: accentPrimary.withOpacity(0.3)),
-                        ),
-                        child: DropdownButtonHideUnderline(
-                          child: DropdownButton<int>(
-                            value: _selectedDuration,
-                            dropdownColor: bgDark,
-                            icon: const Icon(Icons.arrow_drop_down, color: accentPrimary),
-                            style: TextStyle(fontFamily: GoogleFonts.inter().fontFamily, color: accentPrimary, fontSize: 12),
-                            items: const [
-                              DropdownMenuItem(value: 180, child: Text('3 Min')),
-                              DropdownMenuItem(value: 300, child: Text('5 Min')),
-                              DropdownMenuItem(value: 600, child: Text('10 Min')),
-                            ],
-                            onChanged: (val) {
-                              if (val != null) setState(() => _selectedDuration = val);
-                            },
-                          ),
+
+            // Pre-Game Controls
+            if (!isPlaying && (service.playerNumber ?? 0) - 1 == (gameState?['masterPlayerIndex'] ?? 0))
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: cardFill,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: borderLight),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<int>(
+                          value: _selectedDuration,
+                          dropdownColor: bgDark,
+                          icon: const Icon(Icons.arrow_drop_down, color: accentPrimary),
+                          style: GoogleFonts.inter(color: accentPrimary, fontSize: 14),
+                          items: const [
+                            DropdownMenuItem(value: 180, child: Text('3 Min')),
+                            DropdownMenuItem(value: 300, child: Text('5 Min')),
+                            DropdownMenuItem(value: 600, child: Text('10 Min')),
+                          ],
+                          onChanged: (val) {
+                            if (val != null) setState(() => _selectedDuration = val);
+                          },
                         ),
                       ),
-                    if (service.latestGameState?['gameStatus'] != 'playing')
-                      const SizedBox(width: 8),
+                    ),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: LgButton(
-                        label: service.latestGameState?['gameStatus']=='playing' ? 'Restart Game' : 'Start Game',
-                        onPressed: ()=>service.startGame(_selectedDuration),
-                        
+                        label: 'START GAME',
+                        onPressed: () => service.startGame(_selectedDuration),
+                        isPrimary: true,
                       ),
                     ),
-                    const SizedBox(width: 16),
                   ],
-                  Expanded(
-                    child: LgButton(
-                      label: 'Power Ups',
-                      onPressed: ()=>showPowerUpDialog(context),
-                      
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Spacer(),
-            GestureDetector(
-              onPanStart: _onPanStart,
-              onPanUpdate: _onPanUpdate,
-              onPanEnd: _onPanEnd,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: LgPanel(
-                  
-                  child: SizedBox(
-                    height: 120,
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        Container(
-                          width: double.infinity,
-                          height: 2,
-                          color: accentPrimary.withOpacity(0.3),
-                        ),
-                        Transform.translate(
-                          offset: Offset(_puckPosition, 0),
-                          child: Container(
-                            width: 60,
-                            height: 60,
-                            decoration: BoxDecoration(
-                              color: accentPrimary,
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: accentPrimary.withOpacity(0.5),
-                                  blurRadius: 15,
-                                  spreadRadius: 2,
-                                )
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
                 ),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: GestureDetector(
-                      onTapDown: (_)=>_startHolding(-25.0),
-                      onTapUp: (_)=>_stopHolding(),
-                      onTapCancel: ()=>_stopHolding(),
-                      child: Container(
-                        height: 80,
-                        decoration: BoxDecoration(
-                          color: bgDark,
-                          border: Border.all(color: accentPrimary, width: 2),
-                          borderRadius: BorderRadius.circular(8),
-                          boxShadow: [
-                            BoxShadow(
-                              color: accentPrimary.withOpacity(0.2),
-                              blurRadius: 10,
-                            ),
-                          ],
-                        ),
-                        child: const Icon(Icons.chevron_left, size: 48, color: accentPrimary),
+              
+            const Spacer(),
+
+            // Massive Touch Slider Zone
+            GestureDetector(
+              onPanUpdate: _onPanUpdate,
+              onPanEnd: _onPanEnd,
+              child: Container(
+                width: double.infinity,
+                height: 250, // Massive touch zone
+                margin: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: cardFill,
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: borderLight),
+                  boxShadow: [
+                    BoxShadow(color: bgDark, blurRadius: 20, spreadRadius: 5)
+                  ]
+                ),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    // Horizontal Track
+                    Container(
+                      width: double.infinity,
+                      height: 4,
+                      margin: const EdgeInsets.symmetric(horizontal: 40),
+                      decoration: BoxDecoration(
+                        color: borderLight,
+                        borderRadius: BorderRadius.circular(2),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: GestureDetector(
-                      onTapDown: (_)=>_startHolding(25.0),
-                      onTapUp: (_)=>_stopHolding(),
-                      onTapCancel: ()=>_stopHolding(),
+                    // Directional Labels
+                    Positioned(
+                      left: 20,
+                      child: Icon(Icons.arrow_back_ios, color: textSecondary.withOpacity(0.5), size: 16),
+                    ),
+                    Positioned(
+                      right: 20,
+                      child: Icon(Icons.arrow_forward_ios, color: textSecondary.withOpacity(0.5), size: 16),
+                    ),
+                    Text(
+                      'SLIDE TO MOVE',
+                      style: GoogleFonts.inter(fontSize: 12, color: textSecondary.withOpacity(0.5), fontWeight: FontWeight.bold, letterSpacing: 2),
+                    ),
+                    // The Puck
+                    Transform.translate(
+                      offset: Offset(_puckPosition, 0),
                       child: Container(
+                        width: 80,
                         height: 80,
                         decoration: BoxDecoration(
-                          color: bgDark,
-                          border: Border.all(color: accentPrimary, width: 2),
-                          borderRadius: BorderRadius.circular(8),
+                          color: accentPrimary,
+                          shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: accentPrimary.withOpacity(0.2),
-                              blurRadius: 10,
-                            ),
+                              color: accentPrimary.withOpacity(0.4),
+                              blurRadius: 20,
+                              spreadRadius: 2,
+                            )
                           ],
                         ),
-                        child: const Icon(Icons.chevron_right, size: 48, color: accentPrimary),
+                        child: const Icon(Icons.drag_handle, color: bgDark, size: 32),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 16),
@@ -331,96 +307,4 @@ class _ControllerScreenState extends State<ControllerScreen> {
       ),
     );
   }
-
-  Widget _buildStat(String label, String value){
-    return Column(
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontFamily: GoogleFonts.inter().fontFamily,
-            color: textPrimary,
-            fontSize: 10,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          value,
-          style: TextStyle(
-            fontFamily: GoogleFonts.spaceGrotesk().fontFamily,
-            color: accentPrimary,
-            fontSize: 20,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildLeaderboard(GameService service){
-    final players = List<Map<String, dynamic>>.from(service.latestGameState?['players'] ?? []);
-    if(players.isEmpty) return const SizedBox.shrink();
-
-    players.sort((a, b)=>(b['score'] as int? ?? 0).compareTo(a['score'] as int? ?? 0));
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: LgPanel(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'LIVE STANDINGS',
-              style: TextStyle(
-                fontFamily: GoogleFonts.inter().fontFamily,
-                color: accentPrimary,
-                fontWeight: FontWeight.bold,
-                fontSize: 12,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            ...players.map((p){
-              final rank = p['rank'] ?? '-';
-              final name = p['name'] ?? 'Unknown';
-              final score = p['score'] ?? 0;
-              final isMe = p['id']==service.playerId;
-              return Container(
-                margin: const EdgeInsets.symmetric(vertical: 2),
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: isMe ? accentPrimary.withOpacity(0.1) : Colors.transparent,
-                  borderRadius: BorderRadius.circular(4),
-                  border: isMe ? Border.all(color: accentPrimary.withOpacity(0.3)) : null,
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      '#$rank $name ${isMe ? '(YOU)' : ''}',
-                      style: TextStyle(
-                        fontFamily: GoogleFonts.inter().fontFamily,
-                        color: isMe ? accentPrimary : textPrimary,
-                        fontWeight: isMe ? FontWeight.bold : FontWeight.normal,
-                        fontSize: 12,
-                      ),
-                    ),
-                    Text(
-                      '$score',
-                      style: TextStyle(
-                        fontFamily: GoogleFonts.inter().fontFamily,
-                        color: isMe ? accentPrimary : textPrimary,
-                        fontWeight: isMe ? FontWeight.bold : FontWeight.normal,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }).toList(),
-          ],
-        ),
-      ),
-    );
-  }
 }
-

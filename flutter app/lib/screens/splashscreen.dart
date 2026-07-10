@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../utils/constants.dart';
 
@@ -23,7 +23,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 3500),
+      duration: const Duration(milliseconds: 8000),
     );
 
     _dotOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
@@ -103,27 +103,22 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                           children: [
                             Image.asset('assets/app_icon_transparent.png', width: 64, height: 64),
                             const SizedBox(width: 24),
-                            Image.asset('assets/lg-logo.png', height: 40, color: Colors.white),
+                            Image.asset('assets/lg-logo.png', height: 40),
                           ],
                         ),
                         const SizedBox(height: 32),
                         Text(
-                          'LIQUID GALAXY',
+                          'Liquid Galaxy Arcade Controller',
                           style: GoogleFonts.spaceGrotesk(
-                            fontSize: 28,
+                            fontSize: 18,
                             fontWeight: FontWeight.bold,
                             color: textPrimary,
-                            letterSpacing: 2,
+                            letterSpacing: 1.5,
                           ),
+                          textAlign: TextAlign.center,
                         ),
-                        Text(
-                          'Controller',
-                          style: GoogleFonts.inter(
-                            fontSize: 16,
-                            color: textSecondary,
-                            letterSpacing: 4,
-                          ),
-                        ),
+                        const SizedBox(height: 16),
+                        _DotDotDot(),
                       ],
                     ),
                   ),
@@ -133,6 +128,54 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
           );
         },
       ),
+    );
+  }
+}
+
+class _DotDotDot extends StatefulWidget {
+  @override
+  State<_DotDotDot> createState() => _DotDotDotState();
+}
+
+class _DotDotDotState extends State<_DotDotDot> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<int> _dots;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 1500))..repeat();
+    _dots = IntTween(begin: 0, end: 3).animate(_controller);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _dots,
+      builder: (context, child) {
+        String dotsText = '';
+        for (int i = 0; i < _dots.value; i++) {
+          dotsText += '. ';
+        }
+        return SizedBox(
+          height: 20,
+          child: Text(
+            dotsText,
+            style: GoogleFonts.inter(
+              fontSize: 18,
+              color: textSecondary,
+              letterSpacing: 4,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        );
+      },
     );
   }
 }
