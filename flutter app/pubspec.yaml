@@ -29,6 +29,7 @@ flutter:
   assets:
     - assets/fonts/
     - assets/app_icon.png
+    - assets/app_icon_transparent.png
     - assets/lg-logo.png
 
 flutter_icons:
