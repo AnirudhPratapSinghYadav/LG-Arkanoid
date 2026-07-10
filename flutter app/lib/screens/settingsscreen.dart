@@ -1,3 +1,4 @@
+import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/ttsservice.dart';
@@ -17,15 +18,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final tts = context.watch<TTSService>();
 
     return Scaffold(
-      backgroundColor: bgColor,
+      backgroundColor: bgDark,
       appBar: AppBar(
-        backgroundColor: bgColor,
+        backgroundColor: bgDark,
         title: const Text(
           'GAME SETTINGS',
           style: TextStyle(
-            fontFamily: 'VT323',
+            fontFamily: GoogleFonts.inter().fontFamily,
             fontSize: 24,
-            color: accentCyan,
+            color: accentPrimary,
             letterSpacing: 1,
             height: 1.4,
           ),
@@ -43,9 +44,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   const Text(
                     'ROBOT COMMENTARY',
                     style: TextStyle(
-                      fontFamily: 'JetBrainsMono',
+                      fontFamily: GoogleFonts.inter().fontFamily,
                       fontWeight: FontWeight.bold,
-                      color: accentCyan,
+                      color: accentPrimary,
                       fontSize: 14,
                       letterSpacing: 2,
                     ),
@@ -55,8 +56,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     title: const Text(
                       'Enable TTS Voice',
                       style: TextStyle(
-                        fontFamily: 'JetBrainsMono',
-                        color: textColor,
+                        fontFamily: GoogleFonts.inter().fontFamily,
+                        color: textPrimary,
                         fontSize: 14,
                       ),
                     ),
@@ -66,7 +67,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         tts.toggleMute();
                       }
                     },
-                    activeColor: accentCyan,
+                    activeColor: accentPrimary,
                     contentPadding: EdgeInsets.zero,
                   ),
                 ],

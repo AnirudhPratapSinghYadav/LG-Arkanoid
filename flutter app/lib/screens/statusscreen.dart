@@ -1,3 +1,4 @@
+import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/gameservice.dart';
@@ -13,15 +14,15 @@ class StatusScreen extends StatelessWidget {
     final state = service.latestGameState;
 
     return Scaffold(
-      backgroundColor: bgColor,
+      backgroundColor: bgDark,
       appBar: AppBar(
-        backgroundColor: bgColor,
+        backgroundColor: bgDark,
         title: const Text(
           'DEBUG STATUS',
           style: TextStyle(
-            fontFamily: 'VT323',
+            fontFamily: GoogleFonts.inter().fontFamily,
             fontSize: 24,
-            color: accentCyan,
+            color: accentPrimary,
             letterSpacing: 1,
             height: 1.4,
           ),
@@ -37,7 +38,7 @@ class StatusScreen extends StatelessWidget {
               [
                 _buildRow('Status',
                     service.connected ? 'CONNECTED' : 'DISCONNECTED',
-                    color: service.connected ? accentCyan : accentMagenta),
+                    color: service.connected ? accentPrimary : accentError),
                 _buildRow('Server',
                     '${service.serverAddress}:${service.serverPort}'),
                 _buildRow('Player ID', service.playerId ?? 'None'),
@@ -57,8 +58,8 @@ class StatusScreen extends StatelessWidget {
                   const SizedBox(height: 8),
                   const Text('BALLS',
                       style: TextStyle(
-                          fontFamily: 'JetBrainsMono',
-                          color: accentCyan,
+                          fontFamily: GoogleFonts.inter().fontFamily,
+                          color: accentPrimary,
                           fontWeight: FontWeight.bold)),
                   ...?((state['balls'] as List<dynamic>?)?.map((b) =>
                       _buildRow(
@@ -75,14 +76,14 @@ class StatusScreen extends StatelessWidget {
                   service.lastCommentary.isEmpty
                       ? 'No commentary yet'
                       : service.lastCommentary,
-                  style: const TextStyle(
-                      fontFamily: 'JetBrainsMono', color: textColor),
+                  style: TextStyle(
+                      fontFamily: GoogleFonts.inter().fontFamily, color: textPrimary),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'Source: ${service.lastCommentarySource}',
                   style:
-                      const TextStyle(fontFamily: 'JetBrainsMono', color: textColor, fontSize: 10),
+                      TextStyle(fontFamily: GoogleFonts.inter().fontFamily, color: textPrimary, fontSize: 10),
                 ),
               ],
             ),
@@ -99,9 +100,9 @@ class StatusScreen extends StatelessWidget {
         children: [
           Text(
             title,
-            style: const TextStyle(
-              fontFamily: 'VT323',
-              color: accentCyan,
+            style: TextStyle(
+              fontFamily: GoogleFonts.inter().fontFamily,
+              color: accentPrimary,
               fontSize: 24,
               letterSpacing: 1,
               height: 1.4,
@@ -121,14 +122,14 @@ class StatusScreen extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label,
-              style: const TextStyle(
-                  fontFamily: 'JetBrainsMono', color: textColor, fontSize: 12)),
+              style: TextStyle(
+                  fontFamily: GoogleFonts.inter().fontFamily, color: textPrimary, fontSize: 12)),
           Text(
             value,
             style: TextStyle(
-              color: color ?? accentCyan,
+              color: color ?? accentPrimary,
               fontWeight: FontWeight.bold,
-              fontFamily: 'JetBrainsMono',
+              fontFamily: GoogleFonts.inter().fontFamily,
               fontSize: 12,
             ),
           ),

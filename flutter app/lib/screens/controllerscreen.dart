@@ -1,3 +1,4 @@
+import 'package:google_fonts/google_fonts.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -98,15 +99,15 @@ class _ControllerScreenState extends State<ControllerScreen> {
     final service = context.watch<GameService>();
 
     return Scaffold(
-      backgroundColor: bgColor,
+      backgroundColor: bgDark,
       appBar: AppBar(
-        backgroundColor: bgColor,
+        backgroundColor: bgDark,
         title: Text(
           'PLAYER ${service.playerNumber ?? "?"}',
-          style: const TextStyle(
-            fontFamily: 'VT323',
+          style: TextStyle(
+            fontFamily: GoogleFonts.inter().fontFamily,
             fontSize: 24,
-            color: accentCyan,
+            color: accentPrimary,
             letterSpacing: 1,
             height: 1.4,
           ),
@@ -122,18 +123,18 @@ class _ControllerScreenState extends State<ControllerScreen> {
               return IconButton(
                 icon: Icon(
                   TTSService().isMuted ? Icons.volume_off : Icons.volume_up,
-                  color: accentCyan,
+                  color: accentPrimary,
                 ),
                 onPressed: ()=>TTSService().toggleMute(),
               );
             },
           ),
           IconButton(
-            icon: const Icon(Icons.bug_report, color: accentCyan),
+            icon: const Icon(Icons.bug_report, color: accentPrimary),
             onPressed: ()=>Navigator.pushNamed(context, '/status'),
           ),
           IconButton(
-            icon: const Icon(Icons.settings, color: accentCyan),
+            icon: const Icon(Icons.settings, color: accentPrimary),
             onPressed: ()=>Navigator.pushNamed(context, '/settings'),
           ),
         ],
@@ -163,9 +164,9 @@ class _ControllerScreenState extends State<ControllerScreen> {
                     children: [
                       Text(
                         service.lastCommentary,
-                        style: const TextStyle(
-                          fontFamily: 'JetBrainsMono',
-                          color: textColor,
+                        style: TextStyle(
+                          fontFamily: GoogleFonts.inter().fontFamily,
+                          color: textPrimary,
                           fontStyle: FontStyle.italic,
                           fontSize: 12,
                         ),
@@ -189,14 +190,14 @@ class _ControllerScreenState extends State<ControllerScreen> {
                         decoration: BoxDecoration(
                           color: Colors.black45,
                           borderRadius: BorderRadius.circular(4),
-                          border: Border.all(color: accentCyan.withOpacity(0.3)),
+                          border: Border.all(color: accentPrimary.withOpacity(0.3)),
                         ),
                         child: DropdownButtonHideUnderline(
                           child: DropdownButton<int>(
                             value: _selectedDuration,
-                            dropdownColor: bgColor,
-                            icon: const Icon(Icons.arrow_drop_down, color: accentCyan),
-                            style: const TextStyle(fontFamily: 'JetBrainsMono', color: accentCyan, fontSize: 12),
+                            dropdownColor: bgDark,
+                            icon: const Icon(Icons.arrow_drop_down, color: accentPrimary),
+                            style: TextStyle(fontFamily: GoogleFonts.inter().fontFamily, color: accentPrimary, fontSize: 12),
                             items: const [
                               DropdownMenuItem(value: 180, child: Text('3 Min')),
                               DropdownMenuItem(value: 300, child: Text('5 Min')),
@@ -214,7 +215,7 @@ class _ControllerScreenState extends State<ControllerScreen> {
                       child: LgButton(
                         label: service.latestGameState?['gameStatus']=='playing' ? 'Restart Game' : 'Start Game',
                         onPressed: ()=>service.startGame(_selectedDuration),
-                        accentColor: service.latestGameState?['gameStatus']=='playing' ? Colors.redAccent : accentCyan,
+                        
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -223,7 +224,7 @@ class _ControllerScreenState extends State<ControllerScreen> {
                     child: LgButton(
                       label: 'Power Ups',
                       onPressed: ()=>showPowerUpDialog(context),
-                      accentColor: accentAmber,
+                      
                     ),
                   ),
                 ],
@@ -237,7 +238,7 @@ class _ControllerScreenState extends State<ControllerScreen> {
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: LgPanel(
-                  accentColor: accentCyan,
+                  
                   child: SizedBox(
                     height: 120,
                     child: Stack(
@@ -246,7 +247,7 @@ class _ControllerScreenState extends State<ControllerScreen> {
                         Container(
                           width: double.infinity,
                           height: 2,
-                          color: accentCyan.withOpacity(0.3),
+                          color: accentPrimary.withOpacity(0.3),
                         ),
                         Transform.translate(
                           offset: Offset(_puckPosition, 0),
@@ -254,11 +255,11 @@ class _ControllerScreenState extends State<ControllerScreen> {
                             width: 60,
                             height: 60,
                             decoration: BoxDecoration(
-                              color: accentCyan,
+                              color: accentPrimary,
                               shape: BoxShape.circle,
                               boxShadow: [
                                 BoxShadow(
-                                  color: accentCyan.withOpacity(0.5),
+                                  color: accentPrimary.withOpacity(0.5),
                                   blurRadius: 15,
                                   spreadRadius: 2,
                                 )
@@ -284,17 +285,17 @@ class _ControllerScreenState extends State<ControllerScreen> {
                       child: Container(
                         height: 80,
                         decoration: BoxDecoration(
-                          color: bgColor,
-                          border: Border.all(color: accentCyan, width: 2),
+                          color: bgDark,
+                          border: Border.all(color: accentPrimary, width: 2),
                           borderRadius: BorderRadius.circular(8),
                           boxShadow: [
                             BoxShadow(
-                              color: accentCyan.withOpacity(0.2),
+                              color: accentPrimary.withOpacity(0.2),
                               blurRadius: 10,
                             ),
                           ],
                         ),
-                        child: const Icon(Icons.chevron_left, size: 48, color: accentCyan),
+                        child: const Icon(Icons.chevron_left, size: 48, color: accentPrimary),
                       ),
                     ),
                   ),
@@ -307,17 +308,17 @@ class _ControllerScreenState extends State<ControllerScreen> {
                       child: Container(
                         height: 80,
                         decoration: BoxDecoration(
-                          color: bgColor,
-                          border: Border.all(color: accentCyan, width: 2),
+                          color: bgDark,
+                          border: Border.all(color: accentPrimary, width: 2),
                           borderRadius: BorderRadius.circular(8),
                           boxShadow: [
                             BoxShadow(
-                              color: accentCyan.withOpacity(0.2),
+                              color: accentPrimary.withOpacity(0.2),
                               blurRadius: 10,
                             ),
                           ],
                         ),
-                        child: const Icon(Icons.chevron_right, size: 48, color: accentCyan),
+                        child: const Icon(Icons.chevron_right, size: 48, color: accentPrimary),
                       ),
                     ),
                   ),
@@ -336,18 +337,18 @@ class _ControllerScreenState extends State<ControllerScreen> {
       children: [
         Text(
           label,
-          style: const TextStyle(
-            fontFamily: 'JetBrainsMono',
-            color: textColor,
+          style: TextStyle(
+            fontFamily: GoogleFonts.inter().fontFamily,
+            color: textPrimary,
             fontSize: 10,
           ),
         ),
         const SizedBox(height: 8),
         Text(
           value,
-          style: const TextStyle(
-            fontFamily: 'PressStart2P',
-            color: accentCyan,
+          style: TextStyle(
+            fontFamily: GoogleFonts.spaceGrotesk().fontFamily,
+            color: accentPrimary,
             fontSize: 20,
           ),
         ),
@@ -370,8 +371,8 @@ class _ControllerScreenState extends State<ControllerScreen> {
             const Text(
               'LIVE STANDINGS',
               style: TextStyle(
-                fontFamily: 'JetBrainsMono',
-                color: accentCyan,
+                fontFamily: GoogleFonts.inter().fontFamily,
+                color: accentPrimary,
                 fontWeight: FontWeight.bold,
                 fontSize: 12,
               ),
@@ -387,9 +388,9 @@ class _ControllerScreenState extends State<ControllerScreen> {
                 margin: const EdgeInsets.symmetric(vertical: 2),
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: isMe ? accentCyan.withOpacity(0.1) : Colors.transparent,
+                  color: isMe ? accentPrimary.withOpacity(0.1) : Colors.transparent,
                   borderRadius: BorderRadius.circular(4),
-                  border: isMe ? Border.all(color: accentCyan.withOpacity(0.3)) : null,
+                  border: isMe ? Border.all(color: accentPrimary.withOpacity(0.3)) : null,
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -397,8 +398,8 @@ class _ControllerScreenState extends State<ControllerScreen> {
                     Text(
                       '#$rank $name ${isMe ? '(YOU)' : ''}',
                       style: TextStyle(
-                        fontFamily: 'JetBrainsMono',
-                        color: isMe ? accentCyan : textColor,
+                        fontFamily: GoogleFonts.inter().fontFamily,
+                        color: isMe ? accentPrimary : textPrimary,
                         fontWeight: isMe ? FontWeight.bold : FontWeight.normal,
                         fontSize: 12,
                       ),
@@ -406,8 +407,8 @@ class _ControllerScreenState extends State<ControllerScreen> {
                     Text(
                       '$score',
                       style: TextStyle(
-                        fontFamily: 'JetBrainsMono',
-                        color: isMe ? accentCyan : textColor,
+                        fontFamily: GoogleFonts.inter().fontFamily,
+                        color: isMe ? accentPrimary : textPrimary,
                         fontWeight: isMe ? FontWeight.bold : FontWeight.normal,
                         fontSize: 12,
                       ),

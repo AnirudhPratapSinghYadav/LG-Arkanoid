@@ -1,3 +1,4 @@
+import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter/material.dart';
 import '../utils/constants.dart';
 
@@ -21,7 +22,7 @@ class ConnectionStatus extends StatelessWidget {
           height: 10,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: isConnected ? accentCyan : accentMagenta,
+            color: isConnected ? accentPrimary : accentError,
           ),
         ),
         const SizedBox(width: 6),
@@ -30,9 +31,9 @@ class ConnectionStatus extends StatelessWidget {
               ? label
               : (isConnected ? 'CONNECTED' : 'DISCONNECTED'),
           style: TextStyle(
-            color: isConnected ? accentCyan : accentMagenta,
+            color: isConnected ? accentPrimary : accentError,
             fontSize: 12,
-            fontFamily: 'JetBrainsMono',
+            fontFamily: GoogleFonts.inter().fontFamily,
             fontWeight: FontWeight.bold,
           ),
         ),

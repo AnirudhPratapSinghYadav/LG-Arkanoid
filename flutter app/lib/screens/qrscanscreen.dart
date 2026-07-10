@@ -1,3 +1,4 @@
+import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../utils/constants.dart';
@@ -23,12 +24,12 @@ class _QrScanScreenState extends State<QrScanScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: bgColor,
+      backgroundColor: bgDark,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: const Text('Scan QR Code', style: TextStyle(fontFamily: 'PressStart2P', fontSize: 16, color: accentCyan)),
-        iconTheme: const IconThemeData(color: accentCyan),
+        title: const Text('Scan QR Code', style: TextStyle(fontFamily: GoogleFonts.spaceGrotesk().fontFamily, fontSize: 16, color: accentPrimary)),
+        iconTheme: const IconThemeData(color: accentPrimary),
       ),
       body: Stack(
         children: [
@@ -51,7 +52,7 @@ class _QrScanScreenState extends State<QrScanScreen> {
               width: 250,
               height: 250,
               decoration: BoxDecoration(
-                border: Border.all(color: accentCyan, width: 4),
+                border: Border.all(color: accentPrimary, width: 4),
                 borderRadius: BorderRadius.circular(16),
               ),
             ),
