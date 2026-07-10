@@ -17,7 +17,7 @@ class StatusScreen extends StatelessWidget {
       backgroundColor: bgDark,
       appBar: AppBar(
         backgroundColor: bgDark,
-        title: const Text(
+        title: Text(
           'DEBUG STATUS',
           style: TextStyle(
             fontFamily: GoogleFonts.inter().fontFamily,
@@ -56,7 +56,7 @@ class StatusScreen extends StatelessWidget {
                   _buildRow(
                       'Screen Width', '${state['rigVirtualWidth'] ?? 0}'),
                   const SizedBox(height: 8),
-                  const Text('BALLS',
+                  Text('BALLS',
                       style: TextStyle(
                           fontFamily: GoogleFonts.inter().fontFamily,
                           color: accentPrimary,
@@ -138,3 +138,4 @@ class StatusScreen extends StatelessWidget {
     );
   }
 }
+

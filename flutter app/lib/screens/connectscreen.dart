@@ -1,13 +1,16 @@
-import 'package:google_fonts/google_fonts.dart';
+﻿import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../services/gameservice.dart';
+import '../services/lg_service.dart';
 import '../utils/constants.dart';
 import '../widgets/lgpanel.dart';
 import '../widgets/lgbutton.dart';
 import '../widgets/lgtextfield.dart';
-import '../services/lg_service.dart';
+import '../widgets/mission_background.dart';
+import '../widgets/lg_bot.dart';
 import 'qrscanscreen.dart';
 
 class ConnectScreen extends StatefulWidget {
@@ -24,6 +27,7 @@ class _ConnectScreenState extends State<ConnectScreen> {
   final _sshPassController = TextEditingController(text: 'lg');
   final _tokenController = TextEditingController();
   final _nameController = TextEditingController();
+  
   bool _connecting = false;
   bool _launching = false;
 
@@ -39,6 +43,8 @@ class _ConnectScreenState extends State<ConnectScreen> {
           _portController.text = parts[2];
           _tokenController.text = parts[3];
         });
+        // Auto connect after successful scan
+        _connect();
       }
     }
   }
@@ -104,8 +110,6 @@ class _ConnectScreenState extends State<ConnectScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('SSH Connected! Launching Rig...')),
       );
-      // Example script execution:
-      // await lgService.execute('bash /home/lg/launch_arkanoid.sh');
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('SSH Connection Failed')),
@@ -117,202 +121,144 @@ class _ConnectScreenState extends State<ConnectScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: bgDark,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.help_outline, color: accentPrimary),
-            onPressed: () {
-              showDialog(
-                context: context,
-                builder: (context) => AlertDialog(
-                  backgroundColor: cardFill,
-                  shape: RoundedRectangleBorder(
-                    side: const BorderSide(color: accentPrimary, width: 2),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  title: Column(
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Image.asset('assets/app_icon_transparent.png', width: 40, height: 40),
-                          const SizedBox(width: 16),
-                          Image.asset('assets/lg-logo.png', height: 40, color: Colors.white),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      const Text('ABOUT US', style: TextStyle(color: accentPrimary, fontFamily: GoogleFonts.spaceGrotesk().fontFamily, fontSize: 16, fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 8),
-                      const Divider(color: accentPrimary, thickness: 1),
-                    ],
-                  ),
-                  content: const Text(
-                    'Author -> Anirudh Pratap Singh Yadav\n\nAbout Game -> LG Arkanoid brings classic brick-breaking action to the Liquid Galaxy!\n\nA Gemini Summer of Code Project.\n\nPowered by: Gemini & Liquid Galaxy',
-                    style: TextStyle(color: textPrimary, fontFamily: GoogleFonts.inter().fontFamily, fontSize: 12, height: 1.5),
-                    textAlign: TextAlign.center,
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('CLOSE', style: TextStyle(color: accentError, fontFamily: GoogleFonts.inter().fontFamily, fontWeight: FontWeight.bold)),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-        ],
-      ),
-      body: SafeArea(
-        child: Center(
+      body: MissionControlBackground(
+        child: SafeArea(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          child: Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 450),
-              child: LgPanel(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const SizedBox(height: 8),
-                    Center(
-                      child: Image.asset('assets/app_icon_transparent.png', width: 64, height: 64),
-                    ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'LG ARKANOID',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontFamily: GoogleFonts.inter().fontFamily,
-                        fontSize: 40,
-                        color: accentPrimary,
-                        letterSpacing: 1,
-                        height: 1.4,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                  'JOIN GAME',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontFamily: GoogleFonts.inter().fontFamily,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: textPrimary,
-                    letterSpacing: 2,
-                  ),
-                ),
-                const SizedBox(height: 40),
-                LgTextField(
-                  controller: _nameController,
-                  label: 'Player Name',
-                  maxLength: 12,
-                ),
-                const SizedBox(height: 16),
-                LgTextField(
-                  controller: _tokenController,
-                  label: 'Session Token (4 letters)',
-                  maxLength: 4,
-                ),
-                const SizedBox(height: 16),
-                Theme(
-                  data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-                  child: ExpansionTile(
-                    title: const Text(
-                      'Advanced Server Settings',
-                      style: TextStyle(
-                        fontFamily: GoogleFonts.inter().fontFamily,
-                        fontSize: 12,
-                        color: textPrimary,
-                      ),
-                    ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Header
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8.0),
-                        child: LgTextField(
-                          controller: _ipController,
-                          label: 'Server IP',
-                        ),
+                      Image.asset('assets/app_icon_transparent.png', width: 32, height: 32),
+                      const SizedBox(width: 12),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('LIQUID GALAXY', style: GoogleFonts.spaceGrotesk(fontSize: 18, fontWeight: FontWeight.bold, color: textPrimary, letterSpacing: 1.2)),
+                          Text('Controller', style: GoogleFonts.inter(fontSize: 12, color: textSecondary, letterSpacing: 2)),
+                        ],
                       ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8.0),
-                        child: LgTextField(
-                          controller: _portController,
-                          label: 'Port',
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8.0),
-                        child: LgTextField(
-                          controller: _sshUserController,
-                          label: 'SSH Username',
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8.0),
-                        child: LgTextField(
-                          controller: _sshPassController,
-                          label: 'SSH Password',
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      _launching
-                          ? const Center(
-                              child: SizedBox(
-                                width: 24,
-                                height: 24,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: accentError),
-                              ),
-                            )
-                          : LgButton(
-                              label: 'Launch on Rig (SSH)',
-                              onPressed: _launchRig,
-                              
-                            ),
-                      const SizedBox(height: 16),
                     ],
                   ),
-                ),
-                const SizedBox(height: 32),
-                _connecting
-                    ? const Center(
-                        child: SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: accentPrimary,
-                          ),
-                        ),
-                      )
-                  : Row(
+                  const SizedBox(height: 32),
+                  
+                  // Rig Status Card
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: cardFill,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: borderLight),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: LgButton(
-                            label: 'Scan QR',
-                            onPressed: _scanQr,
-                            
-                          ),
+                        Text('LG Rig Status', style: GoogleFonts.inter(fontSize: 12, color: textSecondary)),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Container(
+                              width: 8, height: 8,
+                              decoration: const BoxDecoration(shape: BoxShape.circle, color: accentWarning),
+                            ),
+                            const SizedBox(width: 8),
+                            Text('Waiting for Connection...', style: GoogleFonts.inter(fontSize: 15, color: textPrimary, fontWeight: FontWeight.w500)),
+                          ],
                         ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: LgButton(
-                            label: 'Join Game',
-                            onPressed: _connect,
-                            
-                          ),
+                        const SizedBox(height: 16),
+                        const Divider(color: borderLight),
+                        const SizedBox(height: 16),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('Last seen', style: GoogleFonts.inter(fontSize: 12, color: textSecondary)),
+                            Text('Never', style: GoogleFonts.jetbrainsMono(fontSize: 12, color: textSecondary)),
+                          ],
                         ),
                       ],
                     ),
-              const SizedBox(height: 16),
-              ],
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Actions Panel
+                  LgPanel(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        LgButton(
+                          label: 'SCAN QR TO PAIR',
+                          onPressed: _scanQr,
+                          isPrimary: true,
+                        ),
+                        const SizedBox(height: 24),
+                        Row(
+                          children: [
+                            const Expanded(child: Divider(color: borderLight)),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                              child: Text('OR MANUAL ENTRY', style: GoogleFonts.inter(fontSize: 10, color: textSecondary, letterSpacing: 1)),
+                            ),
+                            const Expanded(child: Divider(color: borderLight)),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+                        LgTextField(
+                          controller: _nameController,
+                          label: 'Player Name',
+                          maxLength: 12,
+                        ),
+                        const SizedBox(height: 16),
+                        LgTextField(
+                          controller: _tokenController,
+                          label: 'Session Code',
+                          maxLength: 4,
+                        ),
+                        const SizedBox(height: 24),
+                        _connecting 
+                          ? const Center(child: CircularProgressIndicator(color: accentPrimary))
+                          : LgButton(
+                              label: 'JOIN SESSION',
+                              onPressed: _connect,
+                              isPrimary: false,
+                            ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Connection Settings (Advanced)
+                  Theme(
+                    data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                    child: ExpansionTile(
+                      tilePadding: EdgeInsets.zero,
+                      title: Text('Connection Settings', style: GoogleFonts.inter(fontSize: 14, color: textSecondary)),
+                      children: [
+                        LgTextField(controller: _ipController, label: 'Server IP'),
+                        const SizedBox(height: 12),
+                        LgTextField(controller: _portController, label: 'Port'),
+                        const SizedBox(height: 12),
+                        LgTextField(controller: _sshUserController, label: 'SSH Username'),
+                        const SizedBox(height: 12),
+                        LgTextField(controller: _sshPassController, label: 'SSH Password', obscureText: true),
+                        const SizedBox(height: 16),
+                        _launching
+                          ? const Center(child: CircularProgressIndicator(color: accentPrimary))
+                          : LgButton(label: 'Launch Rig Scripts (SSH)', onPressed: _launchRig, isPrimary: false),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
+          ),
         ),
-      ),
-      ),
       ),
     );
   }

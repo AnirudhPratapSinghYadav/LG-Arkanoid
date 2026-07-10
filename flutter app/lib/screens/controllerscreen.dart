@@ -368,7 +368,7 @@ class _ControllerScreenState extends State<ControllerScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text(
+            Text(
               'LIVE STANDINGS',
               style: TextStyle(
                 fontFamily: GoogleFonts.inter().fontFamily,
@@ -423,3 +423,4 @@ class _ControllerScreenState extends State<ControllerScreen> {
     );
   }
 }
+
