@@ -137,7 +137,7 @@ class _ConnectScreenState extends State<ConnectScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Image.asset('assets/app_icon.png', width: 40, height: 40),
+                          Image.asset('assets/app_icon_transparent.png', width: 40, height: 40),
                           const SizedBox(width: 16),
                           Image.asset('assets/lg-logo.png', height: 40, color: Colors.white),
                         ],
@@ -178,7 +178,7 @@ class _ConnectScreenState extends State<ConnectScreen> {
                   children: [
                     const SizedBox(height: 8),
                     Center(
-                      child: Image.asset('assets/app_icon.png', width: 64, height: 64),
+                      child: Image.asset('assets/app_icon_transparent.png', width: 64, height: 64),
                     ),
                     const SizedBox(height: 16),
                     const Text(

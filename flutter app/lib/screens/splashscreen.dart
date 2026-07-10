@@ -58,7 +58,7 @@ class _SplashScreenState extends State<SplashScreen>
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Image.asset('assets/app_icon.png', width: 72, height: 72),
+                Image.asset('assets/app_icon_transparent.png', width: 72, height: 72),
                 const SizedBox(width: 32),
                 Image.asset('assets/lg-logo.png', height: 48, color: Colors.white),
               ],
