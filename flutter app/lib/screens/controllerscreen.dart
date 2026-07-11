@@ -208,13 +208,30 @@ class _ControllerScreenState extends State<ControllerScreen> {
                   child: Stack(
                     alignment: Alignment.center,
                     children: [
+                      // Cool neon glowing track
                       Container(
                         width: double.infinity,
-                        height: 4,
+                        height: 12,
                         margin: const EdgeInsets.symmetric(horizontal: 40),
                         decoration: BoxDecoration(
-                          color: borderLight,
-                          borderRadius: BorderRadius.circular(2),
+                          color: bgDark.withValues(alpha: 0.8),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: playerColor.withValues(alpha: 0.3)),
+                          boxShadow: [
+                            BoxShadow(
+                              color: playerColor.withValues(alpha: 0.15),
+                              blurRadius: 10,
+                              spreadRadius: 2,
+                            ),
+                          ],
+                        ),
+                        child: Center(
+                          child: Container(
+                            width: double.infinity,
+                            height: 2,
+                            margin: const EdgeInsets.symmetric(horizontal: 10),
+                            color: playerColor.withValues(alpha: 0.5),
+                          ),
                         ),
                       ),
                       
@@ -222,9 +239,9 @@ class _ControllerScreenState extends State<ControllerScreen> {
                         'SLIDE TO CONTROL PADDLE',
                         style: GoogleFonts.spaceGrotesk(
                           fontSize: 12,
-                          color: textSecondary.withValues(alpha: 0.3),
+                          color: textSecondary.withValues(alpha: 0.5),
                           fontWeight: FontWeight.bold,
-                          letterSpacing: 2,
+                          letterSpacing: 3,
                         ),
                       ),
                       
@@ -234,13 +251,36 @@ class _ControllerScreenState extends State<ControllerScreen> {
                           width: 80,
                           height: 80,
                           decoration: BoxDecoration(
-                            color: accentPrimary,
                             shape: BoxShape.circle,
+                            gradient: RadialGradient(
+                              colors: [
+                                playerColor.withValues(alpha: 0.8),
+                                playerColor,
+                                playerColor.withValues(alpha: 0.4),
+                              ],
+                              stops: const [0.3, 0.7, 1.0],
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: playerColor.withValues(alpha: 0.6),
+                                blurRadius: 20,
+                                spreadRadius: 4,
+                              ),
+                              BoxShadow(
+                                color: playerColor.withValues(alpha: 0.3),
+                                blurRadius: 40,
+                                spreadRadius: 10,
+                              ),
+                            ],
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.8),
+                              width: 2,
+                            ),
                           ),
                           child: const Icon(
                             Icons.drag_handle_rounded,
-                            color: bgDark,
-                            size: 32,
+                            color: Colors.white,
+                            size: 38,
                           ),
                         ),
                       ),

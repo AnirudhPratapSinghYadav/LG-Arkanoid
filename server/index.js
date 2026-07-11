@@ -18,7 +18,7 @@ const TICK_MS = 16;
 
 function getScreenBoundaries(){
   const boundaries = [];
-  const numScreens = worldState.numScreens || 5;
+  const numScreens = worldState.numScreens || 3;
   for(let i = 0; i < numScreens; i++){
     boundaries.push({
       screenId: i+1,
@@ -112,7 +112,7 @@ function createInitialWorldState(){
   
   state.currentLevel = state.level;
   state.gameActive = false;
-  state.numScreens = process.env.NUM_SCREENS || 5;
+  state.numScreens = process.env.NUM_SCREENS ? parseInt(process.env.NUM_SCREENS, 10) : 3;
   
   return state;
 }
@@ -196,7 +196,7 @@ function timingSafeTokenCompare(provided, stored){
 }
 
 function getScreenIdForX(x){
-  const numScreens = worldState.numScreens || 5;
+  const numScreens = worldState.numScreens || 3;
   const maxRight = numScreens*1920-1;
   const clampedX = Math.max(0, Math.min(x, maxRight));
   return Math.floor(clampedX/1920)+1;
@@ -583,7 +583,7 @@ function getWorldSnapshot(){
 
 io.on('connection', (socket)=>{
   const screenId = parseInt(socket.handshake.query.screenId, 10);
-  if(screenId>=1 && screenId<=(worldState.numScreens || 5)){
+  if(screenId>=1 && screenId<=(worldState.numScreens || 3)){
     socket.join(`screen-${screenId}`);
   }
 
@@ -677,7 +677,8 @@ io.on('connection', (socket)=>{
     player.id = PLAYER_SLOT_IDS[slotIndex];
     player.name = (typeof playerName === 'string' && playerName.trim().length > 0) ? playerName.trim().substring(0, 12) : `Player ${slotIndex + 1}`;
     player.socketId = socket.id;
-    player.paddleX = ((worldState.numScreens || 5)*1920)/2-150;
+    player.paddleWidth = 300;
+    player.paddleX = ((worldState.numScreens || 3)*1920)/2 - (player.paddleWidth/2);
     player.lastNonces = [];
     socketToPlayerIndex.set(socket.id, slotIndex);
 
@@ -739,7 +740,7 @@ io.on('connection', (socket)=>{
       return;
     }
 
-    const maxRight = (worldState.numScreens || 5)*1920;
+    const maxRight = (worldState.numScreens || 3)*1920;
     player.paddleX += deltaX;
     player.paddleX = Math.max(0, Math.min(maxRight-300, Math.round(player.paddleX)));
   });

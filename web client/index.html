@@ -292,6 +292,7 @@ class GameScene extends Phaser.Scene {
             this.drawCountdownMode();
             this.drawBricks();
             this.drawPaddles();
+            this.drawRobots();
             this.updateHUD();
             return;
         } else {
@@ -300,6 +301,7 @@ class GameScene extends Phaser.Scene {
         
         if (this.currentState.gameStatus === 'win' || this.currentState.gameStatus === 'time_up') {
             this.drawWinMode();
+            this.drawRobots();
             return;
         } else {
             this.hideWinMode();
@@ -309,6 +311,7 @@ class GameScene extends Phaser.Scene {
         this.drawPowerUps();
         this.drawBalls();
         this.drawPaddles();
+        this.drawRobots();
         this.updateHUD();
     }
 
@@ -956,16 +959,11 @@ class GameScene extends Phaser.Scene {
         const players = this.currentState.players;
         if (!players) return;
 
-        this.robotGraphics.clear();
-
         const entries = Array.isArray(players) ? players : Object.values(players);
 
         for (let i = 0; i < entries.length; i++) {
             const player = entries[i];
-            if (!player || !player.connected) {
-                if (this.robots[i]) this.robots[i].text.setAlpha(0);
-                continue;
-            }
+            if (!player || !player.connected) continue;
 
             const paddleX = player.paddleX !== undefined ? player.paddleX : player.x;
             const paddleWidth = player.paddleWidth !== undefined ? player.paddleWidth : player.width || 200;
@@ -974,34 +972,67 @@ class GameScene extends Phaser.Scene {
             if (paddleX === undefined) continue;
 
             const localX = paddleX - virtualLeft;
-            const robotTargetX = localX + paddleWidth / 2;
-            const robotY = 950;
             const color = PADDLE_COLORS[(playerNumber - 1) % PADDLE_COLORS.length];
-            
-            if (robotTargetX > -50 && robotTargetX < 1970) {
-                this.robotGraphics.fillStyle(0x0d1117, this.robots[i].opacityTarget);
-                this.robotGraphics.fillRoundedRect(robotTargetX - 25, robotY - 25, 50, 50, 8);
-                this.robotGraphics.lineStyle(2, color, this.robots[i].opacityTarget);
-                this.robotGraphics.strokeRoundedRect(robotTargetX - 25, robotY - 25, 50, 50, 8);
-                
-                this.robotGraphics.fillStyle(0x00e5ff, this.robots[i].opacityTarget);
-                this.robotGraphics.fillRect(robotTargetX - 12, robotY - 10, 8, 8);
-                this.robotGraphics.fillRect(robotTargetX + 4, robotY - 10, 8, 8);
-
-                if (this.robots[i].text.alpha > 0) {
-                    this.robots[i].text.setPosition(robotTargetX, robotY - 35);
-                }
-            } else {
-                this.robots[i].text.setPosition(-1000, -1000);
-            }
 
             if (localX + paddleWidth < 0 || localX > 1920) continue;
+
+            // Name Tag above paddle
+            if (player.name) {
+                const nameX = localX + paddleWidth / 2;
+                this.graphics.fillStyle(0xffffff, 0.8);
+                this.graphics.fillRoundedRect(nameX - 40, 1000 - 35, 80, 20, 4);
+                if (!this[`paddleNameText_${i}`]) {
+                    this[`paddleNameText_${i}`] = this.add.text(0, 0, '', { fontFamily: '"Inter"', fontSize: '12px', color: '#000', fontWeight: 'bold' }).setOrigin(0.5, 0.5).setDepth(200);
+                }
+                this[`paddleNameText_${i}`].setText(player.name.substring(0, 8));
+                this[`paddleNameText_${i}`].setPosition(nameX, 1000 - 25);
+                this[`paddleNameText_${i}`].setVisible(true);
+            }
 
             this.graphics.fillStyle(color, 0.3);
             this.graphics.fillRoundedRect(localX - 10, 1000 - 10, paddleWidth + 20, 40, 10);
             
             this.graphics.fillStyle(color, 1);
             this.graphics.fillRoundedRect(localX, 1000, paddleWidth, 20, 6);
+        }
+    }
+
+    drawRobots() {
+        const players = this.currentState.players;
+        if (!players) return;
+
+        this.robotGraphics.clear();
+        const entries = Array.isArray(players) ? players : Object.values(players);
+        
+        let connectedCount = 0;
+        let startX = 1750; // Draw robots on bottom right of the screen
+        let robotY = 1000;
+
+        for (let i = entries.length - 1; i >= 0; i--) {
+            const player = entries[i];
+            if (!player || !player.connected) {
+                if (this.robots[i]) this.robots[i].text.setAlpha(0);
+                continue;
+            }
+
+            const playerNumber = player.playerNumber !== undefined ? player.playerNumber : (i + 1);
+            const color = PADDLE_COLORS[(playerNumber - 1) % PADDLE_COLORS.length];
+            const robotTargetX = startX - (connectedCount * 100);
+            
+            this.robotGraphics.fillStyle(0x0d1117, this.robots[i].opacityTarget || 0.7);
+            this.robotGraphics.fillRoundedRect(robotTargetX - 25, robotY - 25, 50, 50, 8);
+            this.robotGraphics.lineStyle(2, color, this.robots[i].opacityTarget || 0.7);
+            this.robotGraphics.strokeRoundedRect(robotTargetX - 25, robotY - 25, 50, 50, 8);
+            
+            this.robotGraphics.fillStyle(0x00e5ff, this.robots[i].opacityTarget || 0.7);
+            this.robotGraphics.fillRect(robotTargetX - 12, robotY - 10, 8, 8);
+            this.robotGraphics.fillRect(robotTargetX + 4, robotY - 10, 8, 8);
+
+            if (this.robots[i].text.alpha > 0) {
+                this.robots[i].text.setPosition(robotTargetX, robotY - 35);
+            }
+            
+            connectedCount++;
         }
     }
 

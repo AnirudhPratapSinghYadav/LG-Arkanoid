@@ -21,6 +21,7 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
   int _countdownVal = 3;
   Timer? _countdownTimer;
   bool _countdownStarted = false;
+  int _selectedDuration = 180;
 
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
@@ -80,8 +81,7 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
   }
 
   void _onStartMatch() {
-    // Call startGame with 180 seconds default duration
-    _gameService.startGame(180);
+    _gameService.startGame(_selectedDuration);
   }
 
   @override
@@ -188,13 +188,35 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
                         ),
                         const SizedBox(height: 48),
 
-                        if (isHost)
+                        if (isHost) ...[
+                          const SizedBox(height: 16),
+                          Text(
+                            'MATCH DURATION',
+                            style: GoogleFonts.spaceGrotesk(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: textSecondary,
+                              letterSpacing: 1,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              _buildDurationOption(60, '1 MIN'),
+                              _buildDurationOption(180, '3 MIN'),
+                              _buildDurationOption(300, '5 MIN'),
+                              _buildDurationOption(0, 'ENDLESS'),
+                            ],
+                          ),
+                          const SizedBox(height: 32),
                           LgButton(
                             label: 'START MATCH',
                             onPressed: connectedCount >= 1 ? _onStartMatch : null,
                             isPrimary: true,
-                          )
-                        else
+                          ),
+                        ] else
                           AnimatedBuilder(
                             animation: _pulseAnimation,
                             builder: (context, child) {
@@ -294,6 +316,44 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
             ),
           ),
       ],
+    );
+  }
+
+  Widget _buildDurationOption(int duration, String label) {
+    final isSelected = _selectedDuration == duration;
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedDuration = duration;
+        });
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? accentPrimary.withValues(alpha: 0.15) : cardFill,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isSelected ? accentPrimary : borderLight,
+            width: isSelected ? 1.5 : 1.0,
+          ),
+          boxShadow: isSelected ? [
+            BoxShadow(
+              color: accentPrimary.withValues(alpha: 0.3),
+              blurRadius: 10,
+              spreadRadius: -2,
+            )
+          ] : [],
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.spaceGrotesk(
+            fontSize: 12,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+            color: isSelected ? accentPrimary : textSecondary,
+          ),
+        ),
+      ),
     );
   }
 }
