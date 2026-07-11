@@ -11,7 +11,7 @@ const gameEngine = require('./gameEngine.js');
 const { Server } = require('socket.io');
 const fetch = require('node-fetch');
 
-const PORT = process.env.PORT || 8080;
+const PORT = process.env.PORT || 3000;
 const CANVAS_HEIGHT = 1080;
 const BALL_RADIUS = 8;
 const TICK_MS = 16;
@@ -272,6 +272,9 @@ function broadcastGameState(){
     longestRally: worldState.longestRally || 0,
     powerupsCollected: worldState.powerupsCollected || 0,
     highestCombo: worldState.highestCombo || 0,
+    lanIp: getLanIp(),
+    port: PORT,
+    sessionToken: worldState.sessionToken,
   };
   io.emit('game_state', payload);
 }
@@ -583,6 +586,8 @@ io.on('connection', (socket)=>{
   if(screenId>=1 && screenId<=(worldState.numScreens || 5)){
     socket.join(`screen-${screenId}`);
   }
+
+  broadcastGameState();
 
   socket.on('ping_test', (data, callback)=>{
     if(typeof callback === 'function') callback();
