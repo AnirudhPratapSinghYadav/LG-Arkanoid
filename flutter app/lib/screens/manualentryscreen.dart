@@ -16,10 +16,11 @@ class ManualEntryScreen extends StatefulWidget {
 
 class _ManualEntryScreenState extends State<ManualEntryScreen> {
   final _tokenController = TextEditingController();
-  final _ipController = TextEditingController(text: '192.168.');
+  final _ipController = TextEditingController(text: '192.168.1.100');
   final _portController = TextEditingController(text: '8080');
   
-  bool _showAdvanced = false;
+  bool _developerMode = false;
+  int _developerTaps = 0;
   final _storage = const FlutterSecureStorage();
 
   @override
@@ -40,6 +41,21 @@ class _ManualEntryScreenState extends State<ManualEntryScreen> {
         if (savedToken != null && savedToken.isNotEmpty) _tokenController.text = savedToken;
       });
     }
+  }
+
+  void _onTitleTap() {
+    setState(() {
+      _developerTaps++;
+      if (_developerTaps >= 5 && !_developerMode) {
+        _developerMode = true;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('DEVELOPER MODE UNLOCKED'),
+            backgroundColor: accentPrimary,
+          ),
+        );
+      }
+    });
   }
 
   void _onContinue() {
@@ -79,7 +95,7 @@ class _ManualEntryScreenState extends State<ManualEntryScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        iconTheme: const IconThemeData(color: accentPrimary),
+        iconTheme: const IconThemeData(color: textSecondary),
       ),
       body: MissionControlBackground(
         child: SafeArea(
@@ -91,20 +107,24 @@ class _ManualEntryScreenState extends State<ManualEntryScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text(
-                      'ENTER CODE',
-                      style: GoogleFonts.spaceGrotesk(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: textPrimary,
+                    GestureDetector(
+                      onTap: _onTitleTap,
+                      child: Text(
+                        'ENTER SESSION CODE',
+                        style: GoogleFonts.spaceGrotesk(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: textPrimary,
+                          letterSpacing: 1.5,
+                        ),
+                        textAlign: TextAlign.center,
                       ),
-                      textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Enter the session token displayed on the center screen',
+                      'Enter the 4-letter token displayed on the Liquid Galaxy rig',
                       style: GoogleFonts.inter(
-                        fontSize: 14,
+                        fontSize: 13,
                         color: textSecondary,
                       ),
                       textAlign: TextAlign.center,
@@ -116,42 +136,35 @@ class _ManualEntryScreenState extends State<ManualEntryScreen> {
                         children: [
                           LgTextField(
                             controller: _tokenController,
-                            label: 'SESSION TOKEN',
+                            label: 'SESSION CODE',
                             maxLength: 4,
                             keyboardType: TextInputType.text,
                           ),
-                          const SizedBox(height: 24),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                'Advanced Settings',
-                                style: GoogleFonts.inter(
-                                  fontSize: 14,
-                                  color: textSecondary,
-                                  fontWeight: FontWeight.w500,
-                                ),
+                          
+                          // Hidden Developer Panel (Unlocks on 5 taps)
+                          if (_developerMode) ...[
+                            const SizedBox(height: 24),
+                            const Divider(color: borderLight),
+                            const SizedBox(height: 16),
+                            Text(
+                              'DEVELOPER OPTIONS',
+                              style: GoogleFonts.spaceGrotesk(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: accentWarning,
+                                letterSpacing: 1.5,
                               ),
-                              Switch(
-                                value: _showAdvanced,
-                                activeColor: accentPrimary,
-                                onChanged: (val) {
-                                  setState(() => _showAdvanced = val);
-                                },
-                              ),
-                            ],
-                          ),
-                          if (_showAdvanced) ...[
+                            ),
                             const SizedBox(height: 16),
                             LgTextField(
                               controller: _ipController,
-                              label: 'SERVER IP ADDRESS',
+                              label: 'RIG HOST IP ADDRESS',
                               keyboardType: TextInputType.datetime,
                             ),
                             const SizedBox(height: 16),
                             LgTextField(
                               controller: _portController,
-                              label: 'SERVER PORT',
+                              label: 'RIG SERVER PORT',
                               keyboardType: TextInputType.number,
                             ),
                           ],
@@ -162,6 +175,7 @@ class _ManualEntryScreenState extends State<ManualEntryScreen> {
                     LgButton(
                       label: 'CONTINUE',
                       onPressed: _onContinue,
+                      isPrimary: true,
                     ),
                   ],
                 ),

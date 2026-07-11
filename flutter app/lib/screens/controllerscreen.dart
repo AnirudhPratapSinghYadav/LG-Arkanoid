@@ -1,308 +1,268 @@
-import 'package:google_fonts/google_fonts.dart';
-import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import '../services/gameservice.dart';
-import '../widgets/connectionstatus.dart';
-import '../widgets/powerupdialog.dart';
 import '../utils/constants.dart';
-import '../services/ttsservice.dart';
+import '../services/gameservice.dart';
 import '../widgets/lgpanel.dart';
-import '../widgets/lgbutton.dart';
-import 'dart:math';
+import '../widgets/mission_background.dart';
 
 class ControllerScreen extends StatefulWidget {
   const ControllerScreen({super.key});
 
   @override
-  State<ControllerScreen> createState()=>_ControllerScreenState();
+  State<ControllerScreen> createState() => _ControllerScreenState();
 }
 
 class _ControllerScreenState extends State<ControllerScreen> {
-  double _puckPosition = 0;
-  int _selectedDuration = 180;
+  double _puckPosition = 0.0;
+  final double _sliderRange = 1.0; // Normalized -1.0 to 1.0
 
-  @override
-  void initState() {
-    super.initState();
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.portraitUp,
-      DeviceOrientation.portraitDown,
-    ]);
-  }
+  void _onPanUpdate(DragUpdateDetails details, double screenWidth) {
+    // Width of active sliding zone
+    final trackWidth = screenWidth - 64 - 80; // Margin padding + Puck width
+    if (trackWidth <= 0) return;
 
-  @override
-  void dispose() {
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.portraitUp,
-      DeviceOrientation.portraitDown,
-      DeviceOrientation.landscapeLeft,
-      DeviceOrientation.landscapeRight,
-    ]);
-    super.dispose();
-  }
-
-  void _onPanUpdate(DragUpdateDetails details){
-    final screenWidth = MediaQuery.of(context).size.width;
     final dx = details.delta.dx;
-    final speed = maxVirtualX/screenWidth;
-    final deltaX = dx * speed * 2.0; // Boosted sensitivity for large slider
+    // Normalized delta movement
+    final normalizedDelta = (dx / (trackWidth / 2)) * _sliderRange;
 
+    // Send paddle movement velocity/delta
+    final speed = 80.0; // Base speed constant
+    final deltaX = normalizedDelta * speed * 2.5; 
     context.read<GameService>().sendPaddleMove(deltaX);
 
-    setState((){
+    setState(() {
       _puckPosition += dx;
-      double maxVisual = (screenWidth - 32) / 2 - 40; 
-      if(_puckPosition > maxVisual) _puckPosition = maxVisual;
-      if(_puckPosition < -maxVisual) _puckPosition = -maxVisual;
+      double maxVisual = trackWidth / 2;
+      if (_puckPosition > maxVisual) _puckPosition = maxVisual;
+      if (_puckPosition < -maxVisual) _puckPosition = -maxVisual;
     });
   }
 
-  void _onPanEnd(DragEndDetails details){
-    setState((){
+  void _onPanEnd(DragEndDetails details) {
+    setState(() {
       _puckPosition = 0;
     });
   }
 
-  String _formatTime(int seconds) {
-    if (seconds <= 0) return "00:00";
-    final m = seconds ~/ 60;
-    final s = seconds % 60;
-    return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
-  }
-
   @override
-  Widget build(BuildContext context){
+  Widget build(BuildContext context) {
     final service = context.watch<GameService>();
-    final gameState = service.latestGameState;
-    final isPlaying = gameState != null && gameState['gameStatus'] == 'playing';
-    final timeLeft = gameState != null ? (gameState['timeLeft'] as int? ?? 0) : 0;
+    final screenWidth = MediaQuery.of(context).size.width;
+
+    // Paddle/Player Colors matching Rig Client
+    final List<Color> playerColors = [
+      const Color(0xFF20C5FF), // Player 1 - Cyan
+      const Color(0xFFFF2D78), // Player 2 - Pink
+      const Color(0xFFFFB800), // Player 3 - Gold
+    ];
+    final playerColor = playerColors[((service.playerNumber ?? 1) - 1) % playerColors.length];
 
     return Scaffold(
       backgroundColor: bgDark,
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Top App Bar
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+      body: MissionControlBackground(
+        child: SafeArea(
+          child: Column(
+            children: [
+              // 1. Premium Hardware Top Info Bar
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: cardFill,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: borderLight),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('PLAYER ${service.playerNumber ?? "?"}', style: GoogleFonts.inter(fontSize: 12, color: textSecondary)),
+                      // Player indicator
                       Row(
                         children: [
-                          Container(width: 8, height: 8, decoration: BoxDecoration(shape: BoxShape.circle, color: service.connected ? accentSuccess : accentError)),
-                          const SizedBox(width: 6),
-                          Text(service.connected ? 'ONLINE' : 'OFFLINE', style: GoogleFonts.inter(fontSize: 14, color: textPrimary, fontWeight: FontWeight.bold)),
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: playerColor,
+                              boxShadow: [
+                                BoxShadow(color: playerColor.withOpacity(0.4), blurRadius: 6, spreadRadius: 1)
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'P${service.playerNumber ?? 1}',
+                            style: GoogleFonts.spaceGrotesk(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: textPrimary,
+                            ),
+                          ),
                         ],
                       ),
-                    ],
-                  ),
-                  Row(
-                    children: [
-                      ListenableBuilder(
-                        listenable: TTSService(),
-                        builder: (context, _) => IconButton(
-                          icon: Icon(TTSService().isMuted ? Icons.volume_off : Icons.volume_up, color: accentPrimary),
-                          onPressed: () => TTSService().toggleMute(),
+                      
+                      // Rig Online indicator
+                      Row(
+                        children: [
+                          Container(
+                            width: 6,
+                            height: 6,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: service.connected ? accentSuccess : accentError,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            service.connected ? 'RIG ONLINE' : 'RIG OFFLINE',
+                            style: GoogleFonts.spaceGrotesk(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: service.connected ? accentSuccess : accentError,
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      // Latency (JetBrains Mono)
+                      Text(
+                        'PING ${service.latencyMs} MS',
+                        style: GoogleFonts.jetBrainsMono(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: textSecondary,
                         ),
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.settings, color: accentPrimary),
-                        onPressed: ()=>Navigator.pushNamed(context, '/settings'),
+
+                      // Battery (JetBrains Mono)
+                      Row(
+                        children: [
+                          Icon(Icons.battery_5_bar_rounded, size: 14, color: textSecondary),
+                          const SizedBox(width: 2),
+                          Text(
+                            '88%',
+                            style: GoogleFonts.jetBrainsMono(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: textSecondary,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
-                  )
-                ],
-              ),
-            ),
-            
-            // HUD Dashboard
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(color: cardFill, borderRadius: BorderRadius.circular(12), border: Border.all(color: borderLight)),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('LIVES', style: GoogleFonts.inter(fontSize: 10, color: textSecondary)),
-                          const SizedBox(height: 4),
-                          Row(
-                            children: List.generate(3, (index) => Icon(
-                              index < service.lives ? Icons.favorite : Icons.favorite_border,
-                              color: accentError,
-                              size: 16,
-                            )),
-                          ),
-                          const SizedBox(height: 12),
-                          Text('SCORE', style: GoogleFonts.inter(fontSize: 10, color: textSecondary)),
-                          Text('${service.score}', style: GoogleFonts.spaceGrotesk(fontSize: 20, color: accentPrimary, fontWeight: FontWeight.bold)),
-                        ],
-                      ),
-                    ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(color: cardFill, borderRadius: BorderRadius.circular(12), border: Border.all(color: borderLight)),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Text('TIME', style: GoogleFonts.inter(fontSize: 10, color: textSecondary)),
-                          const SizedBox(height: 4),
-                          Text(_formatTime(timeLeft), style: GoogleFonts.spaceGrotesk(fontSize: 28, color: textPrimary, fontWeight: FontWeight.bold)),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ),
 
-            if (service.lastCommentary.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.all(16),
+              const Spacer(),
+
+              // 2. Mission Assistant Commentary Panel (Center)
+              if (service.lastCommentary.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: LgPanel(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(Icons.shield_outlined, color: accentPrimary, size: 20),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'MISSION CONTROL FEED',
+                                style: GoogleFonts.spaceGrotesk(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: accentPrimary,
+                                  letterSpacing: 1,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                '"${service.lastCommentary}"',
+                                style: GoogleFonts.inter(
+                                  fontSize: 13,
+                                  color: textPrimary,
+                                  fontStyle: FontStyle.italic,
+                                  height: 1.4,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+              const Spacer(),
+
+              // 3. Primary Control Surface - Matte Slider (Bottom)
+              GestureDetector(
+                onPanUpdate: (details) => _onPanUpdate(details, screenWidth),
+                onPanEnd: _onPanEnd,
                 child: Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(color: cardFill, borderRadius: BorderRadius.circular(8), border: Border.all(color: accentPrimary.withOpacity(0.3))),
-                  child: Row(
+                  height: 220, // Clean, comfortable remote touch height
+                  margin: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: cardFill,
+                    borderRadius: BorderRadius.circular(14), // V2 Corners token
+                    border: Border.all(color: borderLight),
+                  ),
+                  child: Stack(
+                    alignment: Alignment.center,
                     children: [
-                      const Icon(Icons.smart_toy, color: accentPrimary, size: 20),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          '"${service.lastCommentary}"',
-                          style: GoogleFonts.inter(fontSize: 12, color: textPrimary, fontStyle: FontStyle.italic),
+                      // Slider Track Guide
+                      Container(
+                        width: double.infinity,
+                        height: 4,
+                        margin: const EdgeInsets.symmetric(horizontal: 40),
+                        decoration: BoxDecoration(
+                          color: borderLight,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                      
+                      // Touch helper overlay text
+                      Text(
+                        'SLIDE TO CONTROL PADDLE',
+                        style: GoogleFonts.spaceGrotesk(
+                          fontSize: 12,
+                          color: textSecondary.withOpacity(0.3),
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 2,
+                        ),
+                      ),
+                      
+                      // Slide Puck
+                      Transform.translate(
+                        offset: Offset(_puckPosition, 0),
+                        child: Container(
+                          width: 80,
+                          height: 80,
+                          decoration: BoxDecoration(
+                            color: accentPrimary,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.drag_handle_rounded,
+                            color: bgDark,
+                            size: 32,
+                          ),
                         ),
                       ),
                     ],
                   ),
                 ),
               ),
-
-            // Pre-Game Controls
-            if (!isPlaying && (service.playerNumber ?? 0) - 1 == (gameState?['masterPlayerIndex'] ?? 0))
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      decoration: BoxDecoration(
-                        color: cardFill,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: borderLight),
-                      ),
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<int>(
-                          value: _selectedDuration,
-                          dropdownColor: bgDark,
-                          icon: const Icon(Icons.arrow_drop_down, color: accentPrimary),
-                          style: GoogleFonts.inter(color: accentPrimary, fontSize: 14),
-                          items: const [
-                            DropdownMenuItem(value: 180, child: Text('3 Min')),
-                            DropdownMenuItem(value: 300, child: Text('5 Min')),
-                            DropdownMenuItem(value: 600, child: Text('10 Min')),
-                          ],
-                          onChanged: (val) {
-                            if (val != null) setState(() => _selectedDuration = val);
-                          },
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: LgButton(
-                        label: 'START GAME',
-                        onPressed: () => service.startGame(_selectedDuration),
-                        isPrimary: true,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              
-            const Spacer(),
-
-            // Massive Touch Slider Zone
-            GestureDetector(
-              onPanUpdate: _onPanUpdate,
-              onPanEnd: _onPanEnd,
-              child: Container(
-                width: double.infinity,
-                height: 250, // Massive touch zone
-                margin: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: cardFill,
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: borderLight),
-                  boxShadow: [
-                    BoxShadow(color: bgDark, blurRadius: 20, spreadRadius: 5)
-                  ]
-                ),
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    // Horizontal Track
-                    Container(
-                      width: double.infinity,
-                      height: 4,
-                      margin: const EdgeInsets.symmetric(horizontal: 40),
-                      decoration: BoxDecoration(
-                        color: borderLight,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                    // Directional Labels
-                    Positioned(
-                      left: 20,
-                      child: Icon(Icons.arrow_back_ios, color: textSecondary.withOpacity(0.5), size: 16),
-                    ),
-                    Positioned(
-                      right: 20,
-                      child: Icon(Icons.arrow_forward_ios, color: textSecondary.withOpacity(0.5), size: 16),
-                    ),
-                    Text(
-                      'SLIDE TO MOVE',
-                      style: GoogleFonts.inter(fontSize: 12, color: textSecondary.withOpacity(0.5), fontWeight: FontWeight.bold, letterSpacing: 2),
-                    ),
-                    // The Puck
-                    Transform.translate(
-                      offset: Offset(_puckPosition, 0),
-                      child: Container(
-                        width: 80,
-                        height: 80,
-                        decoration: BoxDecoration(
-                          color: accentPrimary,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: accentPrimary.withOpacity(0.4),
-                              blurRadius: 20,
-                              spreadRadius: 2,
-                            )
-                          ],
-                        ),
-                        child: const Icon(Icons.drag_handle, color: bgDark, size: 32),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-          ],
+              const SizedBox(height: 16),
+            ],
+          ),
         ),
       ),
     );

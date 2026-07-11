@@ -268,30 +268,22 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
     required int masterIndex,
   }) {
     final bool isSlotConnected = index < playersList.length && playersList[index]['connected'] == true;
-    final String name = isSlotConnected 
-        ? playersList[index]['name'] as String? ?? 'Player ${index + 1}'
-        : 'Waiting for player...';
     final bool isPlayerMaster = index == masterIndex;
+    final String displayName = isSlotConnected 
+        ? (playersList[index]['name'] as String? ?? 'Player ${index + 1}')
+        : 'Waiting...';
 
     return Row(
       children: [
-        Container(
-          width: 12,
-          height: 12,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: isSlotConnected ? color : Colors.white12,
-            boxShadow: isSlotConnected
-                ? [BoxShadow(color: color.withOpacity(0.5), blurRadius: 8, spreadRadius: 1)]
-                : [],
-          ),
-        ),
-        const SizedBox(width: 16),
+        isSlotConnected
+            ? const Icon(Icons.check_rounded, color: accentSuccess, size: 20)
+            : Icon(Icons.radio_button_unchecked_rounded, color: textSecondary.withOpacity(0.2), size: 18),
+        const SizedBox(width: 14),
         Expanded(
           child: Text(
-            name,
+            displayName,
             style: GoogleFonts.inter(
-              fontSize: 16,
+              fontSize: 15,
               color: isSlotConnected ? textPrimary : textSecondary.withOpacity(0.4),
               fontWeight: isSlotConnected ? FontWeight.w600 : FontWeight.normal,
             ),
