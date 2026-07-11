@@ -17,7 +17,7 @@ class ManualEntryScreen extends StatefulWidget {
 class _ManualEntryScreenState extends State<ManualEntryScreen> {
   final _tokenController = TextEditingController();
   final _ipController = TextEditingController(text: '192.168.1.100');
-  final _portController = TextEditingController(text: '8080');
+  final _portController = TextEditingController(text: '3000');
   
   bool _developerMode = false;
   int _developerTaps = 0;

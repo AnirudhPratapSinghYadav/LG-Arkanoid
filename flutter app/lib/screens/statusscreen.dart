@@ -79,7 +79,7 @@ class StatusScreen extends StatelessWidget {
                 const SizedBox(height: 8),
                 Text(
                   'Source: ${service.lastCommentarySource}',
-                      GoogleFonts.inter(color: textPrimary, fontSize: 10),
+                  style: GoogleFonts.inter(color: textPrimary, fontSize: 10),
                 ),
               ],
             ),

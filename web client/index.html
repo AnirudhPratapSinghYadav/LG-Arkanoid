@@ -6,7 +6,7 @@
     <title>LG Arkanoid</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Space+Grotesk:wght@400;700&family=JetBrains+Mono:wght@400;700&family=VT323&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.80.1/phaser.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.8.0/socket.io.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         html, body {
@@ -21,11 +21,15 @@
             left: 50%;
             transform: translate(-50%, -50%);
             display: none;
-            padding: 24px;
-            background: #10151d;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 16px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            padding: 28px;
+            background: rgba(13, 17, 23, 0.95);
+            border: 2px solid #00e5ff;
+            border-radius: 20px;
+            box-shadow: 0 0 40px rgba(0, 229, 255, 0.3);
+            z-index: 1000;
         }
         #qrcode img, #qrcode canvas {
             border: 8px solid white;
@@ -35,7 +39,14 @@
 </head>
 <body>
     <div id="qrcode">
-        <div style="font-family: 'JetBrains Mono', monospace; font-size: 16px; color: #00e5ff; font-weight: bold; text-align: center; margin-bottom: 16px; letter-spacing: 2px;">SCAN TO JOIN</div>
+        <h2 style="font-family: 'VT323', monospace; font-size: 2.8rem; color: #fff; margin: 0 0 20px 0; letter-spacing: 2px;">SCAN TO JOIN</h2>
+        <div id="qrcode-img"></div>
+        <div style="font-family: 'VT323', monospace; font-size: 2rem; color: #4ade80; margin-top: 30px; letter-spacing: 2px;">Session Code</div>
+        <div id="qr-session-code" style="font-family: 'VT323', monospace; font-size: 5rem; color: #fff; margin-top: 10px; letter-spacing: 15px;"></div>
+        <div id="qr-instructions" style="font-family: 'VT323', monospace; font-size: 2rem; color: #aaa; margin-top: 40px; line-height: 1.8;">
+            Open the LG Arkanoid app<br/>OR<br/>Enter code <span id="qr-session-code-inline" style="color: #fff;"></span><br/><br/>
+            <span id="qr-waiting-text" style="color: #4ade80;">Waiting for first player...</span>
+        </div>
     </div>
 <script>
 
@@ -109,13 +120,7 @@ class GameScene extends Phaser.Scene {
         this.graphics = this.add.graphics();
         this.trailGraphics = this.add.graphics();
         
-        this.statusText = this.add.text(960, 540, '', {
-            fontFamily: '"Space Grotesk"',
-            fontSize: '80px',
-            color: '#ff2d78',
-            align: 'center',
-            fontStyle: 'bold'
-        }).setOrigin(0.5, 0.5).setAlpha(0);
+
 
         this.robotGraphics = this.add.graphics();
         this.robots = [];
@@ -225,31 +230,7 @@ class GameScene extends Phaser.Scene {
             fontStyle: 'bold'
         }).setAlpha(0);
 
-        this.startButton = this.add.text(960, 480, 'LIQUID GALAXY\nARKANOID', {
-            fontFamily: '"Space Grotesk"',
-            fontSize: '80px',
-            color: '#4f7cac',
-            align: 'center',
-            fontWeight: 'bold',
-            lineSpacing: 20
-        }).setOrigin(0.5, 0.5);
-        this.subtitleText = this.add.text(960, 600, 'MULTIPLAYER REMOTE CONTROL CONSOLE', {
-            fontFamily: '"Inter"',
-            fontSize: '24px',
-            color: '#f3f4f6',
-            letterSpacing: 8
-        }).setOrigin(0.5, 0.5);
-        this.waitingSubText = this.add.text(960, 700, 'Waiting for Players...', {
-            fontFamily: '"Inter"',
-            fontSize: '20px',
-            color: '#9aa4af',
-        }).setOrigin(0.5, 0.5);
-        
-        if (!isCenterScreen) {
-            this.startButton.setVisible(false);
-            this.subtitleText.setVisible(false);
-            this.waitingSubText.setVisible(false);
-        }
+
 
         this.sessionTokenText = this.add.text(960, 560, '', {
             fontFamily: '"Space Grotesk"',
@@ -291,7 +272,7 @@ class GameScene extends Phaser.Scene {
             this.drawAttractMode();
             return;
         } else {
-            if (this.attractModeGraphics) this.attractModeGraphics.clear();
+            this.hideAttractMode();
         }
         
         this.checkStateChanges();
@@ -299,11 +280,11 @@ class GameScene extends Phaser.Scene {
         if (this.currentState.gameStatus === 'waiting' || this.currentState.gameStatus === 'lobby') {
             this.hideCountdownMode();
             this.hideWinMode();
-            this.drawLobbyMode();
+            this.renderJoin();
             this.updateHUD();
             return;
         } else {
-            this.hideLobbyMode();
+            this.hideJoinMode();
         }
         
         if (this.currentState.gameStatus === 'countdown') {
@@ -348,67 +329,117 @@ class GameScene extends Phaser.Scene {
             this.attractModeGraphics.fillStyle(0x00e5ff, 0.5);
             this.attractModeGraphics.fillCircle(px, py, 4);
         }
+
+        if (isCenterScreen) {
+            if (!this.bootTitleText) {
+                this.bootTitleText = this.add.text(960, 480, 'LIQUID GALAXY\nARKANOID', {
+                    fontFamily: '"Space Grotesk"', fontSize: '80px', fill: '#20c5ff', align: 'center', fontWeight: 'bold'
+                }).setOrigin(0.5, 0.5);
+                this.bootLoadingText = this.add.text(960, 600, 'Loading assets...', {
+                    fontFamily: '"Inter"', fontSize: '24px', fill: '#ffffff', letterSpacing: 8
+                }).setOrigin(0.5, 0.5);
+            }
+            this.bootTitleText.setVisible(true);
+            this.bootLoadingText.setVisible(true);
+        }
+    }
+
+    hideAttractMode() {
+        if (this.attractModeGraphics) this.attractModeGraphics.clear();
+        if (this.bootTitleText) this.bootTitleText.setVisible(false);
+        if (this.bootLoadingText) this.bootLoadingText.setVisible(false);
     }
 
     
-    drawLobbyMode() {
-        if (!this.lobbyModeGraphics) {
-            this.lobbyModeGraphics = this.add.graphics();
-            this.lobbyTexts = [];
-            
-            this.lobbyTitle = this.add.text(960, 200, 'LIQUID GALAXY\nARKANOID', {
-                fontFamily: '"Space Grotesk"', fontSize: '64px', color: '#20c5ff', align: 'center', fontWeight: 'bold'
-            }).setOrigin(0.5, 0.5);
-            
-            this.lobbySubTitle = this.add.text(960, 300, 'MULTIPLAYER LOBBY', {
-                fontFamily: '"Inter"', fontSize: '24px', color: '#ffffff', letterSpacing: 8
-            }).setOrigin(0.5, 0.5);
-            
-            for (let i = 0; i < 3; i++) {
-                let txt = this.add.text(960, 450 + (i * 60), '', {
-                    fontFamily: '"Inter"', fontSize: '32px', color: '#ffffff'
-                }).setOrigin(0.5, 0.5);
-                this.lobbyTexts.push(txt);
-            }
-            
-            this.lobbyStatus = this.add.text(960, 700, 'Game starts shortly...', {
-                fontFamily: '"Inter"', fontSize: '24px', color: '#4ade80'
-            }).setOrigin(0.5, 0.5);
-            
-            if (!isCenterScreen) {
-                this.lobbyTitle.setVisible(false);
-                this.lobbySubTitle.setVisible(false);
-                this.lobbyStatus.setVisible(false);
-                this.lobbyTexts.forEach(t => t.setVisible(false));
-            }
+    initAmbientTexts() {
+        if (!this.ambientLeftText) {
+            this.ambientLeftText = this.add.text(960, 540, 'LIQUID GALAXY\nMULTIPLAYER ARCADE', {
+                fontFamily: '"VT323"', fontSize: '64px', fill: '#ffffff',
+                align: 'center', alpha: 0.3
+            }).setOrigin(0.5).setVisible(false);
         }
-        
-        if (isCenterScreen) {
-            this.lobbyTitle.setVisible(true);
-            this.lobbySubTitle.setVisible(true);
-            this.lobbyStatus.setVisible(true);
-            
-            let players = this.currentState.players || [];
-            for (let i = 0; i < 3; i++) {
-                this.lobbyTexts[i].setVisible(true);
-                if (players[i] && players[i].connected) {
-                    this.lobbyTexts[i].setText(`🟢 ${players[i].name || 'Player ' + (i+1)}`);
-                    this.lobbyTexts[i].setColor('#4ade80');
-                } else {
-                    this.lobbyTexts[i].setText(`⚪ Waiting for player...`);
-                    this.lobbyTexts[i].setColor('#888888');
-                }
+        if (!this.ambientRightText) {
+            this.ambientRightText = this.add.text(960, 540, 'Waiting for Players\n0 / 3', {
+                fontFamily: '"VT323"', fontSize: '64px', fill: '#ffffff',
+                align: 'center', alpha: 0.3
+            }).setOrigin(0.5).setVisible(false);
+        }
+        if (!this.lobbyPlayerTexts) {
+            this.lobbyPlayerTexts = [];
+            for(let i=0; i<3; i++) {
+                let txt = this.add.text(960, 680 + (i*60), 'Waiting...', {
+                    fontFamily: '"VT323"', fontSize: '40px', fill: '#666666'
+                }).setOrigin(0.5).setVisible(false);
+                this.lobbyPlayerTexts.push({text: txt});
             }
         }
     }
-    
-    hideLobbyMode() {
-        if (this.lobbyTitle) {
-            this.lobbyTitle.setVisible(false);
-            this.lobbySubTitle.setVisible(false);
-            this.lobbyStatus.setVisible(false);
-            this.lobbyTexts.forEach(t => t.setVisible(false));
+
+    renderJoin() {
+        this.initAmbientTexts();
+        
+        let players = this.currentState.players || [];
+        let connectedCount = players.filter(p => p.connected).length;
+        
+        if (screenId === 1) {
+            this.ambientLeftText.setVisible(true);
+        } else if (screenId === numScreens) {
+            this.ambientRightText.setText(`Waiting for Players\n${connectedCount} / 3 Connected`);
+            this.ambientRightText.setVisible(true);
+        } else if (isCenterScreen) {
+            if (this.currentState.sessionToken) {
+                const qrDiv = document.getElementById('qrcode');
+                const sessionCodeDiv = document.getElementById('qr-session-code');
+                const sessionCodeInline = document.getElementById('qr-session-code-inline');
+                const waitingText = document.getElementById('qr-waiting-text');
+                
+                qrDiv.style.display = 'flex';
+                
+                sessionCodeDiv.innerText = this.currentState.sessionToken;
+                sessionCodeInline.innerText = this.currentState.sessionToken;
+                
+                if (connectedCount === 0) {
+                    waitingText.innerText = "Waiting for first player...";
+                    this.lobbyPlayerTexts.forEach(p => p.text.setVisible(false));
+                } else {
+                    waitingText.innerText = "";
+                    
+                    for (let i = 0; i < 3; i++) {
+                        let p = players[i];
+                        let txtObj = this.lobbyPlayerTexts[i].text;
+                        
+                        if (p && p.connected) {
+                            txtObj.setText(`✓ ${p.name || 'Player ' + (i+1)}`);
+                            txtObj.setColor('#4ade80');
+                        } else {
+                            txtObj.setText('Waiting...');
+                            txtObj.setColor('#666666');
+                        }
+                        txtObj.setVisible(true);
+                    }
+                }
+                
+                if (this.currentState.lanIp && !this.qrCodeObj) {
+                    const qrData = `LGARK|${this.currentState.lanIp}|${this.currentState.port}|${this.currentState.sessionToken}`;
+                    this.qrCodeObj = new QRCode(document.getElementById('qrcode-img'), {
+                        text: qrData,
+                        width: 320,
+                        height: 320,
+                        colorDark: "#000000",
+                        colorLight: "#ffffff",
+                        correctLevel: QRCode.CorrectLevel.L
+                    });
+                }
+                qrDiv.style.top = connectedCount === 0 ? '50%' : '40%';
+            }
         }
+    }
+
+    hideJoinMode() {
+        document.getElementById('qrcode').style.display = 'none';
+        if (this.ambientLeftText) this.ambientLeftText.setVisible(false);
+        if (this.ambientRightText) this.ambientRightText.setVisible(false);
+        if (this.lobbyPlayerTexts) this.lobbyPlayerTexts.forEach(p => p.text.setVisible(false));
     }
 
     drawCountdownMode() {
@@ -730,65 +761,7 @@ class GameScene extends Phaser.Scene {
             });
         }
         
-        if (this.currentState.gameStatus === 'game_over') {
-            if (this.statusText.text !== 'GAME OVER') {
-                this.statusText.setText('GAME OVER');
-                this.statusText.setColor('#ff0000');
-                this.tweens.add({ targets: this.statusText, alpha: 1, duration: 500 });
-            }
-        } else if (this.currentState.gameStatus === 'time_up') {
-            if (this.statusText.text !== 'TIME UP!') {
-                this.statusText.setText('TIME UP!');
-                this.statusText.setColor('#ffb800');
-                this.tweens.add({ targets: this.statusText, alpha: 1, duration: 500 });
-            }
-        } else if (this.currentState.gameStatus === 'win') {
-            if (this.statusText.text !== 'YOU WIN!') {
-                this.statusText.setText('YOU WIN!');
-                this.statusText.setColor('#00ff00');
-                this.tweens.add({ targets: this.statusText, alpha: 1, duration: 500 });
-            }
-        } else {
-            this.statusText.setAlpha(0);
-            this.statusText.setText('');
-        }
 
-        if (this.currentState.gameStatus === 'playing' || this.currentState.gameStatus === 'countdown') {
-            this.startButton.setAlpha(0);
-            this.sessionTokenText.setAlpha(0);
-            this.logo.setAlpha(0);
-            document.getElementById('qrcode').style.display = 'none';
-            if (this.rigStatusText) this.rigStatusText.setAlpha(0);
-        } else {
-            if (isCenterScreen) {
-                this.startButton.setAlpha(1);
-                this.logo.setAlpha(1);
-                if (this.currentState.sessionToken) {
-                    this.sessionTokenText.setText('TOKEN: ' + this.currentState.sessionToken);
-                    this.sessionTokenText.setAlpha(1);
-                    
-                    const qrDiv = document.getElementById('qrcode');
-                    if (this.currentState.lanIp && !this.qrCodeObj) {
-                        const qrData = `LGARK|${this.currentState.lanIp}|${this.currentState.port}|${this.currentState.sessionToken}`;
-                        this.qrCodeObj = new QRCode(qrDiv, {
-                            text: qrData,
-                            width: 150,
-                            height: 150,
-                            colorDark : "#000000",
-                            colorLight : "#ffffff",
-                            correctLevel : QRCode.CorrectLevel.L
-                        });
-                    }
-                    qrDiv.style.display = 'block';
-                }
-            } else {
-                this.startButton.setAlpha(0);
-                this.logo.setAlpha(0);
-                this.sessionTokenText.setAlpha(0);
-                document.getElementById('qrcode').style.display = 'none';
-            }
-            if (this.rigStatusText) this.rigStatusText.setAlpha(1);
-        }
     }
 
     spawnFloatingText(text, x, y, color) {

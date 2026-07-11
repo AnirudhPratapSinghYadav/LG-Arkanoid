@@ -70,7 +70,7 @@ class _RigDiscoveryScreenState extends State<RigDiscoveryScreen> {
       final batch = candidates.sublist(i, end);
 
       final probes = batch.map((ip) {
-        return service.checkHealth(ip, '8080').then((ok) => ok ? ip : null);
+        return service.checkHealth(ip, '3000').then((ok) => ok ? ip : null);
       });
 
       final results = await Future.wait(probes);
@@ -91,7 +91,7 @@ class _RigDiscoveryScreenState extends State<RigDiscoveryScreen> {
 
     if (_discoveredRigs.length == 1) {
       final rigIp = _discoveredRigs.first;
-      await service.connect(rigIp, '8080');
+      await service.connect(rigIp, '3000');
       if (mounted) {
         Navigator.pushReplacementNamed(context, '/joinchoice');
       }
@@ -103,7 +103,7 @@ class _RigDiscoveryScreenState extends State<RigDiscoveryScreen> {
       _isSearching = true;
     });
     final service = context.read<GameService>();
-    await service.connect(ip, '8080');
+    await service.connect(ip, '3000');
     if (mounted) {
       Navigator.pushReplacementNamed(context, '/joinchoice');
     }
