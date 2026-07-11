@@ -1,4 +1,6 @@
 import 'dart:math';
+import 'dart:io';
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -29,6 +31,19 @@ class GameService extends ChangeNotifier {
     return List.generate(8, (_)=>_random.nextInt(16).toRadixString(16)).join();
   }
 
+  Future<bool> checkHealth(String address, String port) async {
+    try {
+      final client = HttpClient();
+      client.connectionTimeout = const Duration(milliseconds: 400);
+      final uri = Uri.parse('http://$address:$port/health');
+      final req = await client.getUrl(uri);
+      final resp = await req.close();
+      return resp.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<bool> connect(String address, String port,
       {Duration timeout = const Duration(seconds: 3)}) async {
     disconnect();
@@ -47,6 +62,7 @@ class GameService extends ChangeNotifier {
 
       socket!.onConnect((_){
         connected = true;
+        startLatencyPing();
         if (playerId != null && sessionId != null) {
           socket!.emit('resume_request', {'playerId': playerId, 'sessionId': sessionId});
         }
@@ -184,12 +200,35 @@ class GameService extends ChangeNotifier {
   }
 
   void disconnect(){
+    stopLatencyPing();
     socket?.dispose();
     socket = null;
     connected = false;
     isJoinConfirmed = false;
     joinError = null;
     notifyListeners();
+  }
+
+  int latencyMs = 0;
+  Timer? _pingTimer;
+
+  void startLatencyPing() {
+    _pingTimer?.cancel();
+    _pingTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
+      if (socket != null && connected) {
+        final stopwatch = Stopwatch()..start();
+        socket!.emitWithAck('ping_test', {}, ack: (_) {
+          stopwatch.stop();
+          latencyMs = stopwatch.elapsedMilliseconds;
+          notifyListeners();
+        });
+      }
+    });
+  }
+
+  void stopLatencyPing() {
+    _pingTimer?.cancel();
+    _pingTimer = null;
   }
 
   Map<String, dynamic> _asMap(dynamic data){

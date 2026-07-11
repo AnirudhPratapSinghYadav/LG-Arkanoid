@@ -57,6 +57,11 @@ class GameState {
     this.level = 1;
     this.gameStatus = 'waiting';
     this.nextLevelBricks = null;
+    this.rallyCount = 0;
+    this.longestRally = 0;
+    this.powerupsCollected = 0;
+    this.highestCombo = 0;
+    this.currentCombo = 0;
   }
 }
 
@@ -299,6 +304,7 @@ function updatePowerUps(gameState, applyPowerUpEffectCallback){
           p.falling = false;
           p.active = true;
           p.activatedAt = Date.now();
+          gameState.powerupsCollected = (gameState.powerupsCollected || 0) + 1;
           if(player.id){
             player.score += 50;
             if(applyPowerUpEffectCallback){
@@ -334,8 +340,21 @@ function updateGameLoop(gameState, applyPowerUpEffectCallback){
 
       moveBall(ball);
       checkWallCollision(ball, gameState);
-      checkPaddleCollision(ball, gameState.players);
-      checkBrickCollision(ball, gameState);
+      const hitPaddle = checkPaddleCollision(ball, gameState.players);
+      if (hitPaddle) {
+        gameState.rallyCount++;
+        if (gameState.rallyCount > gameState.longestRally) {
+          gameState.longestRally = gameState.rallyCount;
+        }
+        gameState.currentCombo = 0;
+      }
+      const hitBrick = checkBrickCollision(ball, gameState);
+      if (hitBrick) {
+        gameState.currentCombo++;
+        if (gameState.currentCombo > gameState.highestCombo) {
+          gameState.highestCombo = gameState.currentCombo;
+        }
+      }
 
       if(ball.y-ball.radius>=1080){
         ball.active = false;
@@ -346,6 +365,8 @@ function updateGameLoop(gameState, applyPowerUpEffectCallback){
     }
 
     if(!gameState.balls.some(b=>b.active)){
+      gameState.rallyCount = 0;
+      gameState.currentCombo = 0;
       let playerToDeduct = gameState.players.find(p=>p.id===lastFallenBallToucher);
       if(!playerToDeduct){
          playerToDeduct = gameState.players.find(p=>p.connected);

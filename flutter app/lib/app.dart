@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
 import 'screens/splashscreen.dart';
+import 'screens/rigdiscoveryscreen.dart';
 import 'screens/joinchoicescreen.dart';
 import 'screens/manualentryscreen.dart';
 import 'screens/nameentryscreen.dart';
+import 'screens/connectingscreen.dart';
 import 'screens/lobbyscreen.dart';
 import 'screens/qrscanscreen.dart';
 import 'screens/controllerscreen.dart';
 import 'screens/statusscreen.dart';
 import 'screens/settingsscreen.dart';
-import 'utils/constants.dart';
+import '../utils/constants.dart';
 
 class ArkanoidApp extends StatelessWidget {
   const ArkanoidApp({super.key});
@@ -28,9 +30,11 @@ class ArkanoidApp extends StatelessWidget {
       initialRoute: '/',
       routes: {
         '/': (context) => const SplashScreen(),
+        '/discovery': (context) => const RigDiscoveryScreen(),
         '/joinchoice': (context) => const JoinChoiceScreen(),
         '/manualentry': (context) => const ManualEntryScreen(),
         '/nameentry': (context) => const NameEntryScreen(),
+        '/connecting': (context) => const ConnectingScreen(),
         '/lobby': (context) => const LobbyScreen(),
         '/qrscan': (context) => const QrScanScreen(),
         '/controller': (context) => const ControllerScreen(),

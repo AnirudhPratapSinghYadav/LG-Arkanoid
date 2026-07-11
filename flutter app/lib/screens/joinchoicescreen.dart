@@ -25,22 +25,24 @@ class JoinChoiceScreen extends StatelessWidget {
                     Column(
                       children: [
                         Image.asset('assets/lg-logo.png', height: 40),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 16),
                         Text(
                           'LG ARKANOID',
-                          style: GoogleFonts.vt323(
-                            fontSize: 32,
-                            color: accentPrimary,
+                          style: GoogleFonts.spaceGrotesk(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: textPrimary,
                             letterSpacing: 2.0,
                           ),
                           textAlign: TextAlign.center,
                         ),
+                        const SizedBox(height: 4),
                         Text(
-                          'MULTIPLAYER PANEL',
+                          'MULTIPLAYER REMOTE CONTROL',
                           style: GoogleFonts.inter(
-                            fontSize: 12,
+                            fontSize: 10,
                             color: textSecondary,
-                            letterSpacing: 3.0,
+                            letterSpacing: 2.0,
                             fontWeight: FontWeight.w600,
                           ),
                           textAlign: TextAlign.center,
@@ -50,8 +52,8 @@ class JoinChoiceScreen extends StatelessWidget {
                     const SizedBox(height: 48),
                     _buildChoiceCard(
                       context: context,
-                      title: 'SCAN QR',
-                      description: 'Scan Liquid Galaxy QR Code',
+                      title: 'SCAN LIQUID GALAXY QR',
+                      description: 'Scan display center QR code to join',
                       icon: Icons.qr_code_scanner_rounded,
                       onTap: () async {
                         final result = await Navigator.pushNamed(context, '/qrscan');
@@ -76,8 +78,8 @@ class JoinChoiceScreen extends StatelessWidget {
                     const SizedBox(height: 24),
                     _buildChoiceCard(
                       context: context,
-                      title: 'ENTER CODE',
-                      description: 'Manually configure connection',
+                      title: 'ENTER SESSION CODE',
+                      description: 'Manually configure session token',
                       icon: Icons.keyboard_rounded,
                       onTap: () {
                         Navigator.pushNamed(context, '/manualentry');
@@ -102,7 +104,7 @@ class JoinChoiceScreen extends StatelessWidget {
   }) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(14), // Arkanoid V2 Corner Token
       child: LgPanel(
         child: Row(
           children: [
@@ -116,10 +118,10 @@ class JoinChoiceScreen extends StatelessWidget {
               child: Icon(
                 icon,
                 color: accentPrimary,
-                size: 32,
+                size: 28,
               ),
             ),
-            const SizedBox(width: 20),
+            const SizedBox(width: 18),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -127,7 +129,7 @@ class JoinChoiceScreen extends StatelessWidget {
                   Text(
                     title,
                     style: GoogleFonts.spaceGrotesk(
-                      fontSize: 18,
+                      fontSize: 15,
                       fontWeight: FontWeight.bold,
                       color: textPrimary,
                     ),
@@ -146,6 +148,7 @@ class JoinChoiceScreen extends StatelessWidget {
             const Icon(
               Icons.chevron_right_rounded,
               color: textSecondary,
+              size: 20,
             ),
           ],
         ),

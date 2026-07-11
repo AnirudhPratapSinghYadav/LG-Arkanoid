@@ -270,6 +270,9 @@ function broadcastGameState(){
     gameStartedAt: worldState.gameStartedAt,
     lobbyStartedAt: worldState.lobbyStartedAt,
     countdownStartedAt: worldState.countdownStartedAt,
+    longestRally: worldState.longestRally || 0,
+    powerupsCollected: worldState.powerupsCollected || 0,
+    highestCombo: worldState.highestCombo || 0,
   };
   io.emit('game_state', payload);
 }
@@ -582,6 +585,10 @@ io.on('connection', (socket)=>{
     socket.join(`screen-${screenId}`);
   }
 
+  socket.on('ping_test', (data, callback)=>{
+    if(typeof callback === 'function') callback();
+  });
+
   socket.on('start_game', (data)=>{
     const slotIndex = socketToPlayerIndex.get(socket.id);
     if(slotIndex!==worldState.masterPlayerIndex){
@@ -593,6 +600,12 @@ io.on('connection', (socket)=>{
     worldState.level = 1;
     worldState.currentLevel = 1;
     worldState.bricks = gameEngine.loadLevel(1);
+    
+    worldState.longestRally = 0;
+    worldState.powerupsCollected = 0;
+    worldState.highestCombo = 0;
+    worldState.rallyCount = 0;
+    worldState.currentCombo = 0;
     
     const centerX = (worldState.numScreens * 1920) / 2;
     worldState.balls = [

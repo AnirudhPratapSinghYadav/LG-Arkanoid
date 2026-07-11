@@ -48,7 +48,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
 
     _controller.forward().then((_) {
       if (mounted) {
-        Navigator.pushReplacementNamed(context, '/joinchoice');
+        Navigator.pushReplacementNamed(context, '/discovery');
       }
     });
   }
