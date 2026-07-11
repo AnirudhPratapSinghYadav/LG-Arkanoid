@@ -69,7 +69,6 @@ function applyGameMasterMod(gameState, modType){
   try {
     switch(modType){
       case 'WIDE_PADDLE':
-        // Spawn wide paddle at center top of screen 3 (assuming 5 screens)
         gameState.powerUps.push(new PowerUp('wide_paddle', (gameState.numScreens*1920)/2, 0));
         break;
       case 'EXTRA_BALL':
@@ -92,7 +91,6 @@ function loadLevel(levelNumber, aiGeneratedGrid = null){
   try {
     let newBricks = [];
     
-    // If we have a pre-generated grid from AI, use it
     if(aiGeneratedGrid && Array.isArray(aiGeneratedGrid) && aiGeneratedGrid.length > 0){
       for(let r = 0; r < aiGeneratedGrid.length; r++){
         let rowBricks = [];
@@ -100,13 +98,11 @@ function loadLevel(levelNumber, aiGeneratedGrid = null){
           let val = aiGeneratedGrid[r][c];
           if(val > 0){
             let brickType = val===3 ? 'indestructible' : (val===2 ? 'hard' : 'normal');
-            // Assuming 8 rows and 65 columns (13 per screen*5 screens)
             let xPos = 24+c*144;
             let brick = new Brick(r, c, xPos, 100+r*40, 140, 30);
             brick.type = brickType;
             rowBricks.push(brick);
           }else{
-            // Placeholder for empty space so indices match
             let xPos = 24+c*144;
             let brick = new Brick(r, c, xPos, 100+r*40, 140, 30);
             brick.active = false;
@@ -118,7 +114,6 @@ function loadLevel(levelNumber, aiGeneratedGrid = null){
       return newBricks;
     }
 
-    // Fallback hardcoded logic
     for(let row = 0; row < 8; row++){
       let rowBricks = [];
       for(let col = 0; col < 65; col++){
@@ -198,15 +193,12 @@ function checkPaddleCollision(ball, players){
         if(player.paddleWidth<=0) return true;
         let normalized = Math.max(-1, Math.min(1, offset/(player.paddleWidth/2)));
         
-        let bounceAngle = normalized * (Math.PI/3); // up to 60 degrees from vertical
+        let bounceAngle = normalized * (Math.PI/3);
         
-        // Calculate current speed
         let speed = Math.sqrt(ball.vx*ball.vx + ball.vy*ball.vy);
         
-        // Escalate speed by 2% on paddle hit, cap at max speed (e.g., 25)
         speed = Math.min(25, speed * 1.02);
         
-        // Ensure minimum speed
         speed = Math.max(8, speed);
 
         ball.vx = speed * Math.sin(bounceAngle);

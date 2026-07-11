@@ -28,7 +28,7 @@ class _QrScanScreenState extends State<QrScanScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: Text('Scan QR Code', style: TextStyle(fontFamily: GoogleFonts.spaceGrotesk().fontFamily, fontSize: 16, color: accentPrimary)),
+        title: Text('Scan QR Code', style: GoogleFonts.spaceGrotesk(fontSize: 16, color: accentPrimary)),
         iconTheme: const IconThemeData(color: accentPrimary),
       ),
       body: Stack(

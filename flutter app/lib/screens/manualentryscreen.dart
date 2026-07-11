@@ -141,7 +141,6 @@ class _ManualEntryScreenState extends State<ManualEntryScreen> {
                             keyboardType: TextInputType.text,
                           ),
                           
-                          // Hidden Developer Panel (Unlocks on 5 taps)
                           if (_developerMode) ...[
                             const SizedBox(height: 24),
                             const Divider(color: borderLight),

@@ -19,8 +19,7 @@ class StatusScreen extends StatelessWidget {
         backgroundColor: bgDark,
         title: Text(
           'DEBUG STATUS',
-          style: TextStyle(
-            fontFamily: GoogleFonts.inter().fontFamily,
+          style: GoogleFonts.inter(
             fontSize: 24,
             color: accentPrimary,
             letterSpacing: 1,
@@ -57,8 +56,7 @@ class StatusScreen extends StatelessWidget {
                       'Screen Width', '${state['rigVirtualWidth'] ?? 0}'),
                   const SizedBox(height: 8),
                   Text('BALLS',
-                      style: TextStyle(
-                          fontFamily: GoogleFonts.inter().fontFamily,
+                      style: GoogleFonts.inter(
                           color: accentPrimary,
                           fontWeight: FontWeight.bold)),
                   ...?((state['balls'] as List<dynamic>?)?.map((b) =>
@@ -76,14 +74,12 @@ class StatusScreen extends StatelessWidget {
                   service.lastCommentary.isEmpty
                       ? 'No commentary yet'
                       : service.lastCommentary,
-                  style: TextStyle(
-                      fontFamily: GoogleFonts.inter().fontFamily, color: textPrimary),
+                  style: GoogleFonts.inter(color: textPrimary),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'Source: ${service.lastCommentarySource}',
-                  style:
-                      TextStyle(fontFamily: GoogleFonts.inter().fontFamily, color: textPrimary, fontSize: 10),
+                      GoogleFonts.inter(color: textPrimary, fontSize: 10),
                 ),
               ],
             ),
@@ -100,8 +96,7 @@ class StatusScreen extends StatelessWidget {
         children: [
           Text(
             title,
-            style: TextStyle(
-              fontFamily: GoogleFonts.inter().fontFamily,
+            style: GoogleFonts.inter(
               color: accentPrimary,
               fontSize: 24,
               letterSpacing: 1,
@@ -122,14 +117,12 @@ class StatusScreen extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label,
-              style: TextStyle(
-                  fontFamily: GoogleFonts.inter().fontFamily, color: textPrimary, fontSize: 12)),
+              style: GoogleFonts.inter(color: textPrimary, fontSize: 12)),
           Text(
             value,
-            style: TextStyle(
+            style: GoogleFonts.inter(
               color: color ?? accentPrimary,
               fontWeight: FontWeight.bold,
-              fontFamily: GoogleFonts.inter().fontFamily,
               fontSize: 12,
             ),
           ),

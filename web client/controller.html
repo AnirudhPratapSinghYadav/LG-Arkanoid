@@ -239,12 +239,10 @@
                 document.getElementById('joinArea').classList.add('hidden');
                 document.getElementById('gameArea').classList.remove('hidden');
                 document.getElementById('playerStatus').innerText = 'Player ' + data.playerNumber;
-                setupTouchControls();
-                
-                // Initialize speech synthesis on user interaction
                 if ('speechSynthesis' in window) {
                     window.speechSynthesis.getVoices();
                 }
+                setupTouchControls();
             });
 
             socket.on('join_rejected', (data) => {

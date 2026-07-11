@@ -65,7 +65,7 @@ class _LgButtonState extends State<LgButton> with SingleTickerProviderStateMixin
             height: 56,
             decoration: BoxDecoration(
               color: widget.isPrimary ? accentPrimary : Colors.transparent,
-              border: Border.all(color: widget.isPrimary ? accentPrimary : Colors.white.withOpacity(0.12), width: 1.5),
+              border: Border.all(color: widget.isPrimary ? accentPrimary : Colors.white.withValues(alpha: 0.12), width: 1.5),
               borderRadius: BorderRadius.circular(14),
             ),
             child: Center(

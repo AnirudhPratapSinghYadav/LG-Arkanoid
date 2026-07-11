@@ -42,7 +42,6 @@ class _LgBotState extends State<LgBot> with SingleTickerProviderStateMixin {
           child: GestureDetector(
             onTap: () {
               HapticFeedback.lightImpact();
-              // Optional: Play chirp sound
             },
             child: SizedBox(
               width: 48,
@@ -63,7 +62,6 @@ class _BotPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final paint = Paint()..style = PaintingStyle.fill;
     
-    // Body (White shell)
     paint.color = Colors.white;
     canvas.drawRRect(
       RRect.fromRectAndRadius(
@@ -73,7 +71,6 @@ class _BotPainter extends CustomPainter {
       paint,
     );
 
-    // Visor (Cyan)
     paint.color = accentPrimary;
     canvas.drawRRect(
       RRect.fromRectAndRadius(
@@ -83,14 +80,13 @@ class _BotPainter extends CustomPainter {
       paint,
     );
 
-    // Antenna
     paint.color = Colors.white;
     canvas.drawLine(
       Offset(size.width / 2, 12),
       Offset(size.width / 2, 4),
       Paint()..color = Colors.white..strokeWidth = 2,
     );
-    paint.color = accentWarning; // Warning dot on top
+    paint.color = accentWarning;
     canvas.drawCircle(Offset(size.width / 2, 4), 3, paint);
   }
 

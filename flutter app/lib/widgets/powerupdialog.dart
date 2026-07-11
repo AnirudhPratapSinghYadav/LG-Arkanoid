@@ -5,7 +5,6 @@ import 'package:provider/provider.dart';
 import '../services/gameservice.dart';
 import '../utils/constants.dart';
 import 'lgpanel.dart';
-import 'lgbutton.dart';
 
 void showPowerUpDialog(BuildContext context) {
   showDialog(

@@ -35,8 +35,6 @@ class _ConnectingScreenState extends State<ConnectingScreen> {
     super.initState();
     _gameService = context.read<GameService>();
     _gameService.addListener(_onServiceUpdate);
-    
-    // Start Connection Flow after build
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _startConnecting();
     });
@@ -109,7 +107,6 @@ class _ConnectingScreenState extends State<ConnectingScreen> {
       _errorMessage = null;
     });
 
-    // 1. Establish Socket connection
     final ok = await _gameService.connect(ip, port);
     if (!ok) {
       if (mounted) {
@@ -122,11 +119,9 @@ class _ConnectingScreenState extends State<ConnectingScreen> {
 
     _proceedToStep(1); // Connecting...
 
-    // 2. Submit Join Game request (Authenticating...)
     _proceedToStep(2);
     _gameService.joinGame(token, name);
 
-    // 3. Set a fallback timeout timer
     _timeoutTimer = Timer(const Duration(seconds: 6), () {
       if (mounted && !_gameService.isJoinConfirmed) {
         setState(() {
@@ -161,7 +156,6 @@ class _ConnectingScreenState extends State<ConnectingScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Spinner
         const Center(
           child: SizedBox(
             width: 48,
@@ -174,7 +168,6 @@ class _ConnectingScreenState extends State<ConnectingScreen> {
         ),
         const SizedBox(height: 48),
 
-        // Bios-style Connection logs
         LgPanel(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -206,7 +199,7 @@ class _ConnectingScreenState extends State<ConnectingScreen> {
     final bool isCompleted = index < _currentStepIndex;
     final bool isActive = index == _currentStepIndex;
     
-    Color textColor = textSecondary.withOpacity(0.3);
+    Color textColor = textSecondary.withValues(alpha: 0.3);
     Widget icon = Text('[ ]', style: GoogleFonts.jetBrainsMono(color: textColor));
 
     if (isCompleted) {
