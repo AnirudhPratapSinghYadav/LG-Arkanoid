@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'screens/splashscreen.dart';
-import 'screens/connectscreen.dart';
 import 'screens/joinchoicescreen.dart';
 import 'screens/manualentryscreen.dart';
 import 'screens/nameentryscreen.dart';
@@ -29,7 +28,6 @@ class ArkanoidApp extends StatelessWidget {
       initialRoute: '/',
       routes: {
         '/': (context) => const SplashScreen(),
-        '/connect': (context) => const ConnectScreen(), // Deprecated but kept for safety comparison
         '/joinchoice': (context) => const JoinChoiceScreen(),
         '/manualentry': (context) => const ManualEntryScreen(),
         '/nameentry': (context) => const NameEntryScreen(),
