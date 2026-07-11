@@ -621,7 +621,8 @@ class GameScene extends Phaser.Scene {
             }
             
             let playersCount = this.currentState.players.filter(p => p.connected).length;
-            this.rigHealthText.setText(`DISPLAYS: ${numScreens}/${numScreens}  |  FPS: ${Math.round(this.game.loop.actualFps)}  |  PLAYERS: ${playersCount}/3  |  SERVER: HEALTHY`);
+            let maxPlayers = this.currentState.players.length > 0 ? this.currentState.players.length : numScreens;
+            this.rigHealthText.setText(`DISPLAYS: ${numScreens}/${numScreens}  |  PLAYERS: ${playersCount}/${maxPlayers}  |  SERVER: HEALTHY`);
             this.rigHealthText.setVisible(true);
         }
 
