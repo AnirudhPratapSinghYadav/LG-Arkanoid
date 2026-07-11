@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=1920, height=1080">
     <title>LG Arkanoid</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Space+Grotesk:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Space+Grotesk:wght@400;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.80.1/phaser.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.8.0/socket.io.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -34,7 +34,9 @@
     </style>
 </head>
 <body>
-    <div id="qrcode"></div>
+    <div id="qrcode">
+        <div style="font-family: 'JetBrains Mono', monospace; font-size: 16px; color: #00e5ff; font-weight: bold; text-align: center; margin-bottom: 16px; letter-spacing: 2px;">SCAN TO JOIN</div>
+    </div>
 <script>
 
 const urlParams = new URLSearchParams(window.location.search);
@@ -143,6 +145,13 @@ class GameScene extends Phaser.Scene {
             color: '#888888'
         });
 
+        this.rigStatusText = this.add.text(20, 50, `LIQUID GALAXY · ONLINE · ${numScreens} DISPLAYS`, {
+            fontFamily: '"JetBrains Mono", monospace',
+            fontSize: '14px',
+            color: '#20c5ff',
+            fontWeight: 'bold'
+        }).setAlpha(0);
+
         this.hudPanelGraphics = this.add.graphics();
         this.hudBorderAlpha = 1.0;
 
@@ -172,6 +181,14 @@ class GameScene extends Phaser.Scene {
             if (screenId !== numScreens) txt.setVisible(false);
             this.leaderboardTexts.push(txt);
         }
+        
+        this.leaderboardTitle = this.add.text(1880, 40, '🏆 LEADERBOARD', { 
+            fontFamily: '"Space Grotesk"', 
+            fontSize: '20px', 
+            color: '#20c5ff', 
+            fontWeight: 'bold' 
+        }).setOrigin(1, 0);
+        if (screenId !== numScreens) this.leaderboardTitle.setVisible(false);
         
         // Gemini AI Commentary Panel
         this.geminiCardGraphics = this.add.graphics();
@@ -273,10 +290,14 @@ class GameScene extends Phaser.Scene {
             if (this.attractModeGraphics) this.attractModeGraphics.clear();
         }
         
-        if (this.currentState.gameStatus === 'lobby') {
+        // Always run checkStateChanges to update logo, start text, token, and QR code visibility
+        this.checkStateChanges();
+        
+        if (this.currentState.gameStatus === 'waiting' || this.currentState.gameStatus === 'lobby') {
             this.hideCountdownMode();
             this.hideWinMode();
             this.drawLobbyMode();
+            this.updateHUD(); // Make sure HUD elements are hidden
             return;
         } else {
             this.hideLobbyMode();
@@ -288,6 +309,7 @@ class GameScene extends Phaser.Scene {
             // Draw background stuff
             this.drawBricks();
             this.drawPaddles();
+            this.updateHUD();
             return;
         } else {
             this.hideCountdownMode();
@@ -300,7 +322,6 @@ class GameScene extends Phaser.Scene {
             this.hideWinMode();
         }
         
-        this.checkStateChanges();
         this.drawBricks();
         this.drawPowerUps();
         this.drawBalls();
@@ -479,6 +500,37 @@ class GameScene extends Phaser.Scene {
         this.timerPanelGraphics.clear();
         this.leaderboardPanelGraphics.clear();
         
+        const isGameActive = this.currentState && 
+                             (this.currentState.gameStatus === 'playing' || 
+                              this.currentState.gameStatus === 'countdown' ||
+                              this.currentState.gameStatus === 'game_over' ||
+                              this.currentState.gameStatus === 'win' ||
+                              this.currentState.gameStatus === 'time_up');
+
+        if (!isGameActive) {
+            this.hudText.setVisible(false);
+            this.timerText.setVisible(false);
+            this.leaderboardTexts.forEach(t => { if(t) t.setVisible(false); });
+            this.leaderboardTitle.setVisible(false);
+            this.geminiText.setVisible(false);
+            this.geminiTitle.setVisible(false);
+            this.geminiCardGraphics.clear();
+            if (this.rigHealthText) this.rigHealthText.setVisible(false);
+            return;
+        }
+
+        // Restore standard visibility
+        if (screenId === 1) this.hudText.setVisible(true);
+        if (isCenterScreen) this.timerText.setVisible(true);
+        if (screenId === numScreens) {
+            this.leaderboardTexts.forEach(t => { if (t) t.setVisible(true); });
+            this.geminiText.setVisible(true);
+            this.geminiTitle.setVisible(true);
+        }
+        if (isCenterScreen && this.rigHealthText) {
+            this.rigHealthText.setVisible(true);
+        }
+
         if (!this.currentState || !this.currentState.players) {
             this.hudText.setText('');
             return;
@@ -587,7 +639,7 @@ class GameScene extends Phaser.Scene {
         if (screenId === numScreens && lbLines > 0) {
             // Draw Leaderboard title
             this.leaderboardPanelGraphics.fillStyle(0x20c5ff, 1);
-            this.add.text(1880, 40, '🏆 LEADERBOARD', { fontFamily: '"Space Grotesk"', fontSize: '20px', color: '#20c5ff', fontWeight: 'bold' }).setOrigin(1, 0).setDepth(2);
+            this.leaderboardTitle.setVisible(true).setDepth(2);
             
             this.drawStandardPanel(this.leaderboardPanelGraphics, 1880 - Math.max(lbW, 180) - 20, 25, Math.max(lbW, 180) + 40, (lbLines * 40) + 70);
             
@@ -688,11 +740,12 @@ class GameScene extends Phaser.Scene {
             this.statusText.setText('');
         }
 
-        if (this.currentState.gameStatus === 'playing') {
+        if (this.currentState.gameStatus === 'playing' || this.currentState.gameStatus === 'countdown') {
             this.startButton.setAlpha(0);
             this.sessionTokenText.setAlpha(0);
             this.logo.setAlpha(0);
             document.getElementById('qrcode').style.display = 'none';
+            if (this.rigStatusText) this.rigStatusText.setAlpha(0);
         } else {
             if (isCenterScreen) {
                 this.startButton.setAlpha(1);
@@ -721,6 +774,7 @@ class GameScene extends Phaser.Scene {
                 this.sessionTokenText.setAlpha(0);
                 document.getElementById('qrcode').style.display = 'none';
             }
+            if (this.rigStatusText) this.rigStatusText.setAlpha(1);
         }
     }
 
