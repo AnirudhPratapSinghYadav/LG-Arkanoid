@@ -57,6 +57,20 @@ class _QrScanScreenState extends State<QrScanScreen> {
               ),
             ),
           ),
+          Positioned(
+            bottom: 80,
+            left: 0,
+            right: 0,
+            child: Text(
+              'SCAN THIS QR',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.vt323(
+                fontSize: 32,
+                color: accentPrimary,
+                letterSpacing: 2,
+              ),
+            ),
+          ),
         ],
       ),
     );

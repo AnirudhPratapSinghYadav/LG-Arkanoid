@@ -1,0 +1,175 @@
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import '../utils/constants.dart';
+import '../widgets/lgpanel.dart';
+import '../widgets/lgbutton.dart';
+import '../widgets/lgtextfield.dart';
+import '../widgets/mission_background.dart';
+
+class ManualEntryScreen extends StatefulWidget {
+  const ManualEntryScreen({super.key});
+
+  @override
+  State<ManualEntryScreen> createState() => _ManualEntryScreenState();
+}
+
+class _ManualEntryScreenState extends State<ManualEntryScreen> {
+  final _tokenController = TextEditingController();
+  final _ipController = TextEditingController(text: '192.168.');
+  final _portController = TextEditingController(text: '8080');
+  
+  bool _showAdvanced = false;
+  final _storage = const FlutterSecureStorage();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedSettings();
+  }
+
+  Future<void> _loadSavedSettings() async {
+    final savedIp = await _storage.read(key: prefServerAddress);
+    final savedPort = await _storage.read(key: prefServerPort);
+    final savedToken = await _storage.read(key: prefSessionToken);
+    
+    if (mounted) {
+      setState(() {
+        if (savedIp != null && savedIp.isNotEmpty) _ipController.text = savedIp;
+        if (savedPort != null && savedPort.isNotEmpty) _portController.text = savedPort;
+        if (savedToken != null && savedToken.isNotEmpty) _tokenController.text = savedToken;
+      });
+    }
+  }
+
+  void _onContinue() {
+    final token = _tokenController.text.trim().toUpperCase();
+    final ip = _ipController.text.trim();
+    final port = _portController.text.trim();
+
+    if (token.length != 4) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Session Code must be exactly 4 characters')),
+      );
+      return;
+    }
+
+    if (ip.isEmpty || port.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('IP Address and Port cannot be empty')),
+      );
+      return;
+    }
+
+    Navigator.pushNamed(
+      context,
+      '/nameentry',
+      arguments: {
+        'ip': ip,
+        'port': port,
+        'token': token,
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: bgDark,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: accentPrimary),
+      ),
+      body: MissionControlBackground(
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 400),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      'ENTER CODE',
+                      style: GoogleFonts.spaceGrotesk(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: textPrimary,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Enter the session token displayed on the center screen',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        color: textSecondary,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 36),
+                    LgPanel(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          LgTextField(
+                            controller: _tokenController,
+                            label: 'SESSION TOKEN',
+                            maxLength: 4,
+                            keyboardType: TextInputType.text,
+                          ),
+                          const SizedBox(height: 24),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Advanced Settings',
+                                style: GoogleFonts.inter(
+                                  fontSize: 14,
+                                  color: textSecondary,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              Switch(
+                                value: _showAdvanced,
+                                activeColor: accentPrimary,
+                                onChanged: (val) {
+                                  setState(() => _showAdvanced = val);
+                                },
+                              ),
+                            ],
+                          ),
+                          if (_showAdvanced) ...[
+                            const SizedBox(height: 16),
+                            LgTextField(
+                              controller: _ipController,
+                              label: 'SERVER IP ADDRESS',
+                              keyboardType: TextInputType.datetime,
+                            ),
+                            const SizedBox(height: 16),
+                            LgTextField(
+                              controller: _portController,
+                              label: 'SERVER PORT',
+                              keyboardType: TextInputType.number,
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 48),
+                    LgButton(
+                      label: 'CONTINUE',
+                      onPressed: _onContinue,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

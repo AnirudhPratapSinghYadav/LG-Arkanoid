@@ -18,6 +18,8 @@ class GameService extends ChangeNotifier {
   String lastCommentary = '';
   String lastCommentarySource = 'fallback';
   bool connected = false;
+  bool isJoinConfirmed = false;
+  String? joinError;
   Map<String, dynamic>? latestGameState;
   void Function(bool isSpectator)? onJoinConfirmed;
 
@@ -61,6 +63,8 @@ class GameService extends ChangeNotifier {
         playerId = map['playerId'] as String?;
         playerNumber = map['playerNumber'] as int?;
         sessionId = map['sessionId'] as String?;
+        isJoinConfirmed = true;
+        joinError = null;
         bool isSpectator = map['isSpectator'] as bool? ?? false;
         if (onJoinConfirmed != null) onJoinConfirmed!(isSpectator);
         notifyListeners();
@@ -68,6 +72,8 @@ class GameService extends ChangeNotifier {
 
       socket!.on('join_rejected', (data){
         final map = _asMap(data);
+        isJoinConfirmed = false;
+        joinError = map['message'] as String? ?? 'Join rejected';
         lastCommentary = 'Join rejected: ${map['message'] ?? map['errorCode']}';
         lastCommentarySource = 'fallback';
         notifyListeners();
@@ -145,6 +151,8 @@ class GameService extends ChangeNotifier {
   }
 
   void joinGame(String sessionToken, String playerName){
+    isJoinConfirmed = false;
+    joinError = null;
     socket?.emit('player_join', {
       'sessionToken': sessionToken,
       'playerName': playerName
@@ -179,6 +187,8 @@ class GameService extends ChangeNotifier {
     socket?.dispose();
     socket = null;
     connected = false;
+    isJoinConfirmed = false;
+    joinError = null;
     notifyListeners();
   }
 

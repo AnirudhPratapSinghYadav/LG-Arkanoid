@@ -94,8 +94,8 @@ function createInitialWorldState(){
   
   state.bricks = gameEngine.loadLevel(state.level);
   
-  state.sessionId = null;
-  state.sessionToken = null;
+  state.sessionId = crypto.randomUUID();
+  state.sessionToken = generateToken();
   state.masterPlayerIndex = 0;
   state.commentaryRateLimiter = {
     level_cleared: { lastCalledAt: 0 },
@@ -588,46 +588,47 @@ io.on('connection', (socket)=>{
       socket.emit('join_rejected', { errorCode: 1007, message: 'Only the host can start the game' });
       return;
     }
-    resetWorldForNewGame();
-    worldState.gameStatus = 'lobby'; // Changed to lobby
+    
+    clearAllPowerUpTimers();
+    worldState.level = 1;
+    worldState.currentLevel = 1;
+    worldState.bricks = gameEngine.loadLevel(1);
+    
+    const centerX = (worldState.numScreens * 1920) / 2;
+    worldState.balls = [
+      new gameEngine.Ball('ball1', centerX, 500, 3, 4, BALL_RADIUS),
+      new gameEngine.Ball('ball2', centerX, 500, -3, 4, BALL_RADIUS)
+    ];
+    worldState.balls[1].active = false;
+    
+    for (let p of worldState.players) {
+      p.score = 0;
+      p.lives = 3;
+    }
+    
+    worldState.gameStatus = 'countdown';
+    worldState.countdownStartedAt = Date.now();
     worldState.gameActive = false;
-    worldState.sessionId = crypto.randomUUID();
-    worldState.sessionToken = generateToken();
-    worldState.lobbyStartedAt = Date.now();
     worldState.gameDurationSeconds = data?.durationSeconds || 180;
-    io.emit('lobby_started', {
-      sessionToken: worldState.sessionToken,
-      sessionId: worldState.sessionId,
-      gameDurationSeconds: worldState.gameDurationSeconds,
-    });
     
-    // Automatically transition to countdown after 8 seconds of lobby
-    setTimeout(() => {
-        if (worldState.gameStatus === 'lobby' && worldState.sessionId) {
-            worldState.gameStatus = 'countdown';
-            worldState.countdownStartedAt = Date.now();
-            io.emit('countdown_started', { countdown: 5 });
-            broadcastGameState();
-            
-            // 5 second countdown before playing
-            setTimeout(() => {
-                if (worldState.gameStatus === 'countdown') {
-                    worldState.gameStatus = 'playing';
-                    worldState.gameActive = true;
-                    worldState.gameStartedAt = Date.now();
-                    io.emit('game_started', {
-                        sessionToken: worldState.sessionToken,
-                        sessionId: worldState.sessionId,
-                        gameStartedAt: worldState.gameStartedAt,
-                        gameDurationSeconds: worldState.gameDurationSeconds,
-                    });
-                    broadcastGameState();
-                }
-            }, 5000);
-        }
-    }, 8000);
-    
+    io.emit('countdown_started', { countdown: 3 });
     broadcastGameState();
+    
+    // 3 second countdown before playing
+    setTimeout(() => {
+        if (worldState.gameStatus === 'countdown') {
+            worldState.gameStatus = 'playing';
+            worldState.gameActive = true;
+            worldState.gameStartedAt = Date.now();
+            io.emit('game_started', {
+                sessionToken: worldState.sessionToken,
+                sessionId: worldState.sessionId,
+                gameStartedAt: worldState.gameStartedAt,
+                gameDurationSeconds: worldState.gameDurationSeconds,
+            });
+            broadcastGameState();
+        }
+    }, 3000);
   });
 
   socket.on('player_join', (data)=>{
