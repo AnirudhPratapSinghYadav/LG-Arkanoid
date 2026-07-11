@@ -97,7 +97,6 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
     final masterIndex = gameState?['masterPlayerIndex'] as int? ?? 0;
     final isHost = (service.playerNumber ?? 0) - 1 == masterIndex;
 
-    // Paddle/Player Colors matching Rig Client
     final List<Color> playerColors = [
       const Color(0xFF20C5FF), // Player 1 - Cyan
       const Color(0xFFFF2D78), // Player 2 - Pink
@@ -118,7 +117,6 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        // App Logo & title
                         Column(
                           children: [
                             Image.asset('assets/lg-logo.png', height: 40),
@@ -146,7 +144,6 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
                         ),
                         const SizedBox(height: 36),
 
-                        // Connected Players Panel
                         LgPanel(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -177,7 +174,6 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
                               const Divider(color: borderLight),
                               const SizedBox(height: 12),
                               
-                              // List 3 players slots
                               for (int i = 0; i < 3; i++) ...[
                                 _buildPlayerRow(
                                   index: i,
@@ -192,7 +188,6 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
                         ),
                         const SizedBox(height: 48),
 
-                        // Master Host Start Match Button or Muted waiting label
                         if (isHost)
                           LgButton(
                             label: 'START MATCH',
@@ -225,10 +220,9 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
               ),
             ),
 
-            // Countdown Overlay
             if (_countdownStarted)
               Container(
-                color: Colors.black.withOpacity(0.85),
+                color: Colors.black.withValues(alpha: 0.85),
                 child: Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -277,14 +271,14 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
       children: [
         isSlotConnected
             ? const Icon(Icons.check_rounded, color: accentSuccess, size: 20)
-            : Icon(Icons.radio_button_unchecked_rounded, color: textSecondary.withOpacity(0.2), size: 18),
+            : Icon(Icons.radio_button_unchecked_rounded, color: textSecondary.withValues(alpha: 0.2), size: 18),
         const SizedBox(width: 14),
         Expanded(
           child: Text(
             displayName,
             style: GoogleFonts.inter(
               fontSize: 15,
-              color: isSlotConnected ? textPrimary : textSecondary.withOpacity(0.4),
+              color: isSlotConnected ? textPrimary : textSecondary.withValues(alpha: 0.4),
               fontWeight: isSlotConnected ? FontWeight.w600 : FontWeight.normal,
             ),
           ),

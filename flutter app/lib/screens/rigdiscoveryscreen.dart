@@ -35,11 +35,9 @@ class _RigDiscoveryScreenState extends State<RigDiscoveryScreen> {
     final service = context.read<GameService>();
     final Set<String> targetIps = {};
 
-    // 1. Always check localhost and emulator host for easy debugging
     targetIps.add('127.0.0.1');
     targetIps.add('10.0.2.2'); // Default Android emulator host loopback
 
-    // 2. Discover local interfaces and scan subnets
     try {
       final interfaces = await NetworkInterface.list(
         includeLoopback: false,
@@ -52,7 +50,6 @@ class _RigDiscoveryScreenState extends State<RigDiscoveryScreen> {
           final parts = ip.split('.');
           if (parts.length == 4) {
             final subnet = '${parts[0]}.${parts[1]}.${parts[2]}.';
-            // Add all possible hosts in the subnet
             for (int i = 1; i <= 254; i++) {
               targetIps.add('$subnet$i');
             }
@@ -63,7 +60,6 @@ class _RigDiscoveryScreenState extends State<RigDiscoveryScreen> {
       // Fallback if network interfaces cannot be listed
     }
 
-    // 3. Perform asynchronous probes in parallel batches
     final List<String> candidates = targetIps.toList();
     final List<String> activeRigs = [];
     
@@ -89,11 +85,10 @@ class _RigDiscoveryScreenState extends State<RigDiscoveryScreen> {
     if (!mounted) return;
 
     setState(() {
-      _discoveredRigs = activeRigs.toSet().toList(); // Deduplicate
+      _discoveredRigs = activeRigs.toSet().toList();
       _isSearching = false;
     });
 
-    // 4. Auto-route decision
     if (_discoveredRigs.length == 1) {
       final rigIp = _discoveredRigs.first;
       await service.connect(rigIp, '8080');
@@ -128,7 +123,6 @@ class _RigDiscoveryScreenState extends State<RigDiscoveryScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Brand Logo
                     Column(
                       children: [
                         Image.asset('assets/lg-logo.png', height: 44),
@@ -159,7 +153,6 @@ class _RigDiscoveryScreenState extends State<RigDiscoveryScreen> {
                     const SizedBox(height: 48),
 
                     if (_isSearching) ...[
-                      // Search Loader
                       LgPanel(
                         child: Padding(
                           padding: const EdgeInsets.symmetric(vertical: 32),
@@ -187,7 +180,6 @@ class _RigDiscoveryScreenState extends State<RigDiscoveryScreen> {
                         ),
                       ),
                     ] else if (_discoveredRigs.isEmpty) ...[
-                      // No Rigs Found / Retry
                       LgPanel(
                         child: Padding(
                           padding: const EdgeInsets.all(24),
@@ -230,7 +222,6 @@ class _RigDiscoveryScreenState extends State<RigDiscoveryScreen> {
                         isPrimary: true,
                       ),
                     ] else ...[
-                      // Multiple Rigs Found
                       LgPanel(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -256,7 +247,7 @@ class _RigDiscoveryScreenState extends State<RigDiscoveryScreen> {
                                   decoration: BoxDecoration(
                                     border: Border.all(color: borderLight),
                                     borderRadius: BorderRadius.circular(10),
-                                    color: Colors.white.withOpacity(0.02),
+                                    color: Colors.white.withValues(alpha: 0.02),
                                   ),
                                   child: Row(
                                     children: [

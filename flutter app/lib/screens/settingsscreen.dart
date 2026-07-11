@@ -23,8 +23,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         backgroundColor: bgDark,
         title: Text(
           'GAME SETTINGS',
-          style: TextStyle(
-            fontFamily: GoogleFonts.inter().fontFamily,
+          style: GoogleFonts.inter(
             fontSize: 24,
             color: accentPrimary,
             letterSpacing: 1,
@@ -43,8 +42,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 children: [
                   Text(
                     'ROBOT COMMENTARY',
-                    style: TextStyle(
-                      fontFamily: GoogleFonts.inter().fontFamily,
+                    style: GoogleFonts.inter(
                       fontWeight: FontWeight.bold,
                       color: accentPrimary,
                       fontSize: 14,
@@ -55,8 +53,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   SwitchListTile(
                     title: Text(
                       'Enable TTS Voice',
-                      style: TextStyle(
-                        fontFamily: GoogleFonts.inter().fontFamily,
+                      style: GoogleFonts.inter(
                         color: textPrimary,
                         fontSize: 14,
                       ),

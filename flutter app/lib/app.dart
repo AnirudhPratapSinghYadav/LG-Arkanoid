@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
-import 'screens/splashscreen.dart';
-import 'screens/rigdiscoveryscreen.dart';
+
+import 'screens/connectingscreen.dart';
+import 'screens/controllerscreen.dart';
 import 'screens/joinchoicescreen.dart';
+import 'screens/lobbyscreen.dart';
 import 'screens/manualentryscreen.dart';
 import 'screens/nameentryscreen.dart';
-import 'screens/connectingscreen.dart';
-import 'screens/lobbyscreen.dart';
 import 'screens/qrscanscreen.dart';
-import 'screens/controllerscreen.dart';
-import 'screens/statusscreen.dart';
+import 'screens/rigdiscoveryscreen.dart';
 import 'screens/settingsscreen.dart';
-import '../utils/constants.dart';
+import 'screens/splashscreen.dart';
+import 'screens/statusscreen.dart';
+import 'utils/constants.dart';
 
 class ArkanoidApp extends StatelessWidget {
   const ArkanoidApp({super.key});

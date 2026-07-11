@@ -77,7 +77,6 @@ class GameScene extends Phaser.Scene {
     }
 
     drawStandardPanel(graphics, x, y, width, height, alpha = 1.0, borderColor = 0xffffff) {
-        // Mission Control Panel: Solid #10151d with subtle border
         graphics.fillStyle(0x10151d, alpha);
         graphics.fillRoundedRect(x, y, width, height, 8);
         
@@ -197,7 +196,6 @@ class GameScene extends Phaser.Scene {
         }).setOrigin(1, 0);
         if (screenId !== numScreens) this.leaderboardTitle.setVisible(false);
         
-        // Mission Assistant Commentary Panel
         this.geminiCardGraphics = this.add.graphics();
         this.geminiText = this.add.text(1880, 240, '', {
             fontFamily: '"Inter"',
@@ -267,7 +265,6 @@ class GameScene extends Phaser.Scene {
         scanlineGraphics.fillStyle(0xffffff, 0.15);
         scanlineGraphics.fillRect(0, 0, 8, 1);
         scanlineGraphics.generateTexture('scanline', 8, 3);
-        // Scanlines removed for Mission Control theme
 
         const vignetteGraphics = this.make.graphics({x:0, y:0, add:false});
         for (let i = 0; i < 20; i++) {
@@ -297,14 +294,13 @@ class GameScene extends Phaser.Scene {
             if (this.attractModeGraphics) this.attractModeGraphics.clear();
         }
         
-        // Always run checkStateChanges to update logo, start text, token, and QR code visibility
         this.checkStateChanges();
         
         if (this.currentState.gameStatus === 'waiting' || this.currentState.gameStatus === 'lobby') {
             this.hideCountdownMode();
             this.hideWinMode();
             this.drawLobbyMode();
-            this.updateHUD(); // Make sure HUD elements are hidden
+            this.updateHUD();
             return;
         } else {
             this.hideLobbyMode();
@@ -313,7 +309,6 @@ class GameScene extends Phaser.Scene {
         if (this.currentState.gameStatus === 'countdown') {
             this.hideWinMode();
             this.drawCountdownMode();
-            // Draw background stuff
             this.drawBricks();
             this.drawPaddles();
             this.updateHUD();
@@ -344,7 +339,6 @@ class GameScene extends Phaser.Scene {
         this.attractModeGraphics.clear();
         this.attractTime += 0.05;
         
-        // Draw some orbiting particles
         for(let i=0; i<15; i++) {
             const angle = this.attractTime + (i * 0.4);
             const radius = 200 + Math.sin(this.attractTime * 0.5 + i) * 50;
@@ -430,7 +424,6 @@ class GameScene extends Phaser.Scene {
             let remain = 3 - Math.floor(elapsed / 1000);
             if (remain > 0) {
                 this.countdownText.setText(remain.toString());
-                // Animate scale
                 let scale = 1 + (elapsed % 1000) / 1000 * 0.3;
                 this.countdownText.setScale(scale);
                 this.countdownText.setAlpha(1 - (elapsed % 1000) / 1000);
@@ -479,7 +472,6 @@ class GameScene extends Phaser.Scene {
             this.winName.setVisible(true);
             this.winStatsText.setVisible(true);
             
-            // Find winner
             let winner = [...(this.currentState.players || [])].sort((a,b) => b.score - a.score)[0];
             if (winner && winner.connected) {
                 this.winName.setText(`${winner.name.toUpperCase()} WINS!`);
@@ -496,7 +488,6 @@ class GameScene extends Phaser.Scene {
                 this.winConfetti.start();
                 this.winConfettiEmitted = true;
                 
-                // Cinematic Zoom
                 this.cameras.main.pan(960, 450, 2000, 'Sine.easeInOut');
                 this.cameras.main.zoomTo(1.1, 2000, 'Sine.easeInOut');
             }
@@ -539,7 +530,6 @@ class GameScene extends Phaser.Scene {
             return;
         }
 
-        // Restore standard visibility
         if (screenId === 1) this.hudText.setVisible(true);
         if (isCenterScreen) this.timerText.setVisible(true);
         if (screenId === numScreens) {
@@ -593,7 +583,7 @@ class GameScene extends Phaser.Scene {
                 const startY = bounds.y + 40 + (lineIdx * 40) + 12; 
                 const startX = bounds.x + bounds.width - 60; 
                 if (screenId === 1) {
-                    this.hudPanelGraphics.fillStyle(0x4ade80, 1); // Green lives
+                    this.hudPanelGraphics.fillStyle(0x4ade80, 1);
                     for(let l = 0; l < Math.min(p.lives, 5); l++) {
                         this.hudPanelGraphics.fillCircle(startX + (l * 14), startY, 5);
                     }
@@ -622,7 +612,6 @@ class GameScene extends Phaser.Scene {
             this.drawStandardPanel(this.timerPanelGraphics, tBounds.x - 30, tBounds.y - 15, tBounds.width + 60, tBounds.height + 30);
         }
 
-        // Rig Health Panel
         if (isCenterScreen) {
             if (!this.rigHealthText) {
                 this.rigHealthGraphics = this.add.graphics();
@@ -664,15 +653,12 @@ class GameScene extends Phaser.Scene {
         }
         
         if (screenId === numScreens && lbLines > 0) {
-            // Draw Leaderboard title
             this.leaderboardPanelGraphics.fillStyle(0x4f7cac, 1);
             this.leaderboardTitle.setVisible(true).setDepth(2);
             
             this.drawStandardPanel(this.leaderboardPanelGraphics, 1880 - Math.max(lbW, 180) - 20, 25, Math.max(lbW, 180) + 40, (lbLines * 40) + 70);
             
-            // Draw Gemini Panel
             let aiText = "Analyzing game data...";
-            // We'll hook into server commentary if available, otherwise mock it for demo
             if (this.currentState.lastCommentary) {
                 aiText = `"${this.currentState.lastCommentary}"`;
             }
@@ -718,7 +704,6 @@ class GameScene extends Phaser.Scene {
                 if (p.score > prevScore) {
                     this.spawnFloatingText(`+${p.score - prevScore}`, p.paddleX - virtualLeft + (p.paddleWidth/2 || 100), 950, '#00ff00');
                     if (p.score - prevScore >= 50) {
-                        // Likely caught a powerup
                         this.playBeep(1200, 'sine', 0.2, 0.1);
                         this.playBeep(1600, 'sine', 0.3, 0.1);
                     }
@@ -908,9 +893,9 @@ class GameScene extends Phaser.Scene {
 
                 let color;
                 if (brick.type === 'indestructible') {
-                    color = 0x666666; // Silver/Gray
+                    color = 0x666666;
                 } else if (brick.type === 'hard') {
-                    color = 0xffffff; // White
+                    color = 0xffffff;
                 } else {
                     const normalColors = [0x00e5ff, 0xff2d78, 0xffb800];
                     color = normalColors[brick.row % 3];
@@ -1033,7 +1018,7 @@ class GameScene extends Phaser.Scene {
                     this.robots[i].text.setPosition(robotTargetX, robotY - 35);
                 }
             } else {
-                this.robots[i].text.setPosition(-1000, -1000); // Hide text if offscreen
+                this.robots[i].text.setPosition(-1000, -1000);
             }
 
             if (localX + paddleWidth < 0 || localX > 1920) continue;
@@ -1178,7 +1163,6 @@ class GameScene extends Phaser.Scene {
         });
 
         this.socket.on('game_started', (data) => {
-            // State is now managed exclusively by checkStateChanges loop
         });
     }
     playBeep(freq, type, duration, vol) {
@@ -1223,7 +1207,6 @@ if (document.fonts) {
         const game = new Phaser.Game(config);
     });
 } else {
-    // Fallback for older browsers
     const game = new Phaser.Game(config);
 }
 </script>

@@ -14,7 +14,6 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   
   late Animation<double> _dotOpacity;
   late Animation<double> _dotScale;
-  late Animation<double> _orbitOpacity;
   late Animation<double> _logoOpacity;
   late Animation<double> _fadeScreen;
 
@@ -32,10 +31,6 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     
     _dotScale = Tween<double>(begin: 1.0, end: 3.0).animate(
       CurvedAnimation(parent: _controller, curve: const Interval(0.15, 0.35, curve: Curves.easeOut)),
-    );
-
-    _orbitOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: const Interval(0.25, 0.45, curve: Curves.easeIn)),
     );
 
     _logoOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
@@ -62,7 +57,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black, // Pure black for cinematic effect
+      backgroundColor: Colors.black,
       body: AnimatedBuilder(
         animation: _controller,
         builder: (context, child) {
@@ -72,7 +67,6 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  // Dot and Orbit
                   if (_logoOpacity.value == 0.0)
                     Opacity(
                       opacity: _dotOpacity.value,
@@ -85,14 +79,13 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                             color: accentPrimary,
                             shape: BoxShape.circle,
                             boxShadow: [
-                              BoxShadow(color: accentPrimary.withOpacity(0.5), blurRadius: 10)
+                              BoxShadow(color: accentPrimary.withValues(alpha: 0.5), blurRadius: 10)
                             ],
                           ),
                         ),
                       ),
                     ),
                   
-                  // Logo
                   Opacity(
                     opacity: _logoOpacity.value,
                     child: Column(

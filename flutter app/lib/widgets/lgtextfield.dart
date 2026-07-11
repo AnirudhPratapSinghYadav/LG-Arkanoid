@@ -69,7 +69,7 @@ class _LgTextFieldState extends State<LgTextField> {
             boxShadow: _isFocused
                 ? [
                     BoxShadow(
-                      color: accentPrimary.withOpacity(0.15),
+                      color: accentPrimary.withValues(alpha: 0.15),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     )

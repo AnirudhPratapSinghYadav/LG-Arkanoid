@@ -104,7 +104,7 @@ class JoinChoiceScreen extends StatelessWidget {
   }) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(14), // Arkanoid V2 Corner Token
+      borderRadius: BorderRadius.circular(14),
       child: LgPanel(
         child: Row(
           children: [

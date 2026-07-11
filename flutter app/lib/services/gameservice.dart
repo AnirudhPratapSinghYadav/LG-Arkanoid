@@ -39,7 +39,8 @@ class GameService extends ChangeNotifier {
       final req = await client.getUrl(uri);
       final resp = await req.close();
       return resp.statusCode == 200;
-    } catch (_) {
+    } catch (e) {
+      debugPrint('Health check failed: $e');
       return false;
     }
   }
@@ -161,7 +162,8 @@ class GameService extends ChangeNotifier {
         }
       }
       return false;
-    } catch(_){
+    } catch (e) {
+      debugPrint('Socket connection error: $e');
       return false;
     }
   }

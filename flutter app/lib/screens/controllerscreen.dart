@@ -26,7 +26,6 @@ class _ControllerScreenState extends State<ControllerScreen> {
     // Normalized delta movement
     final normalizedDelta = (dx / (trackWidth / 2)) * _sliderRange;
 
-    // Send paddle movement velocity/delta
     final speed = 80.0; // Base speed constant
     final deltaX = normalizedDelta * speed * 2.5; 
     context.read<GameService>().sendPaddleMove(deltaX);
@@ -50,7 +49,6 @@ class _ControllerScreenState extends State<ControllerScreen> {
     final service = context.watch<GameService>();
     final screenWidth = MediaQuery.of(context).size.width;
 
-    // Paddle/Player Colors matching Rig Client
     final List<Color> playerColors = [
       const Color(0xFF20C5FF), // Player 1 - Cyan
       const Color(0xFFFF2D78), // Player 2 - Pink
@@ -64,7 +62,6 @@ class _ControllerScreenState extends State<ControllerScreen> {
         child: SafeArea(
           child: Column(
             children: [
-              // 1. Premium Hardware Top Info Bar
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                 child: Container(
@@ -77,7 +74,6 @@ class _ControllerScreenState extends State<ControllerScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      // Player indicator
                       Row(
                         children: [
                           Container(
@@ -87,7 +83,7 @@ class _ControllerScreenState extends State<ControllerScreen> {
                               shape: BoxShape.circle,
                               color: playerColor,
                               boxShadow: [
-                                BoxShadow(color: playerColor.withOpacity(0.4), blurRadius: 6, spreadRadius: 1)
+                                BoxShadow(color: playerColor.withValues(alpha: 0.4), blurRadius: 6, spreadRadius: 1)
                               ],
                             ),
                           ),
@@ -103,7 +99,6 @@ class _ControllerScreenState extends State<ControllerScreen> {
                         ],
                       ),
                       
-                      // Rig Online indicator
                       Row(
                         children: [
                           Container(
@@ -126,7 +121,6 @@ class _ControllerScreenState extends State<ControllerScreen> {
                         ],
                       ),
 
-                      // Latency (JetBrains Mono)
                       Text(
                         'PING ${service.latencyMs} MS',
                         style: GoogleFonts.jetBrainsMono(
@@ -136,7 +130,6 @@ class _ControllerScreenState extends State<ControllerScreen> {
                         ),
                       ),
 
-                      // Battery (JetBrains Mono)
                       Row(
                         children: [
                           Icon(Icons.battery_5_bar_rounded, size: 14, color: textSecondary),
@@ -158,7 +151,6 @@ class _ControllerScreenState extends State<ControllerScreen> {
 
               const Spacer(),
 
-              // 2. Mission Assistant Commentary Panel (Center)
               if (service.lastCommentary.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -201,7 +193,6 @@ class _ControllerScreenState extends State<ControllerScreen> {
 
               const Spacer(),
 
-              // 3. Primary Control Surface - Matte Slider (Bottom)
               GestureDetector(
                 onPanUpdate: (details) => _onPanUpdate(details, screenWidth),
                 onPanEnd: _onPanEnd,
@@ -211,13 +202,12 @@ class _ControllerScreenState extends State<ControllerScreen> {
                   margin: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
                     color: cardFill,
-                    borderRadius: BorderRadius.circular(14), // V2 Corners token
+                    borderRadius: BorderRadius.circular(14),
                     border: Border.all(color: borderLight),
                   ),
                   child: Stack(
                     alignment: Alignment.center,
                     children: [
-                      // Slider Track Guide
                       Container(
                         width: double.infinity,
                         height: 4,
@@ -228,18 +218,16 @@ class _ControllerScreenState extends State<ControllerScreen> {
                         ),
                       ),
                       
-                      // Touch helper overlay text
                       Text(
                         'SLIDE TO CONTROL PADDLE',
                         style: GoogleFonts.spaceGrotesk(
                           fontSize: 12,
-                          color: textSecondary.withOpacity(0.3),
+                          color: textSecondary.withValues(alpha: 0.3),
                           fontWeight: FontWeight.bold,
                           letterSpacing: 2,
                         ),
                       ),
                       
-                      // Slide Puck
                       Transform.translate(
                         offset: Offset(_puckPosition, 0),
                         child: Container(

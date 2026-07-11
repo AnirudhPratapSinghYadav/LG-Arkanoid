@@ -78,7 +78,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                 decoration: BoxDecoration(
                   color: const Color(0xFF111827),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.white.withOpacity(0.08)),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
                 ),
                 child: Column(
                   children: [
@@ -112,7 +112,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                   decoration: BoxDecoration(
                     color: const Color(0xFF111827),
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.white.withOpacity(0.08)),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -173,7 +173,7 @@ class _SpectatorScreenState extends State<SpectatorScreen> {
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.transparent,
-                  side: BorderSide(color: Colors.white.withOpacity(0.2)),
+                  side: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
                   padding: const EdgeInsets.symmetric(vertical: 20),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),

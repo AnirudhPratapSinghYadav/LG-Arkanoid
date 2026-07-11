@@ -172,7 +172,6 @@ app.get('/screen', (req, res)=>{
   res.sendFile(path.join(webClientPath, 'index.html'));
 });
 
-// Serve static files AFTER specific routes so index.html doesn't hijack '/'
 app.use(express.static(webClientPath));
 
 function generateToken(){
@@ -620,14 +619,13 @@ io.on('connection', (socket)=>{
     }
     
     worldState.gameStatus = 'countdown';
-    worldState.countdownStartedAt = Date.now();
+    worldState.countdownStartTime = Date.now();
     worldState.gameActive = false;
     worldState.gameDurationSeconds = data?.durationSeconds || 180;
     
     io.emit('countdown_started', { countdown: 3 });
     broadcastGameState();
     
-    // 3 second countdown before playing
     setTimeout(() => {
         if (worldState.gameStatus === 'countdown') {
             worldState.gameStatus = 'playing';
@@ -659,7 +657,7 @@ io.on('connection', (socket)=>{
 
     const slotIndex = worldState.players.findIndex((p)=>!p.connected);
     if(slotIndex===-1){
-      // No slots available, join as spectator!
+      socket.join('spectators');
       socket.emit('join_confirmed', {
         playerId: 'spectator_' + socket.id.substring(0, 5),
         playerNumber: 99,
@@ -854,7 +852,6 @@ setInterval(()=>{
 
   gameEngine.updateGameLoop(worldState, applyPowerUpEffect);
 
-  // Pre-fetch next level if needed
   if(!worldState.nextLevelBricks && !isGeneratingLevel){
     generateNextLevelAsync(worldState.level+1);
   }

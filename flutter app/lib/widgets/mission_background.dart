@@ -14,7 +14,6 @@ class MissionControlBackground extends StatelessWidget {
       ),
       child: Stack(
         children: [
-          // Subtle Vignette
           Container(
             decoration: BoxDecoration(
               gradient: RadialGradient(
@@ -22,7 +21,7 @@ class MissionControlBackground extends StatelessWidget {
                 radius: 1.2,
                 colors: [
                   Colors.transparent,
-                  Colors.black.withOpacity(0.6),
+                  Colors.black.withValues(alpha: 0.6),
                 ],
                 stops: const [0.4, 1.0],
               ),
