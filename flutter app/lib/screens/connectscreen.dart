@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/gameservice.dart';
-import '../services/lg_service.dart';
 import '../utils/constants.dart';
 import '../widgets/lgpanel.dart';
 import '../widgets/lgbutton.dart';
@@ -109,34 +108,7 @@ class _ConnectScreenState extends State<ConnectScreen> with SingleTickerProvider
   }
 
   Future<void> _launchRig() async {
-    final address = _ipController.text.trim();
-    final user = _sshUserController.text.trim();
-    final pass = _sshPassController.text.trim();
-
-    if (address.isEmpty || user.isEmpty || pass.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enter IP, SSH User, and Password')),
-      );
-      return;
-    }
-
-    setState(() => _launching = true);
-
-    final lgService = context.read<LgService>();
-    final connected = await lgService.connect(address, user, pass);
-
-    if (!mounted) return;
-    setState(() => _launching = false);
-
-    if (connected) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('SSH Connected! Launching Rig...')),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('SSH Connection Failed')),
-      );
-    }
+    debugPrint('SSH launch removed');
   }
 
   Widget _buildMetric(String label, String value, {Color color = Colors.white}) {
