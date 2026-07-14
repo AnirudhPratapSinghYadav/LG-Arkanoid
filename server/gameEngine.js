@@ -17,7 +17,7 @@ class Player {
     this.id = id;
     this.score = 0;
     this.lives = 3;
-    this.paddleX = 4800;
+    this.paddleX = 2880;
     this.paddleY = 1000;
     this.paddleWidth = 300;
     this.connected = false;
@@ -162,7 +162,7 @@ function checkWallCollision(ball, gameState){
     if(ball.x-ball.radius<=0){
       ball.vx = Math.abs(ball.vx);
     }else{
-      let totalWidth = (gameState.numScreens || 5)*1920;
+      let totalWidth = (gameState.numScreens || 3)*1920;
       if(ball.x+ball.radius>=totalWidth){
         ball.vx = -Math.abs(ball.vx);
       }
@@ -369,7 +369,7 @@ function updateGameLoop(gameState, applyPowerUpEffectCallback){
       }
       
       let mainBall = gameState.balls[0];
-      mainBall.x = ((gameState.numScreens || 5)*1920)/2;
+      mainBall.x = ((gameState.numScreens || 3)*1920)/2;
       mainBall.y = 500;
       mainBall.vx = 3;
       mainBall.vy = 4;
