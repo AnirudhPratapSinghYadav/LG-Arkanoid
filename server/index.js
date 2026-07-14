@@ -275,6 +275,7 @@ function broadcastGameState(){
     lanIp: getLanIp(),
     port: PORT,
     sessionToken: worldState.sessionToken,
+    gameDurationSeconds: worldState.gameDurationSeconds || 180,
   };
   io.emit('game_state', payload);
 }
@@ -624,7 +625,7 @@ io.on('connection', (socket)=>{
     }
     
     worldState.gameStatus = 'countdown';
-    worldState.countdownStartTime = Date.now();
+    worldState.countdownStartedAt = Date.now();
     worldState.gameActive = false;
     worldState.gameDurationSeconds = data?.durationSeconds || 180;
     
@@ -842,7 +843,7 @@ io.on('connection', (socket)=>{
 setInterval(()=>{
   if(worldState.gameStatus!=='playing') return;
 
-  if (worldState.gameStartedAt && worldState.gameDurationSeconds) {
+  if (worldState.gameStartedAt && worldState.gameDurationSeconds > 0) {
     if (Date.now() - worldState.gameStartedAt > worldState.gameDurationSeconds * 1000) {
       worldState.gameStatus = 'time_up';
       broadcastGameState();

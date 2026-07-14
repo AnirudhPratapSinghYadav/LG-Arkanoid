@@ -51,7 +51,7 @@
 <script>
 
 const urlParams = new URLSearchParams(window.location.search);
-const numScreens = parseInt(urlParams.get('numScreens'), 10) || 5;
+const numScreens = parseInt(urlParams.get('numScreens'), 10) || 3;
 const screenId = parseInt(urlParams.get('screenId'), 10) || Math.ceil(numScreens / 2);
 const isCenterScreen = screenId === Math.ceil(numScreens / 2);
 
@@ -626,7 +626,9 @@ class GameScene extends Phaser.Scene {
             }
         }
         
-        this.aiTagText.setPosition(panelX, panelY + panelH + 5);
+        if (screenId === 1) {
+            this.aiTagText.setPosition(bounds.x - 20, bounds.y + bounds.height + 30);
+        }
 
         if (this.currentState.gameStartedAt && this.currentState.gameStatus === 'playing') {
             const elapsed = Math.floor((Date.now() - this.currentState.gameStartedAt) / 1000);
@@ -1002,37 +1004,66 @@ class GameScene extends Phaser.Scene {
         if (!players) return;
 
         this.robotGraphics.clear();
-        const entries = Array.isArray(players) ? players : Object.values(players);
-        
-        let connectedCount = 0;
-        let startX = 1750; // Draw robots on bottom right of the screen
-        let robotY = 1000;
 
-        for (let i = entries.length - 1; i >= 0; i--) {
-            const player = entries[i];
-            if (!player || !player.connected) {
-                if (this.robots[i]) this.robots[i].text.setAlpha(0);
-                continue;
+        // Draw a single persistent robot avatar at the bottom-center of THIS screen
+        const robotX = 960;
+        const robotY = 1050;
+        const robotSize = 40;
+
+        // Robot body (dark rounded rect)
+        this.robotGraphics.fillStyle(0x0d1117, 0.9);
+        this.robotGraphics.fillRoundedRect(robotX - robotSize/2, robotY - robotSize/2, robotSize, robotSize, 10);
+        this.robotGraphics.lineStyle(2, 0x4f7cac, 0.8);
+        this.robotGraphics.strokeRoundedRect(robotX - robotSize/2, robotY - robotSize/2, robotSize, robotSize, 10);
+
+        // Robot eyes
+        this.robotGraphics.fillStyle(0x00e5ff, 0.9);
+        this.robotGraphics.fillCircle(robotX - 8, robotY - 4, 4);
+        this.robotGraphics.fillCircle(robotX + 8, robotY - 4, 4);
+
+        // Robot mouth (small line)
+        this.robotGraphics.lineStyle(2, 0x00e5ff, 0.6);
+        this.robotGraphics.beginPath();
+        this.robotGraphics.moveTo(robotX - 6, robotY + 8);
+        this.robotGraphics.lineTo(robotX + 6, robotY + 8);
+        this.robotGraphics.strokePath();
+
+        // Robot antenna
+        this.robotGraphics.lineStyle(2, 0x4f7cac, 0.6);
+        this.robotGraphics.beginPath();
+        this.robotGraphics.moveTo(robotX, robotY - robotSize/2);
+        this.robotGraphics.lineTo(robotX, robotY - robotSize/2 - 10);
+        this.robotGraphics.strokePath();
+        this.robotGraphics.fillStyle(0x00e5ff, 0.8);
+        this.robotGraphics.fillCircle(robotX, robotY - robotSize/2 - 10, 3);
+
+        // Show the commentary speech bubble from the robot (use robots[0])
+        const robot = this.robots[0];
+        if (robot && robot.text.alpha > 0) {
+            const bubbleText = robot.text.text;
+            if (bubbleText && bubbleText.length > 0) {
+                // Speech bubble background
+                const textWidth = Math.min(bubbleText.length * 8 + 30, 400);
+                const bubbleX = robotX;
+                const bubbleY = robotY - robotSize/2 - 22;
+
+                this.robotGraphics.fillStyle(0x0d1117, 0.95);
+                this.robotGraphics.fillRoundedRect(bubbleX - textWidth/2, bubbleY - 36, textWidth, 30, 8);
+                this.robotGraphics.lineStyle(1, 0x4f7cac, 0.6);
+                this.robotGraphics.strokeRoundedRect(bubbleX - textWidth/2, bubbleY - 36, textWidth, 30, 8);
+
+                // Speech bubble pointer triangle
+                this.robotGraphics.fillStyle(0x0d1117, 0.95);
+                this.robotGraphics.fillTriangle(
+                    bubbleX - 6, bubbleY - 6,
+                    bubbleX + 6, bubbleY - 6,
+                    bubbleX, bubbleY
+                );
+
+                robot.text.setPosition(bubbleX, bubbleY - 21);
+                robot.text.setOrigin(0.5, 0.5);
+                robot.text.setWordWrapWidth(textWidth - 20);
             }
-
-            const playerNumber = player.playerNumber !== undefined ? player.playerNumber : (i + 1);
-            const color = PADDLE_COLORS[(playerNumber - 1) % PADDLE_COLORS.length];
-            const robotTargetX = startX - (connectedCount * 100);
-            
-            this.robotGraphics.fillStyle(0x0d1117, this.robots[i].opacityTarget || 0.7);
-            this.robotGraphics.fillRoundedRect(robotTargetX - 25, robotY - 25, 50, 50, 8);
-            this.robotGraphics.lineStyle(2, color, this.robots[i].opacityTarget || 0.7);
-            this.robotGraphics.strokeRoundedRect(robotTargetX - 25, robotY - 25, 50, 50, 8);
-            
-            this.robotGraphics.fillStyle(0x00e5ff, this.robots[i].opacityTarget || 0.7);
-            this.robotGraphics.fillRect(robotTargetX - 12, robotY - 10, 8, 8);
-            this.robotGraphics.fillRect(robotTargetX + 4, robotY - 10, 8, 8);
-
-            if (this.robots[i].text.alpha > 0) {
-                this.robots[i].text.setPosition(robotTargetX, robotY - 35);
-            }
-            
-            connectedCount++;
         }
     }
 
@@ -1101,12 +1132,6 @@ class GameScene extends Phaser.Scene {
                 message += ' (offline)';
             }
 
-            let robotIdx = 0;
-            if (this.currentState && this.currentState.players) {
-                const idx = this.currentState.players.findIndex(p => p.id === data.playerId);
-                if (idx !== -1) robotIdx = idx;
-            }
-            
             if (data.eventType === 'rank_takeover' && data.playerId) {
                 this._rankSwapHighlightPids = this._rankSwapHighlightPids || {};
                 this._rankSwapHighlightPids[data.playerId] = true;
@@ -1117,9 +1142,14 @@ class GameScene extends Phaser.Scene {
                 }, 1500);
             }
 
-            const robot = this.robots[robotIdx];
+            // Always route commentary to the single persistent robot (robots[0])
+            const robot = this.robots[0];
             if (!robot) return;
             
+            // Store on state so the MISSION ASSISTANT panel on screen 3 can read it
+            if (this.currentState) {
+                this.currentState.lastCommentary = message;
+            }
             robot.text.setText(message);
             this.tweens.killTweensOf([robot]);
             
