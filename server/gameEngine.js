@@ -411,7 +411,7 @@ function updateGameLoop(gameState, applyPowerUpEffectCallback){
         return;
       }
       gameState.currentLevel = gameState.level;
-      gameState.bricks = loadLevel(gameState.level, gameState.nextLevelBricks);
+      gameState.bricks = loadLevel(gameState.level, gameState.nextLevelBricks, gameState.numScreens);
       gameState.nextLevelBricks = null;
     }
 
