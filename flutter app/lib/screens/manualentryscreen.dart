@@ -16,7 +16,7 @@ class ManualEntryScreen extends StatefulWidget {
 
 class _ManualEntryScreenState extends State<ManualEntryScreen> {
   final _tokenController = TextEditingController();
-  final _ipController = TextEditingController(text: '192.168.1.100');
+  final _ipController = TextEditingController();
   final _portController = TextEditingController(text: '3000');
   
   bool _developerMode = false;
@@ -143,10 +143,20 @@ class _ManualEntryScreenState extends State<ManualEntryScreen> {
                               letterSpacing: 1.5,
                             ),
                           ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Using USB debugging? Run "adb reverse tcp:3000 tcp:3000" and use IP 127.0.0.1',
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              color: textSecondary,
+                              height: 1.4,
+                            ),
+                          ),
                           const SizedBox(height: 16),
                           LgTextField(
                             controller: _ipController,
                             label: 'RIG HOST IP ADDRESS',
+                            hint: 'e.g. 192.168.1.42 or 127.0.0.1',
                             keyboardType: TextInputType.datetime,
                           ),
                           const SizedBox(height: 16),

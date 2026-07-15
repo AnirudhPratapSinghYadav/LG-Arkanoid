@@ -1,12 +1,12 @@
 # LG Arkanoid
 
-A multiplayer brick breaker that spans all five screens of a Liquid Galaxy rig as one continuous 9600px wide arcade wall.
+A multiplayer brick breaker that spans all screens of a Liquid Galaxy rig as one continuous panoramic arcade wall.
 
 **Repository:** [github.com/AnirudhPratapSinghYadav/LG-Arkanoid](https://github.com/AnirudhPratapSinghYadav/LG-Arkanoid)
 
 ## What is this
 
-The idea is to take the classic Arkanoid/brick breaker experience and stretch it across the whole Liquid Galaxy panoramic wall instead of confining it to one screen. The five physical screens act as one giant 9600 pixel wide canvas - bricks span across all of them, and the ball can travel freely from Screen 1 all the way to Screen 5 without stuttering or disappearing when it crosses a bezel.
+The idea is to take the classic Arkanoid/brick breaker experience and stretch it across the whole Liquid Galaxy panoramic wall instead of confining it to one screen. The physical screens act as one giant canvas - bricks span across all of them, and the ball can travel freely from Screen 1 all the way to the last screen without stuttering or disappearing when it crosses a bezel.
 
 Up to three players join in using their phones (Android, built with Flutter) as paddle controllers. The phones don't render any game graphics themselves, they're purely input devices - everything actually happens on the rig screens. When the ball crosses from one screen to the next, both screens update in the same frame so it looks seamless, running at 60fps.
 
@@ -20,7 +20,7 @@ The phone app (Flutter) is what each player actually interacts with. It's got a 
 
 The actual game server is Node.js, running on the LG master node. This is the only place that knows the "real" state of the game - ball positions/velocities, the brick grid, paddle positions, scores, lives, session tokens, all of it. It runs a physics loop every 16ms and pushes the updated state out to every connected client 60 times a second.
 
-On the screen side, there's five Chromium windows, each running a Phaser 3 client that only draws its own slice of the 9600px canvas. Important thing here is these clients don't do any actual game logic/physics on their own - they just take whatever state the server sends and draw it. Keeps everything in sync since there's only one source of truth.
+On the screen side, there's multiple Chromium windows, each running a Phaser 3 client that only draws its own slice of the canvas. Important thing here is these clients don't do any actual game logic/physics on their own - they just take whatever state the server sends and draw it. Keeps everything in sync since there's only one source of truth.
 
 And then the Gemini layer - certain events (clearing a level, losing a life, multi ball, score milestones, winning) trigger a call out to Gemini to generate a short line of announcer-style commentary, which shows up on Screen 5 and on the phones. If Gemini's down or rate limited there's a pool of ~20 fallback lines it picks from instead so the game doesn't just go silent.
 
@@ -30,7 +30,7 @@ Honestly the trickiest bit of this whole project was getting the ball to cross b
 
 The way it's handled: the server checks every tick whether the ball's about to cross a boundary, and if so works out where it should land on the next screen over. It then sends out boundary_exit and boundary_enter to the two screens involved at the same time (synchronously, same tick), both screens send back an ack, and if either one doesn't ack within 16ms the server just resends both events once more as a safety net.
 
-End result is the ball doesn't visibly vanish at the bezels and the whole rig feels more like one continuous arcade cabinet instead of five separate screens awkwardly stitched together.
+End result is the ball doesn't visibly vanish at the bezels and the whole rig feels more like one continuous arcade cabinet instead of separate screens awkwardly stitched together.
 
 ## Stack
 
@@ -53,7 +53,7 @@ LG-Arkanoid/
 
 `server/` - the full backend, physics, validation, boundary handoff logic, Gemini integration, all of it.
 
-`web client/` - just one HTML file really, loaded five times with a different screenId param each time.
+`web client/` - just one HTML file really, loaded once per screen with a different screenId param each time.
 
 `flutter app/` - the Android controller app, has connect/controller/status screens.
 
@@ -69,7 +69,7 @@ npm install
 node index.js
 ```
 
-It listens on port 8080, you'll see `LG Arkanoid game server running on port 8080` in the console when it's up.
+It listens on port 3000, you'll see `LG Arkanoid game server running on port 3000` in the console when it's up.
 
 If you want live commentary working, set your Gemini key first:
 
@@ -83,14 +83,14 @@ node index.js
 Open a Chromium window per physical screen (five total):
 
 ```
-http://<master-node-ip>:8080/?screenId=1
-http://<master-node-ip>:8080/?screenId=2
-http://<master-node-ip>:8080/?screenId=3
+http://<master-node-ip>:3000/?screenId=1
+http://<master-node-ip>:3000/?screenId=2
+http://<master-node-ip>:3000/?screenId=3
 ```
 
 (and so on for 4 and 5) - or just use the rig setup (1 master + 2 slaves) that's already configured in the provided VMware image.
 
-Hit S on any screen to kick off a new game. You'll get a 6 digit code shown across the screens for about 10 seconds - Screen 5 tends to be easiest to read it off of.
+Hit S on any screen to kick off a new game. You'll get a 4 letter code shown across the screens for about 10 seconds.
 
 **Connect your phone**
 
@@ -100,7 +100,7 @@ flutter pub get
 flutter run
 ```
 
-Type in the master node's IP, port 8080, and the session code from Screen 5. Drag left/right to move your paddle, there's also Power Up and Fire Ball buttons once you're in.
+Type in the master node's IP, port 3000, and the session code. Drag left/right to move your paddle, there's also Power Up and Fire Ball buttons once you're in.
 
 ## GeminiSoC 2026
 
