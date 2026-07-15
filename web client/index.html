@@ -1199,6 +1199,84 @@ class GameScene extends Phaser.Scene {
 
         this.socket.on('game_started', (data) => {
         });
+
+        // ── Player Joined Notification ──
+        this.socket.on('player_joined', (data) => {
+            const playerName = (data.playerName || 'Player ' + data.playerNumber).toUpperCase();
+            const playerNumber = data.playerNumber || '?';
+            const connectedCount = data.connectedCount || 1;
+
+            // Create toast notification text
+            if (!this.joinToastText) {
+                this.joinToastText = this.add.text(960, -80, '', {
+                    fontFamily: '"VT323", monospace',
+                    fontSize: '48px',
+                    color: '#4ade80',
+                    align: 'center',
+                    backgroundColor: '#0d1117ee',
+                    padding: { x: 40, y: 16 }
+                }).setOrigin(0.5, 0.5).setDepth(500);
+            }
+
+            // Create subtitle text
+            if (!this.joinToastSubText) {
+                this.joinToastSubText = this.add.text(960, -30, '', {
+                    fontFamily: '"Inter"',
+                    fontSize: '20px',
+                    color: '#9AA4AF',
+                    align: 'center'
+                }).setOrigin(0.5, 0.5).setDepth(500);
+            }
+
+            this.joinToastText.setText(`🎮  ${playerName} HAS JOINED!`);
+            this.joinToastSubText.setText(`Player ${playerNumber} · ${connectedCount}/3 Connected`);
+
+            // Animate in
+            this.tweens.killTweensOf(this.joinToastText);
+            this.tweens.killTweensOf(this.joinToastSubText);
+
+            this.joinToastText.setY(-80).setAlpha(1);
+            this.joinToastSubText.setY(-30).setAlpha(1);
+
+            this.tweens.add({
+                targets: this.joinToastText,
+                y: 120,
+                duration: 600,
+                ease: 'Back.easeOut',
+                onComplete: () => {
+                    this.tweens.add({
+                        targets: this.joinToastText,
+                        y: -80,
+                        alpha: 0,
+                        duration: 400,
+                        delay: 3500,
+                        ease: 'Power2'
+                    });
+                }
+            });
+
+            this.tweens.add({
+                targets: this.joinToastSubText,
+                y: 170,
+                duration: 600,
+                ease: 'Back.easeOut',
+                onComplete: () => {
+                    this.tweens.add({
+                        targets: this.joinToastSubText,
+                        y: -30,
+                        alpha: 0,
+                        duration: 400,
+                        delay: 3500,
+                        ease: 'Power2'
+                    });
+                }
+            });
+
+            // Play a join sound
+            this.playBeep(880, 'sine', 0.15, 0.12);
+            setTimeout(() => this.playBeep(1320, 'sine', 0.15, 0.12), 100);
+            setTimeout(() => this.playBeep(1760, 'sine', 0.2, 0.12), 200);
+        });
     }
     playBeep(freq, type, duration, vol) {
         if (!this.audioCtx) {

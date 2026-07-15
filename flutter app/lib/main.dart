@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'services/gameservice.dart';
+import 'services/ttsservice.dart';
 import 'app.dart';
 
 class DevHttpOverrides extends HttpOverrides {
@@ -19,6 +20,7 @@ void main() {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => GameService()),
+        ChangeNotifierProvider<TTSService>(create: (_) => TTSService()),
       ],
       child: const ArkanoidApp(),
     ),
