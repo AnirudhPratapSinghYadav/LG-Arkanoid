@@ -991,10 +991,16 @@ class GameScene extends Phaser.Scene {
                 this[`paddleNameText_${i}`].setVisible(true);
             }
 
-            this.graphics.fillStyle(color, 0.3);
+            let drawAlpha = 1;
+            if (this.lostConnectionPids && this.lostConnectionPids[player.id]) {
+                const elapsed = Date.now() - this.lostConnectionPids[player.id];
+                drawAlpha = 0.3 + (Math.sin(elapsed / 150) * 0.2); // Pulse between 0.1 and 0.5
+            }
+
+            this.graphics.fillStyle(color, 0.3 * drawAlpha);
             this.graphics.fillRoundedRect(localX - 10, 1000 - 10, paddleWidth + 20, 40, 10);
             
-            this.graphics.fillStyle(color, 1);
+            this.graphics.fillStyle(color, drawAlpha);
             this.graphics.fillRoundedRect(localX, 1000, paddleWidth, 20, 6);
         }
     }
@@ -1114,12 +1120,26 @@ class GameScene extends Phaser.Scene {
                 yoyo: true
             });
 
-            this.socket.emit('boundary_ack', { ballId: ballId });
+            this.socket.emit('boundary_ack', { ballId: ballId, handoffId: data.handoffId, screenId: data.screenId });
         });
 
         this.socket.on('boundary_exit', (data) => {
             if (data.screenId !== screenId) return;
-            this.socket.emit('boundary_ack', { ballId: data.ballId });
+            this.socket.emit('boundary_ack', { ballId: data.ballId, handoffId: data.handoffId, screenId: data.screenId });
+        });
+
+        this.socket.on('player_connection_lost', (data) => {
+            this.lostConnectionPids = this.lostConnectionPids || {};
+            this.lostConnectionPids[data.playerId] = Date.now();
+            this.cameras.main.flash(300, 255, 0, 0, false);
+            // Optionally remove them or gray them out
+        });
+
+        this.socket.on('player_disconnected', (data) => {
+            // Remove from lost list if they are fully purged
+            if (this.lostConnectionPids && data.playerId) {
+                delete this.lostConnectionPids[data.playerId];
+            }
         });
 
         this.socket.on('commentary', (data) => {

@@ -87,7 +87,7 @@ function applyGameMasterMod(gameState, modType){
   }
 }
 
-function loadLevel(levelNumber, aiGeneratedGrid = null){
+function loadLevel(levelNumber, aiGeneratedGrid = null, numScreens = 3){
   try {
     let newBricks = [];
     
@@ -114,9 +114,10 @@ function loadLevel(levelNumber, aiGeneratedGrid = null){
       return newBricks;
     }
 
+    let numCols = Math.floor(((numScreens * 1920) - 48) / 144);
     for(let row = 0; row < 8; row++){
       let rowBricks = [];
-      for(let col = 0; col < 65; col++){
+      for(let col = 0; col < numCols; col++){
         let brickType = 'normal';
         let active = true;
         

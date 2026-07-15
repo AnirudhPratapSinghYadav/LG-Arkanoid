@@ -15,8 +15,6 @@ const String defaultServerPort = '3000';
 const int defaultSshPort = 22;
 const String defaultSshUsername = 'lg';
 
-const double maxVirtualX = 9600.0;
-const int defaultNumScreens = 5;
 
 const String prefHost = 'ssh_host';
 const String prefPort = 'ssh_port';

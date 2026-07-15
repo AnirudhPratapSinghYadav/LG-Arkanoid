@@ -35,6 +35,32 @@ class _QrScanScreenState extends State<QrScanScreen> {
         children: [
           MobileScanner(
             controller: controller,
+            errorBuilder: (context, error, child) {
+              return Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.error, color: accentWarning, size: 48),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Camera permission denied.',
+                      style: GoogleFonts.inter(color: Colors.white, fontSize: 16),
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: accentPrimary,
+                        foregroundColor: bgDark,
+                      ),
+                      onPressed: () {
+                        Navigator.pushReplacementNamed(context, '/manualentry');
+                      },
+                      child: const Text('Use Manual Entry'),
+                    ),
+                  ],
+                ),
+              );
+            },
             onDetect: (capture) {
               if (_barcodeFound) return;
               final List<Barcode> barcodes = capture.barcodes;

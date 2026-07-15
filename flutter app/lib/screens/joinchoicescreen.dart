@@ -53,7 +53,7 @@ class JoinChoiceScreen extends StatelessWidget {
                     _buildChoiceCard(
                       context: context,
                       title: 'SCAN LIQUID GALAXY QR',
-                      description: 'Scan display center QR code to join',
+                      description: 'Requires being on the exact same Wi-Fi network',
                       icon: Icons.qr_code_scanner_rounded,
                       onTap: () async {
                         final result = await Navigator.pushNamed(context, '/qrscan');

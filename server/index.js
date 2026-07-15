@@ -33,14 +33,23 @@ function getScreenBoundaries(){
 
 function getLanIp() {
   const nets = os.networkInterfaces();
+  let bestIp = null;
+  let fallbackIp = '127.0.0.1';
+
   for (const name of Object.keys(nets)) {
     for (const net of nets[name]) {
       if (net.family === 'IPv4' && !net.internal) {
-        return net.address;
+        fallbackIp = net.address;
+        const lowerName = name.toLowerCase();
+        if (lowerName.includes('wl') || lowerName.includes('eth') || lowerName.includes('en')) {
+          if (!lowerName.includes('utun') && !lowerName.includes('tailscale') && !lowerName.includes('docker') && !lowerName.includes('veth') && !lowerName.includes('vmnet')) {
+            bestIp = net.address;
+          }
+        }
       }
     }
   }
-  return '127.0.0.1';
+  return bestIp || fallbackIp;
 }
 
 const FALLBACK_COMMENTARY = [
@@ -94,7 +103,7 @@ function createInitialWorldState(){
     state.players.push(p);
   }
   
-  state.bricks = gameEngine.loadLevel(state.level);
+  state.bricks = gameEngine.loadLevel(state.level, null, state.numScreens);
   
   state.sessionId = crypto.randomUUID();
   state.sessionToken = generateToken();
@@ -123,33 +132,11 @@ let worldState = createInitialWorldState();
 const pendingHandoffs = new Map();
 const disconnectTimers = new Map();
 const socketToPlayerIndex = new Map();
+const ipJoinAttempts = new Map();
 
 const app = express();
 
-const certPath = path.join(__dirname, 'cert.pem');
-const keyPath = path.join(__dirname, 'key.pem');
-
-if(!fs.existsSync(certPath) || !fs.existsSync(keyPath)){
-  console.log('Skipping SSL generation for local network debug...');
-  /*
-  try {
-    execFileSync('openssl', ['req', '-nodes', '-new', '-x509', '-keyout', keyPath, '-out', certPath, '-days', '365', '-subj', '/CN=LG-Arkanoid']);
-  } catch(err){
-    console.error('Failed to generate cert via openssl. Falling back to HTTP.', err.message);
-  }
-  */
-}
-
-let server;
-if(fs.existsSync(certPath) && fs.existsSync(keyPath)){
-  server = https.createServer({
-    key: fs.readFileSync(keyPath),
-    cert: fs.readFileSync(certPath)
-  }, app);
-  console.log('SSL certificate loaded. Running over HTTPS/WSS.');
-}else{
-  server = http.createServer(app);
-}
+let server = http.createServer(app);
 
 const io = new Server(server, {
   cors: { origin: '*', methods: ['GET', 'POST'] },
@@ -608,7 +595,7 @@ io.on('connection', (socket)=>{
     clearAllPowerUpTimers();
     worldState.level = 1;
     worldState.currentLevel = 1;
-    worldState.bricks = gameEngine.loadLevel(1);
+    worldState.bricks = gameEngine.loadLevel(1, null, worldState.numScreens);
     
     worldState.longestRally = 0;
     worldState.powerupsCollected = 0;
@@ -653,6 +640,14 @@ io.on('connection', (socket)=>{
   });
 
   socket.on('player_join', (data)=>{
+    const ip = socket.handshake.address;
+    const attempts = ipJoinAttempts.get(ip) || { count: 0, lockedUntil: 0 };
+    
+    if (Date.now() < attempts.lockedUntil) {
+      socket.emit('join_rejected', { errorCode: 1009, message: 'Too many failed attempts. Try again later.' });
+      return;
+    }
+
     const { sessionToken, playerName } = data || {};
 
     if(typeof sessionToken!=='string' || sessionToken.length!==4){
@@ -661,9 +656,19 @@ io.on('connection', (socket)=>{
     }
 
     if(!timingSafeTokenCompare(sessionToken, String(worldState.sessionToken || ''))){
+      attempts.count++;
+      if (attempts.count >= 5) {
+        attempts.lockedUntil = Date.now() + 60000; // Lock for 1 minute
+        attempts.count = 0;
+      }
+      ipJoinAttempts.set(ip, attempts);
+      
       socket.emit('join_rejected', { errorCode: 1001, message: 'Invalid session token' });
       return;
     }
+    
+    // Success, reset attempts for this IP
+    ipJoinAttempts.delete(ip);
 
     const slotIndex = worldState.players.findIndex((p)=>!p.connected);
     if(slotIndex===-1){
@@ -707,6 +712,17 @@ io.on('connection', (socket)=>{
       connectedCount: worldState.players.filter((p)=>p.connected).length,
     });
 
+    broadcastGameState();
+  });
+
+  socket.on('reset_game', (data)=>{
+    const slotIndex = socketToPlayerIndex.get(socket.id);
+    if(slotIndex!==worldState.masterPlayerIndex){
+      socket.emit('error', { errorCode: 1007, message: 'Only the host can reset the game' });
+      return;
+    }
+    resetWorldForNewGame();
+    io.emit('game_reset', { message: 'Game has been reset by the host', sessionId: worldState.sessionId });
     broadcastGameState();
   });
 
@@ -811,6 +827,12 @@ io.on('connection', (socket)=>{
     if(disconnectTimers.has(disconnectedSocketId)){
       clearTimeout(disconnectTimers.get(disconnectedSocketId));
     }
+    
+    io.emit('player_connection_lost', {
+      playerNumber,
+      playerId: player.id,
+      message: 'Connection lost, waiting to reconnect...',
+    });
 
     const timer = setTimeout(()=>{
       disconnectTimers.delete(disconnectedSocketId);
