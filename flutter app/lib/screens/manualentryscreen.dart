@@ -44,19 +44,9 @@ class _ManualEntryScreenState extends State<ManualEntryScreen> {
   }
 
   void _onTitleTap() {
-    setState(() {
-      _developerTaps++;
-      if (_developerTaps >= 5 && !_developerMode) {
-        _developerMode = true;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('DEVELOPER MODE UNLOCKED'),
-            backgroundColor: accentPrimary,
-          ),
-        );
-      }
-    });
+    // Developer mode logic removed, IP/Port inputs always visible.
   }
+
 
   void _onContinue() {
     final token = _tokenController.text.trim().toUpperCase();
@@ -141,32 +131,30 @@ class _ManualEntryScreenState extends State<ManualEntryScreen> {
                             keyboardType: TextInputType.text,
                           ),
                           
-                          if (_developerMode) ...[
-                            const SizedBox(height: 24),
-                            const Divider(color: borderLight),
-                            const SizedBox(height: 16),
-                            Text(
-                              'DEVELOPER OPTIONS',
-                              style: GoogleFonts.spaceGrotesk(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: accentWarning,
-                                letterSpacing: 1.5,
-                              ),
+                          const SizedBox(height: 24),
+                          const Divider(color: borderLight),
+                          const SizedBox(height: 16),
+                          Text(
+                            'SERVER CONNECTION INFO',
+                            style: GoogleFonts.spaceGrotesk(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: accentWarning,
+                              letterSpacing: 1.5,
                             ),
-                            const SizedBox(height: 16),
-                            LgTextField(
-                              controller: _ipController,
-                              label: 'RIG HOST IP ADDRESS',
-                              keyboardType: TextInputType.datetime,
-                            ),
-                            const SizedBox(height: 16),
-                            LgTextField(
-                              controller: _portController,
-                              label: 'RIG SERVER PORT',
-                              keyboardType: TextInputType.number,
-                            ),
-                          ],
+                          ),
+                          const SizedBox(height: 16),
+                          LgTextField(
+                            controller: _ipController,
+                            label: 'RIG HOST IP ADDRESS',
+                            keyboardType: TextInputType.datetime,
+                          ),
+                          const SizedBox(height: 16),
+                          LgTextField(
+                            controller: _portController,
+                            label: 'RIG SERVER PORT',
+                            keyboardType: TextInputType.number,
+                          ),
                         ],
                       ),
                     ),

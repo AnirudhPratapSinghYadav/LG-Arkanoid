@@ -1,3 +1,5 @@
+// Load server-local .env first, then root .env as fallback
+require('dotenv').config({ path: require('path').join(__dirname, '.env') });
 require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 const express = require('express');
 const https = require('https');
@@ -79,8 +81,8 @@ function createInitialWorldState(){
   const state = new gameEngine.GameState();
   
   state.balls = [
-    new gameEngine.Ball('ball1', 4800, 500, 3, 4, BALL_RADIUS),
-    new gameEngine.Ball('ball2', 4800, 500, -3, 4, BALL_RADIUS)
+    new gameEngine.Ball('ball1', 2880, 500, 3, 4, BALL_RADIUS),
+    new gameEngine.Ball('ball2', 2880, 500, -3, 4, BALL_RADIUS)
   ];
   state.balls[1].active = false;
   
@@ -257,6 +259,7 @@ function broadcastGameState(){
     players: worldState.players.map((p, index)=>({
       id: p.id,
       playerNumber: index+1,
+      name: p.name || null,
       paddleX: p.paddleX,
       paddleWidth: p.paddleWidth,
       score: p.score,
@@ -275,6 +278,7 @@ function broadcastGameState(){
     lanIp: getLanIp(),
     port: PORT,
     sessionToken: worldState.sessionToken,
+    masterPlayerIndex: worldState.masterPlayerIndex,
     gameDurationSeconds: worldState.gameDurationSeconds || 180,
   };
   io.emit('game_state', payload);
@@ -694,6 +698,15 @@ io.on('connection', (socket)=>{
       isSpectator: false,
       sessionId: worldState.sessionId,
     });
+
+    // Notify ALL clients (screens + controllers) that a new player has joined
+    io.emit('player_joined', {
+      playerName: player.name,
+      playerNumber: slotIndex+1,
+      playerId: player.id,
+      connectedCount: worldState.players.filter((p)=>p.connected).length,
+    });
+
     broadcastGameState();
   });
 
@@ -950,6 +963,6 @@ setInterval(()=>{
   broadcastGameState();
 }, TICK_MS);
 
-server.listen(PORT, ()=>{
+server.listen(PORT, '0.0.0.0', ()=>{
   console.log(`LG Arkanoid game server running on port ${PORT}`);
 });

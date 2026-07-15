@@ -34,40 +34,54 @@ class GameService extends ChangeNotifier {
   Future<bool> checkHealth(String address, String port) async {
     try {
       final client = HttpClient();
-      client.connectionTimeout = const Duration(milliseconds: 400);
+      client.connectionTimeout = const Duration(milliseconds: 2000);
       final uri = Uri.parse('http://$address:$port/health');
       final req = await client.getUrl(uri);
       final resp = await req.close();
       return resp.statusCode == 200;
     } catch (e) {
-      debugPrint('Health check failed: $e');
+      debugPrint('Health check failed for $address: $e');
       return false;
     }
   }
 
   Future<bool> connect(String address, String port,
-      {Duration timeout = const Duration(seconds: 3)}) async {
+      {Duration timeout = const Duration(seconds: 8)}) async {
     disconnect();
     serverAddress = address;
     serverPort = port;
 
     try {
       final url = 'http://$address:$port';
+      debugPrint('[GameService] Connecting to $url ...');
       socket = io.io(
         url,
         io.OptionBuilder()
-            .setTransports(['websocket'])
-            .enableAutoConnect()
+            .setTransports(['websocket', 'polling'])
+            .disableAutoConnect()
+            .enableForceNew()
+            .enableReconnection()
+            .setReconnectionDelay(1000)
+            .setReconnectionAttempts(5)
             .build(),
       );
 
       socket!.onConnect((_){
+        debugPrint('[GameService] ✅ Socket connected successfully');
         connected = true;
         startLatencyPing();
         if (playerId != null && sessionId != null) {
           socket!.emit('resume_request', {'playerId': playerId, 'sessionId': sessionId});
         }
         notifyListeners();
+      });
+
+      socket!.onConnectError((error){
+        debugPrint('[GameService] ❌ Connect error: $error');
+      });
+
+      socket!.onError((error){
+        debugPrint('[GameService] ❌ Socket error: $error');
       });
 
       socket!.onDisconnect((_){

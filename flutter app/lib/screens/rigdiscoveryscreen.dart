@@ -37,6 +37,7 @@ class _RigDiscoveryScreenState extends State<RigDiscoveryScreen> {
 
     targetIps.add('127.0.0.1');
     targetIps.add('10.0.2.2'); // Default Android emulator host loopback
+    targetIps.add('10.0.3.2'); // Genymotion emulator loopback
 
     try {
       final interfaces = await NetworkInterface.list(
@@ -60,24 +61,28 @@ class _RigDiscoveryScreenState extends State<RigDiscoveryScreen> {
       // Fallback if network interfaces cannot be listed
     }
 
-    final List<String> candidates = targetIps.toList();
+    // We prioritize local loopback / emulator IPs first before scanning the whole subnet
+    final List<String> priorityCandidates = ['127.0.0.1', '10.0.2.2', '10.0.3.2'];
+    final List<String> subnetCandidates = targetIps.where((ip) => !priorityCandidates.contains(ip)).toList();
+    final List<String> allCandidates = [...priorityCandidates, ...subnetCandidates];
+
     final List<String> activeRigs = [];
     
-    // Batch size of 50 to prevent socket exhaustion
-    const int batchSize = 50;
-    for (int i = 0; i < candidates.length; i += batchSize) {
-      final end = (i + batchSize < candidates.length) ? i + batchSize : candidates.length;
-      final batch = candidates.sublist(i, end);
+    // Batch size of 20 to prevent socket exhaustion and false timeouts on Android
+    const int batchSize = 20;
+    for (int i = 0; i < allCandidates.length; i += batchSize) {
+      final end = (i + batchSize < allCandidates.length) ? i + batchSize : allCandidates.length;
+      final batch = allCandidates.sublist(i, end);
 
       final probes = batch.map((ip) {
-        return service.checkHealth(ip, '3000').then((ok) => ok ? ip : null);
+        return service.checkHealth(ip, defaultServerPort).then((ok) => ok ? ip : null);
       });
 
       final results = await Future.wait(probes);
       activeRigs.addAll(results.whereType<String>());
       
       // If we already found a rig, we can stop early to make the process instant!
-      if (activeRigs.isNotEmpty && candidates.length > 50) {
+      if (activeRigs.isNotEmpty) {
         break;
       }
     }
@@ -91,9 +96,16 @@ class _RigDiscoveryScreenState extends State<RigDiscoveryScreen> {
 
     if (_discoveredRigs.length == 1) {
       final rigIp = _discoveredRigs.first;
-      await service.connect(rigIp, '3000');
-      if (mounted) {
+      final connected = await service.connect(rigIp, defaultServerPort);
+      if (mounted && connected) {
         Navigator.pushReplacementNamed(context, '/joinchoice');
+      } else if (mounted) {
+        setState(() {
+          _isSearching = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to connect to discovered rig')),
+        );
       }
     }
   }
@@ -103,9 +115,18 @@ class _RigDiscoveryScreenState extends State<RigDiscoveryScreen> {
       _isSearching = true;
     });
     final service = context.read<GameService>();
-    await service.connect(ip, '3000');
+    final connected = await service.connect(ip, defaultServerPort);
     if (mounted) {
-      Navigator.pushReplacementNamed(context, '/joinchoice');
+      setState(() {
+        _isSearching = false;
+      });
+      if (connected) {
+        Navigator.pushReplacementNamed(context, '/joinchoice');
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Connection failed. Please check IP and ensure server is running.')),
+        );
+      }
     }
   }
 
@@ -288,6 +309,55 @@ class _RigDiscoveryScreenState extends State<RigDiscoveryScreen> {
                         isPrimary: false,
                       ),
                     ],
+
+                    // ── Always-visible skip button ──
+                    const SizedBox(height: 24),
+                    const Divider(color: borderLight),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Or connect manually via USB / hotspot',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: textSecondary,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 12),
+                    LgButton(
+                      label: 'SKIP — ENTER MANUALLY',
+                      onPressed: () {
+                        Navigator.pushReplacementNamed(context, '/joinchoice');
+                      },
+                      isPrimary: false,
+                    ),
+                    const SizedBox(height: 20),
+                    LgPanel(
+                      child: Column(
+                        children: [
+                          const Icon(Icons.usb_rounded, color: accentWarning, size: 24),
+                          const SizedBox(height: 8),
+                          Text(
+                            'USB DEBUGGING?',
+                            style: GoogleFonts.spaceGrotesk(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: accentWarning,
+                              letterSpacing: 1,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Run this on your PC terminal:\nadb reverse tcp:$defaultServerPort tcp:$defaultServerPort\nThen use IP: 127.0.0.1',
+                            style: GoogleFonts.jetBrainsMono(
+                              fontSize: 11,
+                              color: textSecondary,
+                              height: 1.5,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               ),
