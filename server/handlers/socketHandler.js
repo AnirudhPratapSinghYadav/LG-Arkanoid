@@ -139,8 +139,18 @@ function validateMessage(player, timestamp, nonce){
 
 function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameState, getWorldSnapshot) {
   io.on('connection', (socket)=>{
-    const screenId = parseInt(socket.handshake.query.screenId, 10);
-    if(screenId>=1 && screenId<=(worldState.numScreens || 3)){
+    let screenId = parseInt(socket.handshake.query.screenId, 10);
+    if (isNaN(screenId)) {
+      const referer = socket.handshake.headers.referer;
+      if (referer) {
+        const match = referer.match(/\/(\d+)\/?(\?|$)/);
+        if (match) {
+          screenId = parseInt(match[1], 10);
+        }
+      }
+    }
+
+    if(!isNaN(screenId) && screenId>=1 && screenId<=(worldState.numScreens || 3)){
       socket.join(`screen-${screenId}`);
     }
 
