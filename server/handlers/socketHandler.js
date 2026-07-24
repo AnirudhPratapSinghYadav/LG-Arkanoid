@@ -180,10 +180,11 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
       
       const centerX = (worldState.numScreens * 1920) / 2;
       const ballCount = Math.max(3, worldState.maxPlayers || 3);
+      const speedMult = worldState.ballSpeed === 'slow' ? 0.75 : (worldState.ballSpeed === 'fast' ? 1.4 : (worldState.ballSpeed === 'insane' ? 1.8 : 1.0));
       worldState.balls = [];
       for (let b = 0; b < ballCount; b++) {
-        const vxDir = (b % 2 === 0 ? 1 : -1) * (2.5 + (b * 0.8));
-        const vyDir = 3.5 + (b * 0.5);
+        const vxDir = (b % 2 === 0 ? 1 : -1) * (2.5 + (b * 0.8)) * speedMult;
+        const vyDir = (3.5 + (b * 0.5)) * speedMult;
         const ball = new gameEngine.Ball(`ball_${b + 1}`, centerX + ((b - Math.floor(ballCount / 2)) * 120), 500, vxDir, vyDir, BALL_RADIUS);
         ball.active = (b < 2); // First 2 balls start active, others unlocked via Multi-Ball or Game Master
         worldState.balls.push(ball);
@@ -216,6 +217,33 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
               broadcastGameState();
           }
       }, 3000);
+    });
+
+    socket.on('set_game_settings', (data)=>{
+      const slotIndex = socketToPlayerIndex.get(socket.id);
+      if(slotIndex !== worldState.masterPlayerIndex){
+        socket.emit('join_rejected', { errorCode: 1007, message: 'Only the host can configure settings' });
+        return;
+      }
+      const newMax = parseInt(data?.maxPlayers, 10);
+      if(newMax >= 1 && newMax <= 5){
+        worldState.maxPlayers = newMax;
+        while(worldState.players.length < newMax){
+          let p = new gameEngine.Player(null);
+          p.lastNonces = [];
+          worldState.players.push(p);
+        }
+        if(worldState.players.length > newMax){
+          worldState.players = worldState.players.slice(0, newMax);
+        }
+      }
+      if(typeof data?.ballSpeed === 'string'){
+        worldState.ballSpeed = data.ballSpeed;
+      }
+      if(typeof data?.durationSeconds === 'number'){
+        worldState.gameDurationSeconds = data.durationSeconds;
+      }
+      broadcastGameState();
     });
 
     socket.on('set_max_players', (data)=>{

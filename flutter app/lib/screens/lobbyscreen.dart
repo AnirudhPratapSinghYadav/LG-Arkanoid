@@ -22,6 +22,8 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
   Timer? _countdownTimer;
   bool _countdownStarted = false;
   int _selectedDuration = 180;
+  int _selectedMaxPlayers = 3;
+  String _selectedBallSpeed = 'medium';
 
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
@@ -81,6 +83,11 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
   }
 
   void _onStartMatch() {
+    _gameService.setGameSettings(
+      maxPlayers: _selectedMaxPlayers,
+      ballSpeed: _selectedBallSpeed,
+      durationSeconds: _selectedDuration,
+    );
     _gameService.startGame(_selectedDuration);
   }
 
@@ -191,6 +198,71 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
                         if (isHost) ...[
                           const SizedBox(height: 16),
                           Text(
+                            'MAX PLAYERS',
+                            style: GoogleFonts.spaceGrotesk(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: textSecondary,
+                              letterSpacing: 1,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              for (int p = 1; p <= 5; p++)
+                                GestureDetector(
+                                  onTap: () {
+                                    setState(() => _selectedMaxPlayers = p);
+                                    _gameService.setMaxPlayers(p);
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                    decoration: BoxDecoration(
+                                      color: _selectedMaxPlayers == p ? accentPrimary.withValues(alpha: 0.2) : cardFill,
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: _selectedMaxPlayers == p ? accentPrimary : borderLight,
+                                      ),
+                                    ),
+                                    child: Text(
+                                      '$p',
+                                      style: GoogleFonts.spaceGrotesk(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.bold,
+                                        color: _selectedMaxPlayers == p ? textPrimary : textSecondary,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+
+                          Text(
+                            'BALL SPEED',
+                            style: GoogleFonts.spaceGrotesk(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: textSecondary,
+                              letterSpacing: 1,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              _buildSpeedOption('slow', 'SLOW'),
+                              _buildSpeedOption('medium', 'NORM'),
+                              _buildSpeedOption('fast', 'FAST'),
+                              _buildSpeedOption('insane', 'HYPER'),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+
+                          Text(
                             'MATCH DURATION',
                             style: GoogleFonts.spaceGrotesk(
                               fontSize: 12,
@@ -200,7 +272,7 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
                             ),
                             textAlign: TextAlign.center,
                           ),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 8),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                             children: [
@@ -210,7 +282,7 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
                               _buildDurationOption(0, 'ENDLESS'),
                             ],
                           ),
-                          const SizedBox(height: 32),
+                          const SizedBox(height: 28),
                           LgButton(
                             label: 'START MATCH',
                             onPressed: connectedCount >= 1 ? _onStartMatch : null,
@@ -344,6 +416,37 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
               spreadRadius: -2,
             )
           ] : [],
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.spaceGrotesk(
+            fontSize: 12,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+            color: isSelected ? accentPrimary : textSecondary,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSpeedOption(String speed, String label) {
+    final isSelected = _selectedBallSpeed == speed;
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedBallSpeed = speed;
+        });
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? accentPrimary.withValues(alpha: 0.15) : cardFill,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isSelected ? accentPrimary : borderLight,
+            width: isSelected ? 1.5 : 1.0,
+          ),
         ),
         child: Text(
           label,
