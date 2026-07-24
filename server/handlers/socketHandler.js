@@ -225,7 +225,7 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
       }
     });
 
-    socket.on('join_game', (data)=>{
+    const handleJoin = (data)=>{
       const ip = socket.handshake.address;
       let attempts = ipJoinAttempts.get(ip) || { count: 0, lockedUntil: 0 };
       
@@ -303,7 +303,10 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
       });
 
       broadcastGameState();
-    });
+    };
+
+    socket.on('join_game', handleJoin);
+    socket.on('player_join', handleJoin);
 
     socket.on('paddle_move', (data)=>{
       const found = findPlayerBySocket(socket.id, worldState);
