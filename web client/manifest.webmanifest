@@ -1,0 +1,17 @@
+{
+  "name": "LG Arkanoid Controller",
+  "short_name": "Arkanoid",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#080b11",
+  "theme_color": "#080b11",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/assets/lg-logo.png",
+      "sizes": "192x192 512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

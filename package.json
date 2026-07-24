@@ -1,0 +1,15 @@
+{
+  "name": "lg-arkanoid",
+  "version": "1.0.0",
+  "private": true,
+  "description": "LG Arkanoid Game with Phaser.js, Express, Socket.IO and Vite Live Reload Server",
+  "scripts": {
+    "dev": "vite",
+    "server": "npm --prefix server start",
+    "start": "concurrently --names \"SERVER,VITE\" -c \"cyan,magenta\" \"npm run server\" \"npm run dev\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "vite": "^5.4.0"
+  }
+}

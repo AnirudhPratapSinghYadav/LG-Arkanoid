@@ -3,283 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="LG Arkanoid">
+    <link rel="apple-touch-icon" href="/assets/lg-logo.png">
+    <link rel="manifest" href="/manifest.webmanifest">
     <title>Arkanoid LG Controller</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Space+Grotesk:wght@400;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-
-        body {
-            background: #080b11;
-            color: #e8f4f8;
-            font-family: 'Inter', sans-serif;
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-            height: 100dvh;
-            overflow: hidden;
-            touch-action: none;
-            -webkit-user-select: none;
-            user-select: none;
-        }
-
-        /* ── Top HUD Bar ── */
-        .hud-bar {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 8px 16px;
-            background: #1A1F26;
-            border-bottom: 1px solid rgba(255,255,255,0.08);
-        }
-        .hud-player {
-            display: flex; align-items: center; gap: 6px;
-        }
-        .hud-dot {
-            width: 8px; height: 8px; border-radius: 50%;
-            box-shadow: 0 0 6px currentColor;
-        }
-        .hud-label {
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 13px; font-weight: 700;
-        }
-        .hud-status {
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 10px; font-weight: 700;
-            display: flex; align-items: center; gap: 4px;
-        }
-        .hud-ping {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 10px; font-weight: 700; color: #9AA4AF;
-        }
-
-        /* ── Stats Row ── */
-        .stats-row {
-            display: flex; gap: 8px;
-            padding: 8px 16px;
-        }
-        .stat-card {
-            flex: 1;
-            background: #1A1F26;
-            border: 1px solid rgba(255,255,255,0.08);
-            border-radius: 10px;
-            padding: 8px 6px;
-            text-align: center;
-        }
-        .stat-value {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 16px; font-weight: 700;
-        }
-        .stat-label {
-            font-family: 'Inter', sans-serif;
-            font-size: 8px; font-weight: 700;
-            color: #9AA4AF; letter-spacing: 1px;
-            margin-top: 2px;
-        }
-        .stat-icon {
-            font-size: 16px;
-        }
-
-        /* ── Commentary ── */
-        .commentary-bar {
-            padding: 6px 16px;
-            display: none;
-        }
-        .commentary-bar.active { display: block; }
-        .commentary-inner {
-            background: #1A1F26;
-            border: 1px solid rgba(255,255,255,0.08);
-            border-radius: 10px;
-            padding: 8px 14px;
-            display: flex; align-items: center; gap: 10px;
-        }
-        .commentary-text {
-            font-size: 11px; color: #9AA4AF;
-            font-style: italic; flex: 1;
-            overflow: hidden; text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        /* ── Power-Up Buttons ── */
-        .powerups-row {
-            display: flex; gap: 8px;
-            padding: 0 16px;
-        }
-        .powerup-btn {
-            flex: 1;
-            background: rgba(255,255,255,0.04);
-            border: 1.5px solid rgba(255,255,255,0.12);
-            border-radius: 12px;
-            padding: 10px 0;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.15s;
-        }
-        .powerup-btn:active {
-            transform: scale(0.95);
-        }
-        .powerup-btn.on-cooldown {
-            opacity: 0.3;
-            pointer-events: none;
-        }
-        .powerup-btn .pu-icon {
-            font-size: 22px; display: block;
-        }
-        .powerup-btn .pu-label {
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 9px; font-weight: 700;
-            letter-spacing: 1px; margin-top: 4px;
-        }
-
-        /* ── Touch Pad ── */
-        .touch-pad-wrap {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 12px 16px;
-            min-height: 0;
-        }
-        .touch-pad {
-            width: 100%;
-            height: 100%;
-            max-height: 220px;
-            background: #1A1F26;
-            border-radius: 16px;
-            border: 1.5px solid rgba(255,255,255,0.08);
-            position: relative;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-        }
-        .touch-track {
-            position: absolute;
-            width: calc(100% - 100px);
-            height: 4px;
-            border-radius: 2px;
-        }
-        .touch-arrows {
-            position: absolute;
-            font-size: 28px;
-            color: rgba(255,255,255,0.15);
-        }
-        .touch-arrows.left { left: 14px; }
-        .touch-arrows.right { right: 14px; }
-        .touch-label {
-            position: absolute;
-            bottom: 16px;
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 10px;
-            color: rgba(154,164,175,0.4);
-            font-weight: 700;
-            letter-spacing: 3px;
-        }
-        .puck {
-            width: 68px; height: 68px;
-            border-radius: 50%;
-            position: relative; z-index: 2;
-            display: flex; align-items: center; justify-content: center;
-            border: 2px solid rgba(255,255,255,0.7);
-            transition: transform 0.05s linear;
-        }
-        .puck .material-icons-round { font-size: 32px; color: #fff; }
-
-        /* ── Join Screen ── */
-        #joinArea {
-            display: flex; flex-direction: column;
-            align-items: center; justify-content: center;
-            height: 100%; padding: 32px;
-        }
-        #gameArea { display: none; flex-direction: column; height: 100%; }
-        
-        .join-title {
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 28px; color: #20c5ff;
-            letter-spacing: 1px; margin-bottom: 8px;
-        }
-        .join-sub {
-            font-size: 13px; color: #9AA4AF; margin-bottom: 32px;
-        }
-        .join-input {
-            width: 100%; max-width: 320px;
-            padding: 14px 16px; margin: 6px 0;
-            background: #1A1F26;
-            border: 1px solid rgba(255,255,255,0.08);
-            color: #e8f4f8; font-size: 16px;
-            font-family: 'Inter', sans-serif;
-            border-radius: 12px; text-align: center;
-            outline: none;
-            transition: border-color 0.2s, box-shadow 0.2s;
-        }
-        .join-input:focus {
-            border-color: #4F7CAC;
-            box-shadow: 0 0 12px rgba(79,124,172,0.3);
-        }
-        .join-btn {
-            width: 100%; max-width: 320px;
-            margin-top: 20px; padding: 16px;
-            background: #4F7CAC; color: #080b11;
-            border: none; border-radius: 14px;
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 16px; font-weight: 700;
-            letter-spacing: 1px; cursor: pointer;
-            transition: transform 0.1s;
-        }
-        .join-btn:active { transform: scale(0.97); }
-
-        /* ── Game End Overlay ── */
-        .game-end-overlay {
-            position: fixed; top: 0; left: 0;
-            width: 100%; height: 100%;
-            background: rgba(0,0,0,0.92);
-            display: none;
-            flex-direction: column;
-            align-items: center; justify-content: center;
-            z-index: 2000;
-            text-align: center;
-            padding: 32px;
-        }
-        .game-end-overlay.active { display: flex; }
-        .ge-icon { font-size: 72px; color: #F4A261; margin-bottom: 20px; }
-        .ge-title {
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 42px; font-weight: 700;
-            color: #F4A261; letter-spacing: 4px;
-        }
-        .ge-subtitle {
-            font-size: 22px; color: #f3f4f6;
-            font-weight: 600; margin-top: 10px;
-        }
-        .ge-score {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 18px; margin-top: 8px;
-        }
-        .ge-btn {
-            margin-top: 40px; padding: 14px 48px;
-            background: #4F7CAC; color: #080b11;
-            border: none; border-radius: 14px;
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 16px; font-weight: 700;
-            letter-spacing: 1px; cursor: pointer;
-        }
-        .ge-btn:active { transform: scale(0.97); }
-
-        /* ── About Modal ── */
-        .modal {
-            display: none; position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(10,14,20,0.85);
-            justify-content: center; align-items: center;
-            z-index: 3000;
-        }
-        .modal-content {
-            background: #1A1F26; padding: 30px;
-            border-radius: 16px;
-            border: 1px solid rgba(255,255,255,0.1);
-            width: 85%; max-width: 380px; text-align: center;
-        }
-    </style>
+    <link rel="stylesheet" href="css/controller.css">
 </head>
 <body>
 
@@ -298,84 +30,79 @@
         <div class="hud-bar">
             <div class="hud-player">
                 <div class="hud-dot" id="hudDot" style="background:#20c5ff; color:#20c5ff;"></div>
-                <span class="hud-label" id="hudPlayerLabel">P1</span>
+                <div class="hud-label" id="hudPlayerLabel">P1 CONTROLLER</div>
             </div>
-            <div class="hud-status" id="hudStatus" style="color: #4CAF50;">
-                <span style="width:6px;height:6px;border-radius:50%;background:#4CAF50;display:inline-block;"></span>
-                ONLINE
+            <div class="hud-status" id="hudStatus">
+                <span style="width:6px;height:6px;border-radius:50%;background:#4CAF50;display:inline-block;"></span> ONLINE
             </div>
             <div class="hud-ping" id="hudPing">--ms</div>
         </div>
 
         <!-- Stats Row -->
         <div class="stats-row">
-            <div class="stat-card" id="statScore">
-                <span class="stat-icon">⭐</span>
+            <div class="stat-card">
                 <div class="stat-value" id="scoreVal" style="color:#20c5ff;">00000</div>
                 <div class="stat-label">SCORE</div>
             </div>
-            <div class="stat-card" id="statLives">
-                <span class="stat-icon">❤️</span>
+            <div class="stat-card">
                 <div class="stat-value" id="livesVal" style="color:#4CAF50;">3</div>
                 <div class="stat-label">LIVES</div>
             </div>
-            <div class="stat-card" id="statRank">
-                <span class="stat-icon">🏆</span>
+            <div class="stat-card">
                 <div class="stat-value" id="rankVal" style="color:#F4A261;">#1</div>
                 <div class="stat-label">RANK</div>
             </div>
-            <div class="stat-card" id="statTimer">
-                <span class="stat-icon">⏱️</span>
-                <div class="stat-value" id="timerVal" style="color:#fff;">--:--</div>
+            <div class="stat-card">
+                <div class="stat-value" id="timerVal" style="color:#fff;">00:00</div>
                 <div class="stat-label">TIME</div>
             </div>
         </div>
 
-        <!-- Commentary -->
+        <!-- Commentary Bar -->
         <div class="commentary-bar" id="commentaryBar">
             <div class="commentary-inner">
-                <span style="color:#4F7CAC;font-size:16px;">📢</span>
-                <span class="commentary-text" id="commentaryText"></span>
+                <span class="material-icons-round" style="font-size:16px;color:#F4A261;">smart_toy</span>
+                <div class="commentary-text" id="commentaryText">Welcome to Liquid Galaxy Arkanoid!</div>
             </div>
         </div>
 
-        <!-- Power-Ups -->
+        <!-- Power-Up Buttons -->
         <div class="powerups-row">
-            <div class="powerup-btn" id="puWide" onclick="activatePowerUp('wide_paddle')" style="border-color: rgba(76,175,80,0.4); background: rgba(76,175,80,0.08);">
-                <span class="pu-icon" style="color:#4CAF50;">↔️</span>
+            <div class="powerup-btn" onclick="activatePowerUp('wide_paddle')">
+                <span class="pu-icon" style="color:#4CAF50;">unfold_more</span>
                 <div class="pu-label" style="color:#4CAF50;">WIDE</div>
             </div>
-            <div class="powerup-btn" id="puSlow" onclick="activatePowerUp('slow_ball')" style="border-color: rgba(33,150,243,0.4); background: rgba(33,150,243,0.08);">
-                <span class="pu-icon" style="color:#2196F3;">🐌</span>
-                <div class="pu-label" style="color:#2196F3;">SLOW</div>
+            <div class="powerup-btn" onclick="activatePowerUp('slow_ball')">
+                <span class="pu-icon" style="color:#20c5ff;">speed</span>
+                <div class="pu-label" style="color:#20c5ff;">SLOW</div>
             </div>
-            <div class="powerup-btn" id="puMulti" onclick="activatePowerUp('multi_ball')" style="border-color: rgba(255,184,0,0.4); background: rgba(255,184,0,0.08);">
-                <span class="pu-icon" style="color:#FFB800;">✨</span>
-                <div class="pu-label" style="color:#FFB800;">MULTI</div>
+            <div class="powerup-btn" onclick="activatePowerUp('multi_ball')">
+                <span class="pu-icon" style="color:#F4A261;">filter_tilt_shift</span>
+                <div class="pu-label" style="color:#F4A261;">MULTI</div>
             </div>
-            <div class="powerup-btn" id="puBomb" onclick="activatePowerUp('bomb')" style="border-color: rgba(217,83,79,0.4); background: rgba(217,83,79,0.08);">
-                <span class="pu-icon" style="color:#D9534F;">💣</span>
-                <div class="pu-label" style="color:#D9534F;">BOMB</div>
+            <div class="powerup-btn" onclick="activatePowerUp('bomb')">
+                <span class="pu-icon" style="color:#E76F51;">local_fire_department</span>
+                <div class="pu-label" style="color:#E76F51;">BOMB</div>
             </div>
         </div>
 
-        <!-- Touch Pad -->
+        <!-- Touch Pad Drag Strip -->
         <div class="touch-pad-wrap">
             <div class="touch-pad" id="touchPad">
                 <div class="touch-track" id="touchTrack"></div>
-                <span class="touch-arrows left">‹</span>
-                <span class="touch-arrows right">›</span>
-                <div class="touch-label">SLIDE TO MOVE PADDLE</div>
+                <span class="material-icons-round touch-arrows left">chevron_left</span>
+                <span class="material-icons-round touch-arrows right">chevron_right</span>
                 <div class="puck" id="touchPuck">
-                    <span class="material-icons-round">drag_handle</span>
+                    <span class="material-icons-round">drag_indicator</span>
                 </div>
+                <div class="touch-label">DRAG TO MOVE PADDLE</div>
             </div>
         </div>
     </div>
 
     <!-- Game End Overlay -->
     <div class="game-end-overlay" id="gameEndOverlay">
-        <div class="ge-icon">🏆</div>
+        <span class="material-icons-round ge-icon">emoji_events</span>
         <div class="ge-title" id="geTitle">GAME OVER</div>
         <div class="ge-subtitle" id="geSubtitle">Player 1 wins!</div>
         <div class="ge-score" id="geScore" style="color:#20c5ff;"></div>
@@ -395,294 +122,6 @@
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.8.0/socket.io.min.js"></script>
-    <script>
-        let socket;
-        let isConnected = false;
-        let myPlayerId = null;
-        let myPlayerNumber = null;
-        let myScore = 0;
-        let myLives = 3;
-        let myRank = 1;
-        let lastPowerUpTime = 0;
-        let gameEndShown = false;
-        let playerColor = '#20c5ff';
-        const PLAYER_COLORS = ['#20c5ff', '#FF2D78', '#FFB800'];
-
-        function joinGame() {
-            const token = document.getElementById('tokenInput').value.trim().toUpperCase();
-            const playerName = document.getElementById('nameInput').value.trim() || 'Web Player';
-            if (!token || token.length !== 4) return alert('Enter a 4-letter session code');
-
-            socket = io(window.location.origin, {
-                query: { controller: 'true' },
-                transports: ['websocket', 'polling']
-            });
-
-            socket.on('connect', () => {
-                const nonce = Math.random().toString(36).substring(2, 15);
-                socket.emit('player_join', { sessionToken: token, playerName: playerName, timestamp: Date.now(), nonce });
-            });
-
-            socket.on('join_confirmed', (data) => {
-                isConnected = true;
-                myPlayerId = data.playerId;
-                myPlayerNumber = data.playerNumber;
-                playerColor = PLAYER_COLORS[(myPlayerNumber - 1) % PLAYER_COLORS.length];
-                gameEndShown = false;
-
-                document.getElementById('joinArea').style.display = 'none';
-                document.getElementById('gameArea').style.display = 'flex';
-                document.getElementById('hudPlayerLabel').innerText = playerName.toUpperCase() + ' · P' + myPlayerNumber;
-                document.getElementById('hudDot').style.background = playerColor;
-                document.getElementById('hudDot').style.color = playerColor;
-
-                // Set puck color
-                const puck = document.getElementById('touchPuck');
-                puck.style.background = `radial-gradient(circle, ${playerColor}, ${playerColor}88, ${playerColor}33)`;
-                puck.style.boxShadow = `0 0 24px ${playerColor}80`;
-
-                // Set track color
-                document.getElementById('touchTrack').style.background = `linear-gradient(to right, ${playerColor}0D, ${playerColor}66, ${playerColor}0D)`;
-
-                // Set touch pad border glow
-                document.getElementById('touchPad').style.borderColor = playerColor + '40';
-
-                setupTouchControls();
-                startPingLoop();
-
-                if ('speechSynthesis' in window) {
-                    window.speechSynthesis.getVoices();
-                }
-            });
-
-            socket.on('join_rejected', (data) => {
-                alert('Join failed: ' + data.message);
-                socket.disconnect();
-            });
-
-            socket.on('game_state', (state) => {
-                if (!state || !state.players) return;
-
-                // Find my player data
-                const players = state.players;
-                let me = null;
-                for (const p of players) {
-                    if (p.id === myPlayerId) {
-                        me = p;
-                        break;
-                    }
-                }
-
-                if (me) {
-                    myScore = me.score;
-                    myLives = me.lives;
-                    myRank = me.rank || 1;
-
-                    document.getElementById('scoreVal').innerText = String(myScore).padStart(5, '0');
-                    document.getElementById('scoreVal').style.color = playerColor;
-
-                    document.getElementById('livesVal').innerText = myLives;
-                    document.getElementById('livesVal').style.color = myLives <= 1 ? '#D9534F' : '#4CAF50';
-
-                    document.getElementById('rankVal').innerText = '#' + myRank;
-                    document.getElementById('rankVal').style.color = myRank === 1 ? '#F4A261' : '#4F7CAC';
-                }
-
-                // Timer
-                if (state.gameStartedAt && state.gameStatus === 'playing' && state.gameDurationSeconds > 0) {
-                    const elapsed = Math.floor((Date.now() - state.gameStartedAt) / 1000);
-                    const remaining = Math.max(0, state.gameDurationSeconds - elapsed);
-                    const m = String(Math.floor(remaining / 60)).padStart(2, '0');
-                    const s = String(remaining % 60).padStart(2, '0');
-                    document.getElementById('timerVal').innerText = m + ':' + s;
-                    document.getElementById('timerVal').style.color = remaining <= 30 ? '#D9534F' : '#fff';
-                }
-
-                // Game end detection
-                const status = state.gameStatus;
-                if ((status === 'game_over' || status === 'time_up' || status === 'win') && !gameEndShown) {
-                    gameEndShown = true;
-                    const sorted = [...players].sort((a, b) => b.score - a.score);
-                    const winner = sorted[0];
-                    const winnerName = winner ? (winner.name || 'Player ' + winner.playerNumber) : 'Nobody';
-
-                    let title = 'GAME OVER';
-                    if (status === 'time_up') title = "TIME'S UP!";
-                    if (status === 'win') title = 'VICTORY!';
-
-                    document.getElementById('geTitle').innerText = title;
-                    document.getElementById('geSubtitle').innerText = winnerName + ' wins!';
-                    document.getElementById('geScore').innerText = 'Your Score: ' + myScore;
-                    document.getElementById('geRank').innerText = 'Final Rank: #' + myRank;
-                    document.getElementById('gameEndOverlay').classList.add('active');
-
-                    if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
-                }
-            });
-
-            socket.on('commentary', (data) => {
-                if (data && data.text) {
-                    document.getElementById('commentaryText').innerText = data.text;
-                    document.getElementById('commentaryBar').classList.add('active');
-
-                    if ('speechSynthesis' in window) {
-                        const utterance = new SpeechSynthesisUtterance(data.text);
-                        utterance.rate = 1.1;
-                        window.speechSynthesis.speak(utterance);
-                    }
-
-                    // Auto-hide after 6s
-                    setTimeout(() => {
-                        document.getElementById('commentaryBar').classList.remove('active');
-                    }, 6000);
-                }
-            });
-
-            socket.on('disconnect', () => {
-                isConnected = false;
-                const statusEl = document.getElementById('hudStatus');
-                statusEl.style.color = '#D9534F';
-                statusEl.innerHTML = '<span style="width:6px;height:6px;border-radius:50%;background:#D9534F;display:inline-block;"></span> OFFLINE';
-            });
-        }
-
-        function activatePowerUp(type) {
-            if (!socket || !isConnected || !myPlayerId) return;
-            const now = Date.now();
-            if (now - lastPowerUpTime < 5000) return; // Cooldown
-
-            lastPowerUpTime = now;
-            const nonce = Math.random().toString(36).substring(2, 15);
-            socket.emit('power_up_activate', {
-                playerId: myPlayerId,
-                powerUpType: type,
-                timestamp: now,
-                nonce: nonce
-            });
-
-            if (navigator.vibrate) navigator.vibrate(50);
-
-            // Visual cooldown on all buttons
-            document.querySelectorAll('.powerup-btn').forEach(btn => {
-                btn.classList.add('on-cooldown');
-            });
-            setTimeout(() => {
-                document.querySelectorAll('.powerup-btn').forEach(btn => {
-                    btn.classList.remove('on-cooldown');
-                });
-            }, 5000);
-        }
-
-        function backToJoin() {
-            document.getElementById('gameEndOverlay').classList.remove('active');
-            document.getElementById('gameArea').style.display = 'none';
-            document.getElementById('joinArea').style.display = 'flex';
-            gameEndShown = false;
-            if (socket) socket.disconnect();
-            isConnected = false;
-            myPlayerId = null;
-        }
-
-        function startPingLoop() {
-            setInterval(() => {
-                if (socket && socket.connected) {
-                    const start = Date.now();
-                    socket.emit('ping_test', {}, () => {
-                        const latency = Date.now() - start;
-                        document.getElementById('hudPing').innerText = latency + 'ms';
-                    });
-                }
-            }, 3000);
-        }
-
-        function setupTouchControls() {
-            const pad = document.getElementById('touchPad');
-            const puck = document.getElementById('touchPuck');
-            let lastX = 0;
-
-            pad.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                lastX = e.touches[0].clientX;
-            }, { passive: false });
-
-            pad.addEventListener('touchmove', (e) => {
-                e.preventDefault();
-                if (!isConnected) return;
-
-                const currentX = e.touches[0].clientX;
-                const dx = currentX - lastX;
-
-                // Acceleration: faster swipes move more
-                const absDx = Math.abs(dx);
-                const acceleration = 1.0 + Math.min(3.0, absDx / 20.0);
-                const rigDeltaX = dx * acceleration * 12;
-
-                // Visual puck movement
-                let currentTransform = puck.style.transform || 'translateX(0px)';
-                let match = currentTransform.match(/translateX\(([^p]+)px\)/);
-                let currentOffset = match ? parseFloat(match[1]) : 0;
-                currentOffset += dx;
-
-                const maxSlide = pad.clientWidth / 2 - 40;
-                currentOffset = Math.max(-maxSlide, Math.min(maxSlide, currentOffset));
-                puck.style.transform = `translateX(${currentOffset}px)`;
-
-                if (Math.abs(rigDeltaX) > 0) {
-                    const nonce = Math.random().toString(36).substring(2, 15);
-                    socket.emit('paddle_move', {
-                        deltaX: Math.round(rigDeltaX),
-                        timestamp: Date.now(),
-                        nonce
-                    });
-                }
-
-                lastX = currentX;
-            }, { passive: false });
-
-            pad.addEventListener('touchend', () => {
-                puck.style.transform = 'translateX(0px)';
-            });
-
-            // Mouse fallback for desktop testing
-            let mouseDown = false;
-            let mouseLastX = 0;
-
-            pad.addEventListener('mousedown', (e) => {
-                mouseDown = true;
-                mouseLastX = e.clientX;
-            });
-
-            window.addEventListener('mousemove', (e) => {
-                if (!mouseDown || !isConnected) return;
-                const dx = e.clientX - mouseLastX;
-                const absDx = Math.abs(dx);
-                const acceleration = 1.0 + Math.min(3.0, absDx / 20.0);
-                const rigDeltaX = dx * acceleration * 12;
-
-                let currentTransform = puck.style.transform || 'translateX(0px)';
-                let match = currentTransform.match(/translateX\(([^p]+)px\)/);
-                let currentOffset = match ? parseFloat(match[1]) : 0;
-                currentOffset += dx;
-                const maxSlide = pad.clientWidth / 2 - 40;
-                currentOffset = Math.max(-maxSlide, Math.min(maxSlide, currentOffset));
-                puck.style.transform = `translateX(${currentOffset}px)`;
-
-                if (Math.abs(rigDeltaX) > 0) {
-                    const nonce = Math.random().toString(36).substring(2, 15);
-                    socket.emit('paddle_move', {
-                        deltaX: Math.round(rigDeltaX),
-                        timestamp: Date.now(),
-                        nonce
-                    });
-                }
-                mouseLastX = e.clientX;
-            });
-
-            window.addEventListener('mouseup', () => {
-                mouseDown = false;
-                puck.style.transform = 'translateX(0px)';
-            });
-        }
-    </script>
+    <script src="js/controller.js"></script>
 </body>
 </html>

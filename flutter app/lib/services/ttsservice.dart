@@ -30,8 +30,8 @@ class TTSService extends ChangeNotifier {
     await _tts.awaitSpeakCompletion(false);
     await _tts.setLanguage("en-IN");
     await _tts.setVolume(1.0);
-    await _tts.setSpeechRate(0.4);
-    await _tts.setPitch(0.8);
+    await _tts.setSpeechRate(0.2);
+    await _tts.setPitch(0.65);
 
     if (!kIsWeb && (defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.macOS)) {
       await _tts.setSharedInstance(true);
