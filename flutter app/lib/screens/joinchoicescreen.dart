@@ -24,7 +24,14 @@ class JoinChoiceScreen extends StatelessWidget {
                   children: [
                     Column(
                       children: [
-                        Image.asset('assets/lg-logo.png', height: 40),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Image.asset('assets/app_icon_transparent.png', width: 36, height: 36),
+                            const SizedBox(width: 14),
+                            Image.asset('assets/lg-logo.png', height: 32),
+                          ],
+                        ),
                         const SizedBox(height: 16),
                         Text(
                           'LG ARKANOID',

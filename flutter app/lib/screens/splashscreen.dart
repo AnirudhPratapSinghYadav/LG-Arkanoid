@@ -102,7 +102,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                                 Image.asset('assets/lg-logo.png', height: 40),
                               ],
                             ),
-                            const SizedBox(height: 32),
+                            const SizedBox(height: 28),
                             Text(
                               'Liquid Galaxy Arcade Controller',
                               style: GoogleFonts.spaceGrotesk(
@@ -110,6 +110,27 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                                 fontWeight: FontWeight.bold,
                                 color: textPrimary,
                                 letterSpacing: 1.5,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Where AI meets Arkanoid',
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                color: accentPrimary,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 1.0,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Built by Anirudh Pratap Singh Yadav for Liquid Galaxy\npowered by GeminiSOC 2026',
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                color: textSecondary,
+                                height: 1.4,
                               ),
                               textAlign: TextAlign.center,
                             ),

@@ -445,20 +445,39 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Center(
               child: Column(
                 children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Image.asset('assets/app_icon_transparent.png', width: 28, height: 28),
+                      const SizedBox(width: 10),
+                      Image.asset('assets/lg-logo.png', height: 24),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
                   Text(
                     'LG Arkanoid',
                     style: GoogleFonts.spaceGrotesk(
-                      fontSize: 14,
+                      fontSize: 15,
                       fontWeight: FontWeight.w700,
                       color: textPrimary,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Powered by GeminiSoC 2026 - Liquid Galaxy - Anirudh Pratap Singh Yadav',
+                    'Where AI meets Arkanoid',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: accentPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Built by Anirudh Pratap Singh Yadav for Liquid Galaxy\npowered by GeminiSOC 2026',
                     style: GoogleFonts.inter(
                       fontSize: 11,
                       color: textSecondary,
+                      height: 1.4,
                     ),
                     textAlign: TextAlign.center,
                   ),
