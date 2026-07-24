@@ -1,5 +1,16 @@
 import { defineConfig } from 'vite';
 
+// ---------------------------------------------------------------------------
+// Vite development server configuration for LG Arkanoid.
+//
+// This is used only during local development on a laptop/desktop. On the
+// actual Liquid Galaxy rig, Chromium connects directly to the Express
+// server on port 8128 -- Vite is not involved in production at all.
+//
+// The proxy rules forward Socket.IO and health-check requests from the
+// Vite dev server (port 5173) to the Express game server (port 8128).
+// ---------------------------------------------------------------------------
+
 export default defineConfig({
   root: 'web client',
   server: {
@@ -8,12 +19,12 @@ export default defineConfig({
     strictPort: true,
     proxy: {
       '/socket.io': {
-        target: 'http://localhost:3000',
+        target: 'http://localhost:8128',
         ws: true,
         changeOrigin: true
       },
       '/health': {
-        target: 'http://localhost:3000',
+        target: 'http://localhost:8128',
         changeOrigin: true
       }
     }
@@ -24,14 +35,14 @@ export default defineConfig({
       configureServer(server) {
         server.middlewares.use((req, res, next) => {
           const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
-          if (url.pathname === '/') {
-            if (url.searchParams.has('screenId')) {
-              req.url = '/index.html' + url.search;
-            } else {
-              req.url = '/controller.html' + url.search;
-            }
-          } else if (url.pathname === '/screen') {
+
+          // Match numeric screen paths like /1, /2, /3 etc.
+          // Rewrite them to serve index.html (the Phaser game).
+          const screenMatch = url.pathname.match(/^\/(\d+)$/);
+          if (screenMatch) {
             req.url = '/index.html' + url.search;
+          } else if (url.pathname === '/controller') {
+            req.url = '/controller.html' + url.search;
           }
           next();
         });

@@ -1,6 +1,16 @@
-const urlParams = new URLSearchParams(window.location.search);
-const numScreens = parseInt(urlParams.get('numScreens'), 10) || 3;
-const screenId = parseInt(urlParams.get('screenId'), 10) || Math.ceil(numScreens / 2);
+// ---------------------------------------------------------------------------
+// Screen identification.
+//
+// On a Liquid Galaxy rig, the Express server injects window.SCREEN_ID into
+// the HTML via a script tag (e.g. window.SCREEN_ID = 2). This tells the
+// Phaser client which portion of the panoramic virtual world to render.
+//
+// The number of screens (numScreens) is received from the game server via
+// Socket.IO game_state events, but we initialise with a sensible default
+// here so the scene can set up its boundaries before the first state arrives.
+// ---------------------------------------------------------------------------
+const numScreens = (typeof window.NUM_SCREENS !== 'undefined') ? window.NUM_SCREENS : 3;
+const screenId = (typeof window.SCREEN_ID !== 'undefined') ? window.SCREEN_ID : Math.ceil(numScreens / 2);
 const isCenterScreen = screenId === Math.ceil(numScreens / 2);
 
 let SCREEN_BOUNDARIES = [];
@@ -14,7 +24,7 @@ for (let i = 1; i <= numScreens; i++) {
 
 const screenBoundary = SCREEN_BOUNDARIES.find(s => s.screenId === screenId) || SCREEN_BOUNDARIES[0];
 const virtualLeft = screenBoundary.virtualLeft;
-const serverUrl = urlParams.get('server') || window.location.origin;
+const serverUrl = window.location.origin;
 
 const ROW_COLORS = [0x4f7cac, 0x9aa4af, 0xf4a261, 0x4caf50, 0xd9534f, 0x242b35];
 const PADDLE_COLORS = [0x4f7cac, 0xf4a261, 0x4caf50];
