@@ -1,21 +1,6 @@
 #!/bin/bash
-# ---------------------------------------------------------------------------
-# open-arkanoid.sh
-#
-# Launch script for the LG Arkanoid game across a Liquid Galaxy rig.
-# This script starts the Node.js game server via pm2 and opens Chromium
-# in kiosk mode on each screen of the rig. Screen 1 (the master) is
-# opened locally; screens 2+ are opened on their respective slave
-# machines via sshpass/SSH.
-#
-# Usage:
-#   bash open-arkanoid.sh <number_of_screens>
-#
-# Environment:
-#   LG_PASSWORD  -- the SSH password for all lg@lgN machines
-# ---------------------------------------------------------------------------
-
-# -- Validate arguments -------------------------------------------------------
+# LG Arkanoid Launcher Script
+# Usage: bash open-arkanoid.sh <number_of_screens>
 
 NUM_SCREENS=$1
 
@@ -37,30 +22,23 @@ fi
 
 if [ -z "$LG_PASSWORD" ]; then
   echo "Error: LG_PASSWORD environment variable is not set."
-  echo "Set it first, for example: export LG_PASSWORD='your_password'"
+  echo "Set it first: export LG_PASSWORD='your_password'"
   exit 1
 fi
 
-# -- Start the game server via pm2 if it is not already running ----------------
-
-# Check whether pm2 already has a process called lg-arkanoid.
-# If it does, we skip starting it again to avoid duplicate processes.
+# Start pm2 server if not running
 if pm2 describe lg-arkanoid > /dev/null 2>&1; then
-  echo "Game server is already running under pm2 (lg-arkanoid). Skipping start."
+  echo "Server already running under pm2."
 else
-  echo "Starting the LG Arkanoid game server via pm2..."
+  echo "Starting game server..."
   pm2 start ~/projects/LG-Arkanoid/server/index.js --name lg-arkanoid
 fi
 
-# Give the server a moment to bind to its port before we open browsers.
 sleep 2
 
-# -- Open Chromium on each screen of the rig -----------------------------------
-
+# Open Chromium across rig displays
 for i in $(seq 1 "$NUM_SCREENS"); do
-
   if [ "$i" -eq 1 ]; then
-    # Screen 1 is the master machine. Open Chromium locally.
     echo "Opening Chromium on master (screen 1)..."
     chromium-browser \
       --window-position=0,0 \
@@ -69,10 +47,7 @@ for i in $(seq 1 "$NUM_SCREENS"); do
       --no-first-run \
       --disable-infobars \
       "http://localhost:8128/1" &
-
   else
-    # Screens 2+ are slave machines named lg2, lg3, etc.
-    # We use sshpass to supply the password non-interactively.
     echo "Opening Chromium on slave lg$i (screen $i)..."
     sshpass -p "$LG_PASSWORD" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
       lg@lg"$i" \
@@ -84,7 +59,6 @@ for i in $(seq 1 "$NUM_SCREENS"); do
         --disable-infobars \
         'http://lg1:8128/$i' &" &
   fi
-
 done
 
-echo "All $NUM_SCREENS screens launched."
+echo "Launched $NUM_SCREENS screens successfully."

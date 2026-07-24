@@ -1,15 +1,4 @@
-// ---------------------------------------------------------------------------
-// settingsscreen.dart
-//
-// The settings screen for the LG Arkanoid Flutter controller app. This
-// screen lets the user configure the SSH connection to the Liquid Galaxy
-// master machine, set the number of screens on the rig, toggle TTS, and
-// test the SSH connection before launching the game.
-//
-// All credential fields persist across app restarts. The SSH password is
-// stored securely via flutter_secure_storage; all other values use
-// SharedPreferences.
-// ---------------------------------------------------------------------------
+// Liquid Galaxy Rig Settings Screen
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
