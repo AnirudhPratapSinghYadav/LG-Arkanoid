@@ -69,7 +69,7 @@ npm install
 node index.js
 ```
 
-It listens on port 3000, you'll see `LG Arkanoid game server running on port 3000` in the console when it's up.
+It listens on port 8128, you'll see `LG Arkanoid game server running on port 8128` in the console when it's up.
 
 If you want live commentary working, set your Gemini key first:
 
@@ -80,15 +80,15 @@ node index.js
 
 **Get the screens up**
 
-Open a Chromium window per physical screen (five total):
+Open a Chromium window per physical screen (or launch automatically via `Bash/open-arkanoid.sh <num_screens>`):
 
 ```
-http://<master-node-ip>:3000/?screenId=1
-http://<master-node-ip>:3000/?screenId=2
-http://<master-node-ip>:3000/?screenId=3
+http://<master-node-ip>:8128/1
+http://<master-node-ip>:8128/2
+http://<master-node-ip>:8128/3
 ```
 
-(and so on for 4 and 5) - or just use the rig setup (1 master + 2 slaves) that's already configured in the provided VMware image.
+(and so on for 4 and 5 up to 9) - or launch using the provided Liquid Galaxy shell scripts.
 
 Hit S on any screen to kick off a new game. You'll get a 4 letter code shown across the screens for about 10 seconds.
 
@@ -100,7 +100,7 @@ flutter pub get
 flutter run
 ```
 
-Type in the master node's IP, port 3000, and the session code. Drag left/right to move your paddle, there's also Power Up and Fire Ball buttons once you're in.
+Type in the master node's IP, port 8128, and the session code. Drag left/right to move your paddle, there's also Power Up and Fire Ball buttons once you're in.
 
 ## Testing on iPhone
 
@@ -111,7 +111,7 @@ From the project root directory, run:
 ```bash
 npm start
 ```
-This single command runs both the Node.js backend server (`0.0.0.0:3000`) and the Vite live-reload dev server (`0.0.0.0:5173`) concurrently.
+This single command runs both the Node.js backend server (`0.0.0.0:8128`) and the Vite live-reload dev server (`0.0.0.0:5173`) concurrently.
 
 ### 2. Find Your Laptop IP Address
 Open PowerShell / Command Prompt and run:
@@ -134,7 +134,7 @@ Make sure your iPhone is connected to the **same Wi-Fi network**.
 
 - **Game Screen Preview:**
   Open Safari (or desktop browser) and navigate to:
-  `http://<YOUR-LAPTOP-IP>:5173/screen?screenId=1`
+  `http://<YOUR-LAPTOP-IP>:5173/1`
 
 - **Live Reload:**
   Every time you save a code change in `web client/` (HTML/CSS/JS), the browser on your iPhone automatically reloads immediately!
@@ -151,7 +151,7 @@ To run the web controller full-screen like a native iOS app:
 If Safari cannot reach the server:
 - Open **Windows Defender Firewall** -> **Allow an app or feature through Windows Defender Firewall**.
 - Ensure **Node.js JavaScript Runtime** is allowed for **Private** (and Public if on home/work Wi-Fi) networks.
-- Or allow incoming TCP connections on ports **5173** and **3000**.
+- Or allow incoming TCP connections on ports **5173** and **8128**.
 
 
 ## GeminiSoC 2026
