@@ -991,7 +991,7 @@ class GameScene extends Phaser.Scene {
         this.robotGraphics.fillCircle(robotX, robotY - robotSize/2 - 10, 3);
 
         const robot = this.robots[0];
-        if (robot && robot.text.alpha > 0) {
+        if (robot && robot.text && robot.text.visible && robot.text.alpha > 0) {
             const bubbleText = robot.text.text;
             if (bubbleText && bubbleText.length > 0) {
                 const textWidth = Math.min(bubbleText.length * 8 + 30, 400);
