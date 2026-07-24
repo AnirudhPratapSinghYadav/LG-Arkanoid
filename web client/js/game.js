@@ -273,28 +273,36 @@ class GameScene extends Phaser.Scene {
             this.attractTime = 0;
         }
         this.attractModeGraphics.clear();
-        this.attractTime += 0.05;
+        this.attractTime += 0.04;
         
-        for(let i=0; i<15; i++) {
-            const angle = this.attractTime + (i * 0.4);
-            const radius = 200 + Math.sin(this.attractTime * 0.5 + i) * 50;
+        // Panoramic animated starfield / particle mesh
+        for(let i = 0; i < 30; i++) {
+            const angle = this.attractTime * 0.8 + (i * 0.25);
+            const radius = 220 + Math.sin(this.attractTime * 0.6 + i) * 80;
             const px = 960 + Math.cos(angle) * radius;
-            const py = 540 + Math.sin(angle) * radius;
+            const py = 540 + Math.sin(angle * 0.7) * (radius * 0.6);
             
-            this.attractModeGraphics.fillStyle(0x00e5ff, 0.5);
-            this.attractModeGraphics.fillCircle(px, py, 4);
+            const hueAlpha = 0.4 + Math.sin(this.attractTime + i) * 0.3;
+            this.attractModeGraphics.fillStyle(i % 2 === 0 ? 0x00e5ff : 0x20c5ff, Math.max(0.1, hueAlpha));
+            this.attractModeGraphics.fillCircle(px, py, 3 + (i % 4));
         }
 
         if (isCenterScreen) {
             if (!this.bootTitleText) {
-                this.bootTitleText = this.add.text(960, 480, 'LIQUID GALAXY\nARKANOID', {
-                    fontFamily: '"Space Grotesk"', fontSize: '80px', fill: '#20c5ff', align: 'center', fontWeight: 'bold'
+                this.bootTitleText = this.add.text(960, 440, 'LIQUID GALAXY\nARKANOID', {
+                    fontFamily: '"Space Grotesk"', fontSize: '84px', fill: '#20c5ff', align: 'center', fontWeight: 'bold'
                 }).setOrigin(0.5, 0.5);
-                this.bootLoadingText = this.add.text(960, 600, 'Loading assets...', {
-                    fontFamily: '"Inter"', fontSize: '24px', fill: '#ffffff', letterSpacing: 8
+                
+                this.bootSubTitleText = this.add.text(960, 560, 'WHERE AI MEETS ARKANOID', {
+                    fontFamily: '"Space Grotesk"', fontSize: '22px', fill: '#00e5ff', letterSpacing: 6, fontWeight: 'bold'
+                }).setOrigin(0.5, 0.5);
+
+                this.bootLoadingText = this.add.text(960, 620, 'Powered by GeminiSoC 2026 · Liquid Galaxy', {
+                    fontFamily: '"Inter"', fontSize: '18px', fill: '#9aa4af', letterSpacing: 3
                 }).setOrigin(0.5, 0.5);
             }
             this.bootTitleText.setVisible(true);
+            if (this.bootSubTitleText) this.bootSubTitleText.setVisible(true);
             this.bootLoadingText.setVisible(true);
         }
     }
@@ -302,6 +310,7 @@ class GameScene extends Phaser.Scene {
     hideAttractMode() {
         if (this.attractModeGraphics) this.attractModeGraphics.clear();
         if (this.bootTitleText) this.bootTitleText.setVisible(false);
+        if (this.bootSubTitleText) this.bootSubTitleText.setVisible(false);
         if (this.bootLoadingText) this.bootLoadingText.setVisible(false);
     }
     

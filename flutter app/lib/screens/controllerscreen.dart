@@ -18,6 +18,8 @@ class ControllerScreen extends StatefulWidget {
 class _ControllerScreenState extends State<ControllerScreen>
     with TickerProviderStateMixin {
   double _puckPosition = 0.0;
+  String _controlMode = 'touch'; // 'touch' or 'dpad'
+  Timer? _dpadRepeatTimer;
 
   // Power-up cooldown tracking
   DateTime? _lastPowerUpTime;
@@ -57,10 +59,27 @@ class _ControllerScreenState extends State<ControllerScreen>
 
   @override
   void dispose() {
+    _dpadRepeatTimer?.cancel();
     context.read<GameService>().removeListener(_onGameStateUpdate);
     _pulseController.dispose();
     _glowController.dispose();
     super.dispose();
+  }
+
+  void _startDpadMovement(double stepDelta) {
+    HapticFeedback.selectionClick();
+    context.read<GameService>().sendPaddleMove(stepDelta);
+    _dpadRepeatTimer?.cancel();
+    _dpadRepeatTimer = Timer.periodic(const Duration(milliseconds: 30), (_) {
+      if (mounted) {
+        context.read<GameService>().sendPaddleMove(stepDelta);
+      }
+    });
+  }
+
+  void _stopDpadMovement() {
+    _dpadRepeatTimer?.cancel();
+    _dpadRepeatTimer = null;
   }
 
   void _onGameStateUpdate() {
@@ -412,87 +431,257 @@ class _ControllerScreenState extends State<ControllerScreen>
 
                   const SizedBox(height: 12),
 
-                  // ── Main Touch Controller ──
-                  GestureDetector(
-                    onPanUpdate: (details) =>
-                        _onPanUpdate(details, screenWidth),
-                    onPanEnd: _onPanEnd,
-                    child: AnimatedBuilder(
-                      animation: _glowAnimation,
-                      builder: (context, child) {
-                        return Container(
-                          width: double.infinity,
-                          height: 200,
-                          margin: const EdgeInsets.symmetric(horizontal: 16),
-                          decoration: BoxDecoration(
-                            color: cardFill,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: playerColor
-                                  .withValues(alpha: _glowAnimation.value),
-                              width: 1.5,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: playerColor.withValues(
-                                    alpha: _glowAnimation.value * 0.3),
-                                blurRadius: 20,
-                                spreadRadius: -5,
-                              ),
-                            ],
-                          ),
-                          child: Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              // Track line
-                              Container(
-                                width: double.infinity,
-                                height: 4,
-                                margin:
-                                    const EdgeInsets.symmetric(horizontal: 50),
+                  // ── Control Mode Selector ──
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: cardFill,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: borderLight),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => setState(() => _controlMode = 'touch'),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(vertical: 8),
                                 decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      playerColor.withValues(alpha: 0.05),
-                                      playerColor.withValues(alpha: 0.4),
-                                      playerColor.withValues(alpha: 0.05),
-                                    ],
-                                  ),
-                                  borderRadius: BorderRadius.circular(2),
-                                ),
-                              ),
-
-                              // Left/Right arrows
-                              Positioned(
-                                left: 16,
-                                child: Icon(
-                                  Icons.chevron_left_rounded,
-                                  color: playerColor.withValues(alpha: 0.3),
-                                  size: 32,
-                                ),
-                              ),
-                              Positioned(
-                                right: 16,
-                                child: Icon(
-                                  Icons.chevron_right_rounded,
-                                  color: playerColor.withValues(alpha: 0.3),
-                                  size: 32,
-                                ),
-                              ),
-
-                              // Label
-                              Positioned(
-                                bottom: 20,
-                                child: Text(
-                                  'SLIDE TO MOVE PADDLE',
-                                  style: GoogleFonts.spaceGrotesk(
-                                    fontSize: 10,
-                                    color: textSecondary.withValues(alpha: 0.4),
-                                    fontWeight: FontWeight.bold,
-                                    letterSpacing: 3,
+                                  color: _controlMode == 'touch' ? playerColor.withValues(alpha: 0.2) : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: _controlMode == 'touch' ? playerColor : Colors.transparent,
+                                    width: 1,
                                   ),
                                 ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.touch_app_rounded, size: 16, color: _controlMode == 'touch' ? playerColor : textSecondary),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'DRAG STRIP',
+                                      style: GoogleFonts.spaceGrotesk(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: _controlMode == 'touch' ? textPrimary : textSecondary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => setState(() => _controlMode = 'dpad'),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: _controlMode == 'dpad' ? playerColor.withValues(alpha: 0.2) : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: _controlMode == 'dpad' ? playerColor : Colors.transparent,
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.gamepad_rounded, size: 16, color: _controlMode == 'dpad' ? playerColor : textSecondary),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'D-PAD ARROWS',
+                                      style: GoogleFonts.spaceGrotesk(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: _controlMode == 'dpad' ? textPrimary : textSecondary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  // ── Main Controller (Touch Drag or D-Pad) ──
+                  if (_controlMode == 'dpad')
+                    Container(
+                      width: double.infinity,
+                      height: 200,
+                      margin: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Listener(
+                              onPointerDown: (_) => _startDpadMovement(-24.0),
+                              onPointerUp: (_) => _stopDpadMovement(),
+                              onPointerCancel: (_) => _stopDpadMovement(),
+                              child: AnimatedBuilder(
+                                animation: _glowAnimation,
+                                builder: (context, child) {
+                                  return Container(
+                                    decoration: BoxDecoration(
+                                      color: cardFill,
+                                      borderRadius: BorderRadius.circular(16),
+                                      border: Border.all(color: playerColor.withValues(alpha: _glowAnimation.value), width: 1.5),
+                                      boxShadow: [
+                                        BoxShadow(color: playerColor.withValues(alpha: _glowAnimation.value * 0.3), blurRadius: 15),
+                                      ],
+                                    ),
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.arrow_back_ios_new_rounded, size: 48, color: playerColor),
+                                        const SizedBox(height: 12),
+                                        Text(
+                                          'HOLD LEFT',
+                                          style: GoogleFonts.spaceGrotesk(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                            color: textPrimary,
+                                            letterSpacing: 2,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Listener(
+                              onPointerDown: (_) => _startDpadMovement(24.0),
+                              onPointerUp: (_) => _stopDpadMovement(),
+                              onPointerCancel: (_) => _stopDpadMovement(),
+                              child: AnimatedBuilder(
+                                animation: _glowAnimation,
+                                builder: (context, child) {
+                                  return Container(
+                                    decoration: BoxDecoration(
+                                      color: cardFill,
+                                      borderRadius: BorderRadius.circular(16),
+                                      border: Border.all(color: playerColor.withValues(alpha: _glowAnimation.value), width: 1.5),
+                                      boxShadow: [
+                                        BoxShadow(color: playerColor.withValues(alpha: _glowAnimation.value * 0.3), blurRadius: 15),
+                                      ],
+                                    ),
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.arrow_forward_ios_rounded, size: 48, color: playerColor),
+                                        const SizedBox(height: 12),
+                                        Text(
+                                          'HOLD RIGHT',
+                                          style: GoogleFonts.spaceGrotesk(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                            color: textPrimary,
+                                            letterSpacing: 2,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  else
+                    GestureDetector(
+                      onPanUpdate: (details) =>
+                          _onPanUpdate(details, screenWidth),
+                      onPanEnd: _onPanEnd,
+                      child: AnimatedBuilder(
+                        animation: _glowAnimation,
+                        builder: (context, child) {
+                          return Container(
+                            width: double.infinity,
+                            height: 200,
+                            margin: const EdgeInsets.symmetric(horizontal: 16),
+                            decoration: BoxDecoration(
+                              color: cardFill,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: playerColor
+                                    .withValues(alpha: _glowAnimation.value),
+                                width: 1.5,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: playerColor.withValues(
+                                      alpha: _glowAnimation.value * 0.3),
+                                  blurRadius: 20,
+                                  spreadRadius: -5,
+                                ),
+                              ],
+                            ),
+                            child: Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                // Track line
+                                Container(
+                                  width: double.infinity,
+                                  height: 4,
+                                  margin:
+                                      const EdgeInsets.symmetric(horizontal: 50),
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        playerColor.withValues(alpha: 0.05),
+                                        playerColor.withValues(alpha: 0.4),
+                                        playerColor.withValues(alpha: 0.05),
+                                      ],
+                                    ),
+                                    borderRadius: BorderRadius.circular(2),
+                                  ),
+                                ),
+
+                                // Left/Right arrows
+                                Positioned(
+                                  left: 16,
+                                  child: Icon(
+                                    Icons.chevron_left_rounded,
+                                    color: playerColor.withValues(alpha: 0.3),
+                                    size: 32,
+                                  ),
+                                ),
+                                Positioned(
+                                  right: 16,
+                                  child: Icon(
+                                    Icons.chevron_right_rounded,
+                                    color: playerColor.withValues(alpha: 0.3),
+                                    size: 32,
+                                  ),
+                                ),
+
+                                // Label
+                                Positioned(
+                                  bottom: 20,
+                                  child: Text(
+                                    'SLIDE TO MOVE PADDLE',
+                                    style: GoogleFonts.spaceGrotesk(
+                                      fontSize: 10,
+                                      color: textSecondary.withValues(alpha: 0.4),
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 3,
+                                    ),
+                                  ),
+                                ),
 
                               // Puck
                               Transform.translate(
