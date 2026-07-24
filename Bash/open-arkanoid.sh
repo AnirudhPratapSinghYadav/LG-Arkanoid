@@ -25,9 +25,20 @@ if [ -z "$NUM_SCREENS" ]; then
   exit 1
 fi
 
+if ! [[ "$NUM_SCREENS" =~ ^[0-9]+$ ]]; then
+  echo "Error: <number_of_screens> must be numeric."
+  exit 1
+fi
+
+if [ "$NUM_SCREENS" -lt 1 ] || [ "$NUM_SCREENS" -gt 9 ]; then
+  echo "Error: number_of_screens must be in range 1..9."
+  exit 1
+fi
+
 if [ -z "$LG_PASSWORD" ]; then
-  echo "Warning: LG_PASSWORD environment variable is not set."
-  echo "SSH connections to slave machines will fail without it."
+  echo "Error: LG_PASSWORD environment variable is not set."
+  echo "Set it first, for example: export LG_PASSWORD='your_password'"
+  exit 1
 fi
 
 # -- Start the game server via pm2 if it is not already running ----------------
@@ -63,7 +74,8 @@ for i in $(seq 1 "$NUM_SCREENS"); do
     # Screens 2+ are slave machines named lg2, lg3, etc.
     # We use sshpass to supply the password non-interactively.
     echo "Opening Chromium on slave lg$i (screen $i)..."
-    sshpass -p "$LG_PASSWORD" ssh -t lg@lg"$i" \
+    sshpass -p "$LG_PASSWORD" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+      lg@lg"$i" \
       "DISPLAY=:0 chromium-browser \
         --window-position=0,0 \
         --window-size=1920,1080 \
