@@ -61,63 +61,97 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
       body: AnimatedBuilder(
         animation: _controller,
         builder: (context, child) {
-          return Opacity(
-            opacity: _fadeScreen.value,
-            child: Center(
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  if (_logoOpacity.value == 0.0)
-                    Opacity(
-                      opacity: _dotOpacity.value,
-                      child: Transform.scale(
-                        scale: _dotScale.value,
-                        child: Container(
-                          width: 8,
-                          height: 8,
-                          decoration: BoxDecoration(
-                            color: accentPrimary,
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(color: accentPrimary.withValues(alpha: 0.5), blurRadius: 10)
-                            ],
+          return Stack(
+            children: [
+              // The main splash content with fade animation.
+              Opacity(
+                opacity: _fadeScreen.value,
+                child: Center(
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      if (_logoOpacity.value == 0.0)
+                        Opacity(
+                          opacity: _dotOpacity.value,
+                          child: Transform.scale(
+                            scale: _dotScale.value,
+                            child: Container(
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                color: accentPrimary,
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(color: accentPrimary.withValues(alpha: 0.5), blurRadius: 10)
+                                ],
+                              ),
+                            ),
                           ),
                         ),
-                      ),
-                    ),
-                  
-                  Opacity(
-                    opacity: _logoOpacity.value,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Row(
+                      
+                      Opacity(
+                        opacity: _logoOpacity.value,
+                        child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Image.asset('assets/app_icon_transparent.png', width: 64, height: 64),
-                            const SizedBox(width: 24),
-                            Image.asset('assets/lg-logo.png', height: 40),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Image.asset('assets/app_icon_transparent.png', width: 64, height: 64),
+                                const SizedBox(width: 24),
+                                Image.asset('assets/lg-logo.png', height: 40),
+                              ],
+                            ),
+                            const SizedBox(height: 32),
+                            Text(
+                              'Liquid Galaxy Arcade Controller',
+                              style: GoogleFonts.spaceGrotesk(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: textPrimary,
+                                letterSpacing: 1.5,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 16),
+                            _DotDotDot(),
                           ],
                         ),
-                        const SizedBox(height: 32),
-                        Text(
-                          'Liquid Galaxy Arcade Controller',
-                          style: GoogleFonts.spaceGrotesk(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: textPrimary,
-                            letterSpacing: 1.5,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 16),
-                        _DotDotDot(),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
-            ),
+
+              // GeminiSoC badge in the top-right corner, always visible.
+              Positioned(
+                top: MediaQuery.of(context).padding.top + 12,
+                right: 14,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      'GeminiSoC 2026',
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      textAlign: TextAlign.right,
+                    ),
+                    Text(
+                      'Liquid Galaxy',
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      textAlign: TextAlign.right,
+                    ),
+                  ],
+                ),
+              ),
+            ],
           );
         },
       ),
