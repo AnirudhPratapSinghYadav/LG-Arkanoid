@@ -179,14 +179,14 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
       worldState.currentCombo = 0;
       
       const centerX = (worldState.numScreens * 1920) / 2;
-      const ballCount = Math.max(3, worldState.maxPlayers || 3);
+      const ballCount = Math.max(1, worldState.maxPlayers || 3);
       const speedMult = worldState.ballSpeed === 'slow' ? 0.75 : (worldState.ballSpeed === 'fast' ? 1.4 : (worldState.ballSpeed === 'insane' ? 1.8 : 1.0));
       worldState.balls = [];
       for (let b = 0; b < ballCount; b++) {
         const vxDir = (b % 2 === 0 ? 1 : -1) * (2.5 + (b * 0.8)) * speedMult;
         const vyDir = (3.5 + (b * 0.5)) * speedMult;
         const ball = new gameEngine.Ball(`ball_${b + 1}`, centerX + ((b - Math.floor(ballCount / 2)) * 120), 500, vxDir, vyDir, BALL_RADIUS);
-        ball.active = (b < 2); // First 2 balls start active, others unlocked via Multi-Ball or Game Master
+        ball.active = (b < Math.min(2, ballCount)); // Start active balls capped by total ballCount
         worldState.balls.push(ball);
       }
       
@@ -235,6 +235,9 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
         }
         if(worldState.players.length > newMax){
           worldState.players = worldState.players.slice(0, newMax);
+        }
+        if(worldState.masterPlayerIndex >= worldState.players.length){
+          worldState.masterPlayerIndex = 0;
         }
       }
       if(typeof data?.ballSpeed === 'string'){
