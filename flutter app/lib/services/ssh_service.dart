@@ -1,18 +1,4 @@
-// ---------------------------------------------------------------------------
-// ssh_service.dart
-//
-// SSH service for the LG Arkanoid Flutter controller app. This service
-// provides methods to connect to the Liquid Galaxy master machine via SSH,
-// execute shell commands remotely, and launch or close the game on the rig.
-//
-// It uses the dartssh2 library for SSH communication. Connection credentials
-// are read from SharedPreferences (host, port, username) and
-// flutter_secure_storage (password).
-//
-// All methods are designed to handle errors gracefully using try-catch
-// blocks. The sendCommand method returns an error string on failure rather
-// than throwing, so callers can display user-friendly messages.
-// ---------------------------------------------------------------------------
+// SSH Service for Liquid Galaxy Rig Remote Control
 
 import 'dart:convert';
 import 'package:dartssh2/dartssh2.dart';

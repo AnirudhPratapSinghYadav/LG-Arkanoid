@@ -1,13 +1,4 @@
-// ---------------------------------------------------------------------------
-// routes.js
-//
-// Express routing for the LG Arkanoid game server. This follows the Liquid
-// Galaxy convention where each screen on the rig is addressed by a numeric
-// path segment (e.g. /1, /2, /3) rather than a query parameter. The server
-// injects the screen number into the HTML as a global JavaScript variable
-// so that the Phaser game client knows which portion of the panoramic
-// virtual world to render.
-// ---------------------------------------------------------------------------
+// Express routes for LG Arkanoid screen handling
 
 const express = require('express');
 const path = require('path');
@@ -17,8 +8,7 @@ function createRouter(worldState) {
   const router = express.Router();
   const webClientPath = path.join(__dirname, '..', 'web client');
 
-  // -- Health check endpoint --------------------------------------------------
-  // Used by the Flutter app and monitoring tools to verify the server is alive.
+  // Health check endpoint
 
   router.get('/health', (req, res) => {
     res.json({
