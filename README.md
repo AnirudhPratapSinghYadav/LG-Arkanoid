@@ -102,6 +102,58 @@ flutter run
 
 Type in the master node's IP, port 3000, and the session code. Drag left/right to move your paddle, there's also Power Up and Fire Ball buttons once you're in.
 
+## Testing on iPhone
+
+You can run the live reload Vite dev server on your Windows Lenovo laptop and instantly preview and control the game from your iPhone over the same Wi-Fi network.
+
+### 1. Start the Dev Server
+From the project root directory, run:
+```bash
+npm start
+```
+This single command runs both the Node.js backend server (`0.0.0.0:3000`) and the Vite live-reload dev server (`0.0.0.0:5173`) concurrently.
+
+### 2. Find Your Laptop IP Address
+Open PowerShell / Command Prompt and run:
+```cmd
+ipconfig
+```
+Look for your Wireless LAN adapter Wi-Fi **IPv4 Address** (e.g. `10.11.77.106` or `192.168.x.x`).
+
+Alternatively, run this Node command:
+```bash
+node -e "const os = require('os'); const nets = os.networkInterfaces(); for (const k in nets) for (const n of nets[k]) if (n.family === 'IPv4' && !n.internal) console.log(k, n.address);"
+```
+
+### 3. Open on iPhone Safari
+Make sure your iPhone is connected to the **same Wi-Fi network**.
+
+- **Web Controller (Mobile):**
+  Open Safari and navigate to:
+  `http://<YOUR-LAPTOP-IP>:5173` (e.g., `http://10.11.77.106:5173`)
+
+- **Game Screen Preview:**
+  Open Safari (or desktop browser) and navigate to:
+  `http://<YOUR-LAPTOP-IP>:5173/screen?screenId=1`
+
+- **Live Reload:**
+  Every time you save a code change in `web client/` (HTML/CSS/JS), the browser on your iPhone automatically reloads immediately!
+
+### 4. Install as Web App ("Add to Home Screen" PWA)
+To run the web controller full-screen like a native iOS app:
+1. Open `http://<YOUR-LAPTOP-IP>:5173` in Safari on your iPhone.
+2. Tap the **Share** button (the box with an upward arrow at the bottom of Safari).
+3. Scroll down and tap **Add to Home Screen**.
+4. Tap **Add** in the top right.
+5. Launch **LG Arkanoid** directly from your iPhone home screen to play in full-screen standalone mode.
+
+### 5. Windows Firewall Troubleshooting
+If Safari cannot reach the server:
+- Open **Windows Defender Firewall** -> **Allow an app or feature through Windows Defender Firewall**.
+- Ensure **Node.js JavaScript Runtime** is allowed for **Private** (and Public if on home/work Wi-Fi) networks.
+- Or allow incoming TCP connections on ports **5173** and **3000**.
+
+
 ## GeminiSoC 2026
 
 This project's being built as part of **Gemini Summer of Code 2026**, under the **Liquid Galaxy** org.

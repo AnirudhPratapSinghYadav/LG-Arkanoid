@@ -1,0 +1,26 @@
+html, body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background-color: #080b11;
+}
+#qrcode {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 28px;
+    background: rgba(13, 17, 23, 0.95);
+    border: 2px solid #00e5ff;
+    border-radius: 20px;
+    box-shadow: 0 0 40px rgba(0, 229, 255, 0.3);
+    z-index: 1000;
+}
+#qrcode img, #qrcode canvas {
+    border: 8px solid white;
+    border-radius: 4px;
+}

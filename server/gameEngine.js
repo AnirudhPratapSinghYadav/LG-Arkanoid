@@ -9,6 +9,8 @@ class Ball {
     this.radius = radius;
     this.active = true;
     this.lastTouchedByPlayerId = null;
+    this.rallyCount = 0;
+    this.currentCombo = 0;
   }
 }
 
@@ -62,6 +64,7 @@ class GameState {
     this.powerupsCollected = 0;
     this.highestCombo = 0;
     this.currentCombo = 0;
+    this.lastFallenBallToucher = null;
   }
 }
 
@@ -175,32 +178,31 @@ function checkWallCollision(ball, gameState){
 
 function checkPaddleCollision(ball, players){
   try {
+    if (ball.vy <= 0) return false;
+
     for(let i = 0; i < players.length; i++){
       let player = players[i];
       if(!player.connected) continue;
 
-      let nextY = ball.y+ball.vy;
+      let prevY = ball.y;
+      let nextY = ball.y + ball.vy;
       let paddleTop = player.paddleY;
 
-      let withinVertical = (nextY+ball.radius>=paddleTop-10) && (nextY<=paddleTop);
-      let withinHorizontal = (ball.x>=player.paddleX) && (ball.x<=player.paddleX+player.paddleWidth);
+      let crossedPaddleTop = (prevY + ball.radius <= paddleTop + 5) && (nextY + ball.radius >= paddleTop - 5);
+      let withinHorizontal = (ball.x >= player.paddleX - 10) && (ball.x <= player.paddleX + player.paddleWidth + 10);
 
-      if(withinVertical && withinHorizontal){
-        ball.vy = -Math.abs(ball.vy);
+      if(crossedPaddleTop && withinHorizontal){
+        ball.y = paddleTop - ball.radius - 2;
 
-        let paddleCenter = player.paddleX+(player.paddleWidth/2);
-        let offset = ball.x-paddleCenter;
+        let paddleCenter = player.paddleX + (player.paddleWidth / 2);
+        let offset = ball.x - paddleCenter;
         
-        if(player.paddleWidth<=0) return true;
-        let normalized = Math.max(-1, Math.min(1, offset/(player.paddleWidth/2)));
+        if(player.paddleWidth <= 0) return true;
+        let normalized = Math.max(-1, Math.min(1, offset / (player.paddleWidth / 2)));
         
-        let bounceAngle = normalized * (Math.PI/3);
-        
-        let speed = Math.sqrt(ball.vx*ball.vx + ball.vy*ball.vy);
-        
-        speed = Math.min(25, speed * 1.02);
-        
-        speed = Math.max(8, speed);
+        let bounceAngle = normalized * (Math.PI / 3);
+        let speed = Math.sqrt(ball.vx * ball.vx + ball.vy * ball.vy);
+        speed = Math.min(25, Math.max(8, speed * 1.02));
 
         ball.vx = speed * Math.sin(bounceAngle);
         ball.vy = -speed * Math.cos(bounceAngle);
@@ -325,8 +327,6 @@ function updateGameLoop(gameState, applyPowerUpEffectCallback){
   try {
     if(gameState.gameStatus!=='playing') return;
 
-    let lastFallenBallToucher = null;
-
     for(let i = 0; i < gameState.balls.length; i++){
       let ball = gameState.balls[i];
       if(!ball.active) continue;
@@ -352,7 +352,7 @@ function updateGameLoop(gameState, applyPowerUpEffectCallback){
       if(ball.y-ball.radius>=1080){
         ball.active = false;
         if(ball.lastTouchedByPlayerId){
-          lastFallenBallToucher = ball.lastTouchedByPlayerId;
+          gameState.lastFallenBallToucher = ball.lastTouchedByPlayerId;
         }
       }
     }
@@ -360,7 +360,7 @@ function updateGameLoop(gameState, applyPowerUpEffectCallback){
     if(!gameState.balls.some(b=>b.active)){
       gameState.rallyCount = 0;
       gameState.currentCombo = 0;
-      let playerToDeduct = gameState.players.find(p=>p.id===lastFallenBallToucher);
+      let playerToDeduct = gameState.players.find(p=>p.id===gameState.lastFallenBallToucher);
       if(!playerToDeduct){
          playerToDeduct = gameState.players.find(p=>p.connected);
       }
@@ -368,6 +368,7 @@ function updateGameLoop(gameState, applyPowerUpEffectCallback){
         playerToDeduct.lives -= 1;
         playerToDeduct.score = Math.max(0, playerToDeduct.score-10);
       }
+      gameState.lastFallenBallToucher = null;
       
       let mainBall = gameState.balls[0];
       mainBall.x = ((gameState.numScreens || 3)*1920)/2;
