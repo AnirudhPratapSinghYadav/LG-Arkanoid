@@ -1105,35 +1105,28 @@ class GameScene extends Phaser.Scene {
             }
 
             const robot = this.robots[0];
-            if (!robot) return;
+            if (!robot || !robot.text) return;
             
             if (this.currentState) {
                 this.currentState.lastCommentary = message;
             }
             robot.text.setText(message);
-            this.tweens.killTweensOf([robot]);
+            robot.text.setVisible(true);
+            robot.text.setAlpha(1.0);
             
-            this.tweens.add({
-                targets: robot,
-                opacityTarget: 1,
-                duration: 300,
-                ease: 'Power1',
-                onUpdate: () => {
-                    robot.text.setAlpha((robot.opacityTarget - 0.7) / 0.3);
-                },
-                onComplete: () => {
+            if (this.bubbleTimer) clearTimeout(this.bubbleTimer);
+            this.bubbleTimer = setTimeout(() => {
+                if (robot && robot.text) {
                     this.tweens.add({
-                        targets: robot,
-                        opacityTarget: 0.7,
-                        duration: 300,
-                        delay: 5000,
-                        ease: 'Power1',
-                        onUpdate: () => {
-                            robot.text.setAlpha((robot.opacityTarget - 0.7) / 0.3);
+                        targets: robot.text,
+                        alpha: 0,
+                        duration: 500,
+                        onComplete: () => {
+                            robot.text.setVisible(false);
                         }
                     });
                 }
-            });
+            }, 6000);
         });
 
         this.socket.on('level_source', (data) => {

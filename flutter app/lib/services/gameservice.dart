@@ -210,6 +210,15 @@ class GameService extends ChangeNotifier {
     });
   }
 
+  void setGameSettings({required int maxPlayers, required String ballSpeed, required int durationSeconds}){
+    if(socket==null || !connected) return;
+    socket!.emit('set_game_settings', {
+      'maxPlayers': maxPlayers,
+      'ballSpeed': ballSpeed,
+      'durationSeconds': durationSeconds,
+    });
+  }
+
   void startGame(int durationSeconds){
     if(socket==null || !connected) return;
     socket!.emit('start_game', {'durationSeconds': durationSeconds});
