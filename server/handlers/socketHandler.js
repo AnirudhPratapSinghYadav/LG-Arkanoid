@@ -98,7 +98,11 @@ function applyPowerUpEffect(player, powerUpType, worldState, io, getWorldSnapsho
     }, 8000);
   }else if(powerUpType==='multi_ball'){
     const sourceBall = worldState.balls.find(b=>b.active);
-    const targetBall = worldState.balls.find(b=>!b.active);
+    let targetBall = worldState.balls.find(b=>!b.active);
+    if(!targetBall && sourceBall){
+      targetBall = new gameEngine.Ball(`ball_${worldState.balls.length + 1}`, 0, 0, 0, 0, BALL_RADIUS);
+      worldState.balls.push(targetBall);
+    }
     if(sourceBall && targetBall){
       targetBall.x = sourceBall.x;
       targetBall.y = sourceBall.y;

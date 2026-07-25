@@ -24,6 +24,7 @@ class _ControllerScreenState extends State<ControllerScreen>
   double _puckPosition = 0.0;
   String _controlMode = 'touch'; // 'touch' or 'dpad'
   Timer? _dpadRepeatTimer;
+  DateTime _lastEmit = DateTime.now();
 
   // Power-up cooldown tracking
   DateTime? _lastPowerUpTime;
@@ -140,7 +141,11 @@ class _ControllerScreenState extends State<ControllerScreen>
 
     // Convert to rig-scale movement
     final rigDeltaX = acceleratedDelta * 12.0;
-    context.read<GameService>().sendPaddleMove(rigDeltaX);
+    final now = DateTime.now();
+    if (now.difference(_lastEmit).inMilliseconds >= 33) {
+      context.read<GameService>().sendPaddleMove(rigDeltaX);
+      _lastEmit = now;
+    }
 
     setState(() {
       _puckPosition += dx;
