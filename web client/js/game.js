@@ -712,6 +712,20 @@ class GameScene extends Phaser.Scene {
     }
 
     checkStateChanges() {
+        if (this.currentState.gameStatus !== this.previousGameStatus) {
+            if (this.currentState.gameStatus === 'game_over' || this.currentState.gameStatus === 'time_up') {
+                this.playBeep(220, 'sawtooth', 0.4, 0.15);
+            } else if (this.currentState.gameStatus === 'win') {
+                [660, 880, 1100, 1320].forEach((f, i) => setTimeout(() => this.playBeep(f, 'sine', 0.2, 0.12), i * 120));
+            }
+            this.previousGameStatus = this.currentState.gameStatus;
+        }
+
+        if (this.previousPowerupsCollected !== undefined && this.currentState.powerupsCollected > this.previousPowerupsCollected) {
+            this.playBeep(700, 'square', 0.08, 0.08);
+        }
+        this.previousPowerupsCollected = this.currentState.powerupsCollected || 0;
+
         if (this.currentState.bricks) {
             for (let r = 0; r < this.currentState.bricks.length; r++) {
                 const row = this.currentState.bricks[r];
@@ -752,6 +766,9 @@ class GameScene extends Phaser.Scene {
                 }
                 
                 this.previousScores[p.id] = p.score;
+                if (this.previousLives[p.id] !== undefined && p.lives < this.previousLives[p.id]) {
+                    this.playBeep(150, 'sawtooth', 0.3, 0.15);
+                }
                 this.previousLives[p.id] = p.lives;
             }
         }
@@ -1024,6 +1041,7 @@ class GameScene extends Phaser.Scene {
         let visorColor = COLORS.system;
         if (this.robotState === 'excited') visorColor = COLORS.game;
         else if (this.robotState === 'alert') visorColor = COLORS.error;
+        else if (this.robotState === 'thinking') visorColor = 0xff00ff;
 
         for(let g = 3; g > 0; g--) {
             this.robotGraphics.fillStyle(visorColor, 0.15);
@@ -1066,6 +1084,16 @@ class GameScene extends Phaser.Scene {
             this.robotGraphics.lineTo(robotX - 2, robotY + 6);
             this.robotGraphics.lineTo(robotX + 2, robotY + 10);
             this.robotGraphics.lineTo(robotX + 6, robotY + 8);
+            this.robotGraphics.strokePath();
+        } else if (this.robotState === 'thinking') {
+            this.robotGraphics.fillCircle(robotX - 8, robotY - 4, 3);
+            this.robotGraphics.fillCircle(robotX, robotY - 4, 3);
+            this.robotGraphics.fillCircle(robotX + 8, robotY - 4, 3);
+
+            this.robotGraphics.lineStyle(2, visorColor, 0.6);
+            this.robotGraphics.beginPath();
+            this.robotGraphics.moveTo(robotX - 4, robotY + 8);
+            this.robotGraphics.lineTo(robotX + 4, robotY + 8);
             this.robotGraphics.strokePath();
         } else {
             this.robotGraphics.fillCircle(robotX - 8, robotY - 4, 4);
@@ -1186,6 +1214,14 @@ class GameScene extends Phaser.Scene {
             if (this.lostConnectionPids && data.playerId) {
                 delete this.lostConnectionPids[data.playerId];
             }
+        });
+
+        this.socket.on('commentary_thinking', (data) => {
+            this.robotState = 'thinking';
+            if (this.robotStateTimer) clearTimeout(this.robotStateTimer);
+            this.robotStateTimer = setTimeout(() => {
+                this.robotState = 'idle';
+            }, 3000);
         });
 
         this.socket.on('commentary', (data) => {

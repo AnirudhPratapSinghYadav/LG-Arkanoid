@@ -57,6 +57,7 @@ async function triggerCommentary(eventType, snapshot, io, commentaryRateLimiter)
 
   try {
     const prompt = buildPrompt(eventType, snapshot);
+    io.emit('commentary_thinking', { eventType });
     const text = await callGemini(prompt);
     if(text){
       io.emit('commentary', { text, source: 'gemini', eventType });
@@ -78,6 +79,7 @@ async function pollGameMasterAsync(worldState, io){
   isPollingGameMaster = true;
   if(limiter) limiter.lastCalledAt = Date.now();
   try {
+    io.emit('commentary_thinking', { eventType: 'game_master' });
     const playerStats = worldState.players.map(p => `${p.name || p.id}: ${p.lives} lives, ${p.score} score`).join(' | ');
     const prompt = `You are the AI Game Master of Arkanoid. A player just lost a life.
 Current stats: ${playerStats}, Level=${worldState.level}.
@@ -107,6 +109,9 @@ async function generateNextLevelAsync(nextLevel, worldState){
   if(isGeneratingLevel) return;
   isGeneratingLevel = true;
   try {
+    if (worldState && worldState.io) {
+      worldState.io.emit('commentary_thinking', { eventType: 'level_generation' });
+    }
     const numScreens = worldState.numScreens || 3;
     const numCols = Math.floor(((numScreens * 1920) - 48) / 144);
     const prompt = `You are a level designer for a panoramic brick breaker game spanning ${numScreens} screens. 

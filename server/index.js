@@ -33,7 +33,8 @@ const io = new Server(server, {
       const allowedOrigins = [
         `http://localhost:${PORT}`, 
         `http://127.0.0.1:${PORT}`, 
-        `http://${getLanIp()}:${PORT}`
+        `http://${getLanIp()}:${PORT}`,
+        `http://lg1:${PORT}`
       ];
       if (allowedOrigins.indexOf(origin) === -1) {
         return callback(new Error('The CORS policy for this site does not allow access from the specified Origin.'), false);
