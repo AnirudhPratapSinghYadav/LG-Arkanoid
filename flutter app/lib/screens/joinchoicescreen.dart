@@ -20,6 +20,22 @@ class _JoinChoiceScreenState extends State<JoinChoiceScreen> {
 
     return Scaffold(
       backgroundColor: bgDark,
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings, color: textSecondary, size: 24),
+            tooltip: 'Settings',
+            onPressed: () async {
+              await Navigator.pushNamed(context, '/settings');
+              if (mounted) setState(() {});
+            },
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
       body: MissionControlBackground(
         child: SafeArea(
           child: Center(

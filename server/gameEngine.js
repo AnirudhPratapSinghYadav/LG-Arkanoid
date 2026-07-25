@@ -75,7 +75,8 @@ function applyGameMasterMod(gameState, modType){
         gameState.powerUps.push(new PowerUp('wide_paddle', ((gameState.numScreens || 3)*1920)/2, 0));
         break;
       case 'EXTRA_BALL':
-        let newBall = new Ball(Date.now().toString(), ((gameState.numScreens || 3)*1920)/2, 500, 3, 4, 8);
+        const speedMult = gameState.slowBallActive ? 1.5 : 3;
+        let newBall = new Ball(Date.now().toString(), ((gameState.numScreens || 3)*1920)/2, 500, speedMult, speedMult * 1.33, 8);
         gameState.balls.push(newBall);
         break;
       case 'SLOW_BALL':
@@ -237,11 +238,11 @@ function checkBrickCollision(ball, gameState){
         let distanceSquared = (dx*dx)+(dy*dy);
 
         if(distanceSquared<=(ball.radius*ball.radius)){
-          if(Math.abs(dx) > Math.abs(dy)){
-            ball.vx = -ball.vx;
-          }else{
-            ball.vy = -ball.vy;
-          }
+          const dist = Math.sqrt(distanceSquared) || 0.01;
+          const nx = dx/dist, ny = dy/dist;
+          const dot = ball.vx*nx + ball.vy*ny;
+          ball.vx -= 2*dot*nx;
+          ball.vy -= 2*dot*ny;
           
           if(brick.type==='indestructible'){
             return true;
@@ -362,7 +363,11 @@ function updateGameLoop(gameState, applyPowerUpEffectCallback){
       gameState.currentCombo = 0;
       let playerToDeduct = gameState.players.find(p=>p.id===gameState.lastFallenBallToucher);
       if(!playerToDeduct){
-         playerToDeduct = gameState.players.find(p=>p.connected);
+        const connected = gameState.players.filter(p=>p.connected);
+        if(connected.length > 0){
+          gameState._fallbackDeductCursor = ((gameState._fallbackDeductCursor || 0) + 1) % connected.length;
+          playerToDeduct = connected[gameState._fallbackDeductCursor];
+        }
       }
       if(playerToDeduct && playerToDeduct.lives > 0){
         playerToDeduct.lives -= 1;
