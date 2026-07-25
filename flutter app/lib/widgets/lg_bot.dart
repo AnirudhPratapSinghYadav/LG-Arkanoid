@@ -3,7 +3,8 @@ import 'package:flutter/services.dart';
 import '../utils/constants.dart';
 
 class LgBot extends StatefulWidget {
-  const LgBot({super.key});
+  final bool isSpeaking;
+  const LgBot({super.key, this.isSpeaking = false});
 
   @override
   State<LgBot> createState() => _LgBotState();
@@ -16,9 +17,22 @@ class _LgBotState extends State<LgBot> with SingleTickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
+    _setupAnimation();
+  }
+
+  @override
+  void didUpdateWidget(covariant LgBot oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.isSpeaking != widget.isSpeaking) {
+      _controller.dispose();
+      _setupAnimation();
+    }
+  }
+
+  void _setupAnimation() {
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2000),
+      duration: Duration(milliseconds: widget.isSpeaking ? 250 : 2000),
     )..repeat(reverse: true);
     
     _floatAnimation = Tween<double>(begin: -5.0, end: 5.0).animate(

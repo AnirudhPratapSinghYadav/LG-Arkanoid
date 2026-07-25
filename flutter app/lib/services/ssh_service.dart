@@ -91,7 +91,11 @@ class SSHService {
         }
       }
 
-      debugPrint('[SSHService] Executing: $command');
+      String sanitizedCommand = command;
+      if (command.contains('LG_PASSWORD=')) {
+        sanitizedCommand = command.replaceAll(RegExp(r"LG_PASSWORD='[^']*'"), "LG_PASSWORD='***'");
+      }
+      debugPrint('[SSHService] Executing: $sanitizedCommand');
 
       final session = await _client!.execute(command);
       final stdout = await session.stdout.transform(utf8.decoder).join();

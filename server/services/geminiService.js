@@ -119,8 +119,30 @@ Make it interesting and symmetric where appropriate. Return ONLY valid JSON 2D a
     const jsonMatch = text.match(/\[[\s\S]*\]/);
     if (jsonMatch) {
       const grid = JSON.parse(jsonMatch[0]);
-      if(Array.isArray(grid) && grid.length > 0){
-        worldState.nextLevelBricks = grid;
+      if (Array.isArray(grid)) {
+        let isValid = grid.length === 8;
+        if (isValid) {
+          for (let i = 0; i < grid.length; i++) {
+            const row = grid[i];
+            if (!Array.isArray(row) || row.length !== numCols) {
+              isValid = false;
+              break;
+            }
+            for (let j = 0; j < row.length; j++) {
+              if (typeof row[j] !== 'number' || row[j] < 0 || row[j] > 3) {
+                isValid = false;
+                break;
+              }
+            }
+            if (!isValid) break;
+          }
+        }
+        
+        if (isValid) {
+          worldState.nextLevelBricks = grid;
+        } else {
+          throw new Error('Gemini response returned invalid grid dimensions or values');
+        }
       }
     }
   } catch(err){
