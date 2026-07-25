@@ -383,8 +383,28 @@ class _ControllerScreenState extends State<ControllerScreen>
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.campaign_rounded,
-                                color: accentPrimary, size: 16),
+                            Icon(
+                              service.lastCommentarySource == 'fallback' ? Icons.chat_bubble_outline_rounded : Icons.auto_awesome_rounded,
+                              color: service.lastCommentarySource == 'fallback' ? textSecondary : accentPrimary, 
+                              size: 16
+                            ),
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: service.lastCommentarySource == 'fallback' ? Colors.transparent : accentPrimary.withValues(alpha: 0.2),
+                                border: Border.all(color: service.lastCommentarySource == 'fallback' ? borderLight : accentPrimary),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                service.lastCommentarySource == 'fallback' ? 'CANNED' : 'GEMINI',
+                                style: GoogleFonts.spaceGrotesk(
+                                  fontSize: 8,
+                                  fontWeight: FontWeight.bold,
+                                  color: service.lastCommentarySource == 'fallback' ? textSecondary : accentPrimary,
+                                ),
+                              ),
+                            ),
                             const SizedBox(width: 10),
                             Expanded(
                               child: Text(
