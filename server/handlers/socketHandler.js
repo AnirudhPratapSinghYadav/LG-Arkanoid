@@ -395,7 +395,8 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
 
       const maxRight = (worldState.numScreens || 3)*1920;
       player.paddleX += deltaX;
-      player.paddleX = Math.max(0, Math.min(maxRight-300, Math.round(player.paddleX)));
+      const pw = player.paddleWidth || 300;
+      player.paddleX = Math.max(0, Math.min(maxRight-pw, Math.round(player.paddleX)));
     });
 
     socket.on('power_up_activate', (data)=>{
@@ -403,6 +404,7 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
       if(!found) return;
 
       const { player } = found;
+      if(worldState.gameStatus !== 'playing') return;
       const { powerUpType, timestamp, nonce } = data || {};
 
       if(typeof powerUpType!=='string' || powerUpType.length > 20){
