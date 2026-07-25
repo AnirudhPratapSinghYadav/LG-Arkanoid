@@ -941,10 +941,14 @@ class GameScene extends Phaser.Scene {
             for (let t = 0; t < this.ballTrails[i].length; t++) {
                 const pos = this.ballTrails[i][t];
                 const alpha = t / 10;
-                this.trailGraphics.fillStyle(COLORS.trail, alpha * 0.5);
-                this.trailGraphics.fillCircle(pos.x, pos.y, 8 * alpha);
+                this.trailGraphics.fillStyle(COLORS.accent, alpha * 0.4);
+                this.trailGraphics.fillCircle(pos.x, pos.y, (8 + Math.random() * 4) * alpha);
             }
 
+            for (let g = 3; g > 0; g--) {
+                this.graphics.fillStyle(COLORS.accent, 0.2 * (4 - g));
+                this.graphics.fillCircle(localX, ball.y, 8 + (g * 3));
+            }
             this.graphics.fillStyle(COLORS.white, 1);
             this.graphics.fillCircle(localX, ball.y, 8);
         }
@@ -1007,16 +1011,29 @@ class GameScene extends Phaser.Scene {
         const robotY = 1050;
         const robotSize = 40;
 
-        this.robotGraphics.fillStyle(COLORS.black, 0.9);
+        for(let g = 3; g > 0; g--) {
+            this.robotGraphics.lineStyle(2 + (g * 2), COLORS.accent, 0.15);
+            this.robotGraphics.strokeRoundedRect(robotX - robotSize/2, robotY - robotSize/2, robotSize, robotSize, 10);
+        }
+
+        this.robotGraphics.fillStyle(0x1a1a1a, 1);
         this.robotGraphics.fillRoundedRect(robotX - robotSize/2, robotY - robotSize/2, robotSize, robotSize, 10);
-        this.robotGraphics.lineStyle(2, COLORS.accent, 0.8);
+        this.robotGraphics.lineStyle(2, COLORS.accent, 1);
         this.robotGraphics.strokeRoundedRect(robotX - robotSize/2, robotY - robotSize/2, robotSize, robotSize, 10);
 
         let visorColor = COLORS.system;
         if (this.robotState === 'excited') visorColor = COLORS.game;
         else if (this.robotState === 'alert') visorColor = COLORS.error;
 
-        this.robotGraphics.fillStyle(visorColor, 0.9);
+        for(let g = 3; g > 0; g--) {
+            this.robotGraphics.fillStyle(visorColor, 0.15);
+            this.robotGraphics.fillRoundedRect(robotX - 16 - g, robotY - 8 - g, 32 + (g*2), 16 + (g*2), 6);
+        }
+        
+        this.robotGraphics.fillStyle(0x000000, 0.8);
+        this.robotGraphics.fillRoundedRect(robotX - 16, robotY - 8, 32, 16, 4);
+
+        this.robotGraphics.fillStyle(visorColor, 1);
         
         if (this.robotState === 'excited') {
             this.robotGraphics.lineStyle(2, visorColor, 0.9);
