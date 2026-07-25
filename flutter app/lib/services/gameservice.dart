@@ -25,6 +25,9 @@ class GameService extends ChangeNotifier {
   Map<String, dynamic>? latestGameState;
   void Function(bool isSpectator)? onJoinConfirmed;
 
+  String robotState = 'idle';
+  Timer? robotStateTimer;
+
   final Random _random = Random();
 
   String generateNonce(){
@@ -150,10 +153,35 @@ class GameService extends ChangeNotifier {
         notifyListeners();
       });
 
+      socket!.on('commentary_thinking', (data){
+        robotState = 'thinking';
+        robotStateTimer?.cancel();
+        robotStateTimer = Timer(const Duration(seconds: 3), () {
+          robotState = 'idle';
+          notifyListeners();
+        });
+        notifyListeners();
+      });
+
       socket!.on('commentary', (data){
         final map = _asMap(data);
         final newCommentary = map['text'] as String? ?? '';
+        final eventType = map['eventType'] as String? ?? '';
         
+        if (eventType == 'life_lost') {
+            robotState = 'alert';
+        } else if (eventType == 'level_cleared' || eventType == 'multi_ball') {
+            robotState = 'excited';
+        } else {
+            robotState = 'idle';
+        }
+        
+        robotStateTimer?.cancel();
+        robotStateTimer = Timer(const Duration(seconds: 3), () {
+          robotState = 'idle';
+          notifyListeners();
+        });
+
         if(newCommentary.isNotEmpty && newCommentary!=lastCommentary){
           lastCommentary = newCommentary;
           lastCommentarySource = map['source'] as String? ?? 'fallback';

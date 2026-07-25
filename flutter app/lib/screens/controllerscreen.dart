@@ -356,7 +356,12 @@ class _ControllerScreenState extends State<ControllerScreen>
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          LgBot(isSpeaking: service.lastCommentarySource == 'ai' || service.lastCommentarySource == 'gemini'),
+                          LgBot(
+                            state: service.robotState == 'excited' ? BotState.excited :
+                                   service.robotState == 'alert' ? BotState.alert :
+                                   service.robotState == 'thinking' ? BotState.thinking :
+                                   BotState.idle
+                          ),
                           const SizedBox(width: 4),
                           // Speech bubble tail
                           Padding(

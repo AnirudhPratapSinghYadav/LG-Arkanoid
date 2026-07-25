@@ -286,13 +286,13 @@ class GameScene extends Phaser.Scene {
     initAmbientTexts() {
         if (!this.ambientLeftText) {
             this.ambientLeftText = this.add.text(960, 540, 'LIQUID GALAXY\nMULTIPLAYER ARCADE', {
-                fontFamily: '"VT323"', fontSize: '64px', fill: '#ffffff',
+                fontFamily: FONTS.display, fontSize: '64px', fill: '#ffffff',
                 align: 'center', alpha: 0.3
             }).setOrigin(0.5).setVisible(false);
         }
         if (!this.ambientRightText) {
             this.ambientRightText = this.add.text(960, 540, 'Waiting for Players\n0 / 3', {
-                fontFamily: '"VT323"', fontSize: '64px', fill: '#ffffff',
+                fontFamily: FONTS.display, fontSize: '64px', fill: '#ffffff',
                 align: 'center', alpha: 0.3
             }).setOrigin(0.5).setVisible(false);
         }
@@ -302,7 +302,7 @@ class GameScene extends Phaser.Scene {
         }
         while (this.lobbyPlayerTexts.length < maxP) {
             let txt = this.add.text(960, 680 + (this.lobbyPlayerTexts.length*60), 'Waiting...', {
-                fontFamily: '"VT323"', fontSize: '40px', fill: '#666666'
+                fontFamily: FONTS.display, fontSize: '40px', fill: '#666666'
             }).setOrigin(0.5).setVisible(false);
             this.lobbyPlayerTexts.push({text: txt});
         }
@@ -729,7 +729,7 @@ class GameScene extends Phaser.Scene {
     spawnFloatingText(text, x, y, color) {
         if (x < -200 || x > 2100) return; 
         const t = this.add.text(x, y, text, {
-            fontFamily: '"Space Grotesk"',
+            fontFamily: FONTS.heading,
             fontSize: '28px',
             color: color,
         }).setOrigin(0.5, 0.5);
@@ -775,7 +775,7 @@ class GameScene extends Phaser.Scene {
             
             if (tIdx >= this.powerUpTexts.length) {
                 const txt = this.add.text(0, 0, '', {
-                    fontFamily: '"Space Grotesk"',
+                    fontFamily: FONTS.heading,
                     fontSize: '14px',
                     color: '#ffffff',
                 }).setOrigin(0.5, 0.5);

@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../utils/constants.dart';
 
+enum BotState { idle, excited, alert, thinking }
+
 class LgBot extends StatefulWidget {
-  final bool isSpeaking;
-  const LgBot({super.key, this.isSpeaking = false});
+  final BotState state;
+  const LgBot({super.key, this.state = BotState.idle});
 
   @override
   State<LgBot> createState() => _LgBotState();
@@ -23,16 +25,21 @@ class _LgBotState extends State<LgBot> with SingleTickerProviderStateMixin {
   @override
   void didUpdateWidget(covariant LgBot oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.isSpeaking != widget.isSpeaking) {
+    if (oldWidget.state != widget.state) {
       _controller.dispose();
       _setupAnimation();
     }
   }
 
   void _setupAnimation() {
+    int durationMs = 2000;
+    if (widget.state == BotState.excited) durationMs = 250;
+    else if (widget.state == BotState.alert) durationMs = 150;
+    else if (widget.state == BotState.thinking) durationMs = 800;
+
     _controller = AnimationController(
       vsync: this,
-      duration: Duration(milliseconds: widget.isSpeaking ? 250 : 2000),
+      duration: Duration(milliseconds: durationMs),
     )..repeat(reverse: true);
     
     _floatAnimation = Tween<double>(begin: -5.0, end: 5.0).animate(
@@ -58,7 +65,7 @@ class _LgBotState extends State<LgBot> with SingleTickerProviderStateMixin {
         width: 48,
         height: 48,
         child: CustomPaint(
-          painter: _BotPainter(),
+          painter: _BotPainter(widget.state),
         ),
       ),
     );
@@ -80,6 +87,10 @@ class _LgBotState extends State<LgBot> with SingleTickerProviderStateMixin {
 }
 
 class _BotPainter extends CustomPainter {
+  final BotState state;
+
+  _BotPainter(this.state);
+
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()..style = PaintingStyle.fill;
@@ -93,7 +104,12 @@ class _BotPainter extends CustomPainter {
       paint,
     );
 
-    paint.color = accentSystem;
+    Color visorColor = accentSystem;
+    if (state == BotState.excited) visorColor = accentGame;
+    else if (state == BotState.alert) visorColor = accentError;
+    else if (state == BotState.thinking) visorColor = Colors.purpleAccent;
+
+    paint.color = visorColor;
     canvas.drawRRect(
       RRect.fromRectAndRadius(
         Rect.fromLTWH(12, 18, size.width - 24, 10),
@@ -113,5 +129,5 @@ class _BotPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _BotPainter oldDelegate) => oldDelegate.state != state;
 }
