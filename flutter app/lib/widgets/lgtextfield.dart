@@ -52,7 +52,7 @@ class _LgTextFieldState extends State<LgTextField> {
           style: GoogleFonts.inter(
             fontSize: 12,
             fontWeight: FontWeight.w500,
-            color: _isFocused ? accentPrimary : textSecondary,
+            color: _isFocused ? accentSystem : textSecondary,
             letterSpacing: 0.5,
           ),
         ),
@@ -62,14 +62,14 @@ class _LgTextFieldState extends State<LgTextField> {
           decoration: BoxDecoration(
             color: cardSecondary,
             border: Border.all(
-              color: _isFocused ? accentPrimary : borderLight,
+              color: _isFocused ? accentSystem : borderLight,
               width: _isFocused ? 1.5 : 1.0,
             ),
             borderRadius: BorderRadius.circular(12),
             boxShadow: _isFocused
                 ? [
                     BoxShadow(
-                      color: accentPrimary.withValues(alpha: 0.15),
+                      color: accentSystem.withValues(alpha: 0.15),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     )
@@ -86,7 +86,7 @@ class _LgTextFieldState extends State<LgTextField> {
               color: textPrimary,
               fontSize: 15,
             ),
-            cursorColor: accentPrimary,
+            cursorColor: accentSystem,
             decoration: const InputDecoration(
               counterText: '',
               contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),

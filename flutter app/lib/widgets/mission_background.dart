@@ -27,9 +27,30 @@ class MissionControlBackground extends StatelessWidget {
               ),
             ),
           ),
+          ),
+          CustomPaint(
+            size: Size.infinite,
+            painter: _ScanlinePainter(),
+          ),
           child,
         ],
       ),
     );
   }
+  }
+}
+
+class _ScanlinePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.02)
+      ..strokeWidth = 1.0;
+    for (double y = 0; y < size.height; y += 4) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

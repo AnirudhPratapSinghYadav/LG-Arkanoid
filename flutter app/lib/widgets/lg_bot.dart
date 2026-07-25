@@ -48,23 +48,31 @@ class _LgBotState extends State<LgBot> with SingleTickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    final disableAnimations = MediaQuery.disableAnimationsOf(context);
+
+    Widget botWidget = GestureDetector(
+      onTap: () {
+        HapticFeedback.lightImpact();
+      },
+      child: SizedBox(
+        width: 48,
+        height: 48,
+        child: CustomPaint(
+          painter: _BotPainter(),
+        ),
+      ),
+    );
+
+    if (disableAnimations) {
+      return botWidget;
+    }
+
     return AnimatedBuilder(
       animation: _floatAnimation,
       builder: (context, child) {
         return Transform.translate(
           offset: Offset(0, _floatAnimation.value),
-          child: GestureDetector(
-            onTap: () {
-              HapticFeedback.lightImpact();
-            },
-            child: SizedBox(
-              width: 48,
-              height: 48,
-              child: CustomPaint(
-                painter: _BotPainter(),
-              ),
-            ),
-          ),
+          child: botWidget,
         );
       }
     );
@@ -76,7 +84,7 @@ class _BotPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final paint = Paint()..style = PaintingStyle.fill;
     
-    paint.color = Colors.white;
+    paint.color = cardFill;
     canvas.drawRRect(
       RRect.fromRectAndRadius(
         Rect.fromLTWH(8, 12, size.width - 16, size.height - 24),
@@ -85,7 +93,7 @@ class _BotPainter extends CustomPainter {
       paint,
     );
 
-    paint.color = accentPrimary;
+    paint.color = accentSystem;
     canvas.drawRRect(
       RRect.fromRectAndRadius(
         Rect.fromLTWH(12, 18, size.width - 24, 10),
@@ -94,13 +102,13 @@ class _BotPainter extends CustomPainter {
       paint,
     );
 
-    paint.color = Colors.white;
+    paint.color = cardFill;
     canvas.drawLine(
       Offset(size.width / 2, 12),
       Offset(size.width / 2, 4),
-      Paint()..color = Colors.white..strokeWidth = 2,
+      Paint()..color = cardFill..strokeWidth = 2,
     );
-    paint.color = accentWarning;
+    paint.color = accentGame;
     canvas.drawCircle(Offset(size.width / 2, 4), 3, paint);
   }
 

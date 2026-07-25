@@ -7,6 +7,7 @@ import '../services/ttsservice.dart';
 import '../services/ssh_service.dart';
 import '../utils/constants.dart';
 import '../widgets/lgpanel.dart';
+import '../widgets/lgbutton.dart';
 import '../widgets/connectionstatus.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -110,7 +111,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           connected ? 'Connected to rig.' : 'Failed to connect after $retries retries.',
           style: GoogleFonts.inter(color: Colors.white),
         ),
-        backgroundColor: connected ? accentSuccess : accentError,
+        backgroundColor: connected ? accentSystem : accentError,
       )
     );
   }
@@ -149,7 +150,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _isConnected = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Disconnected from rig.'), backgroundColor: accentSuccess)
+        const SnackBar(content: Text('Disconnected from rig.'), backgroundColor: accentSystem)
       );
     }
   }
@@ -168,10 +169,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       children: [
         Text(
           label,
-          style: GoogleFonts.inter(
+          style: GoogleFonts.jetBrainsMono(
             fontSize: 12,
-            fontWeight: FontWeight.w700,
-            color: textSecondary,
+            fontWeight: FontWeight.bold,
+            color: accentSystem,
             letterSpacing: 1.5,
           ),
         ),
@@ -180,7 +181,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           controller: controller,
           obscureText: obscure,
           keyboardType: keyboardType,
-          style: GoogleFonts.inter(color: textPrimary, fontSize: 15),
+          style: GoogleFonts.jetBrainsMono(color: textPrimary, fontSize: 15),
+          cursorColor: accentSystem,
           validator: validator ?? (value) {
             if (value == null || value.trim().isEmpty) {
               return 'This field is required';
@@ -189,7 +191,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           },
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: GoogleFonts.inter(color: textSecondary.withValues(alpha: 0.5)),
+            hintStyle: GoogleFonts.jetBrainsMono(color: textSecondary.withValues(alpha: 0.5)),
             suffixIcon: suffixIcon,
             filled: true,
             fillColor: cardSecondary,
@@ -203,7 +205,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: accentPrimary, width: 1.5),
+              borderSide: const BorderSide(color: accentSystem, width: 1.5),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
@@ -232,14 +234,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
       backgroundColor: bgDark,
       appBar: AppBar(
         backgroundColor: bgDark,
-        title: Text(
-          'SETTINGS',
-          style: GoogleFonts.inter(
-            fontSize: 24,
-            color: accentPrimary,
-            letterSpacing: 1,
-            height: 1.4,
-          ),
+        elevation: 0,
+        title: Row(
+          children: [
+            Text(
+              'SYS.CFG',
+              style: GoogleFonts.jetBrainsMono(
+                fontSize: 20,
+                color: accentSystem,
+                letterSpacing: 2,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const Spacer(),
+            ConnectionStatus(isConnected: _isConnected, label: 'SYS.CONN'),
+          ],
         ),
       ),
       body: SingleChildScrollView(
@@ -249,16 +258,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
           children: [
             // -- TTS toggle panel ---------------------------------------------
             LgPanel(
+              tag: 'CFG.TTS',
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
                     'ROBOT COMMENTARY',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.spaceGrotesk(
                       fontWeight: FontWeight.bold,
-                      color: accentPrimary,
-                      fontSize: 14,
-                      letterSpacing: 2,
+                      color: textPrimary,
+                      fontSize: 16,
+                      letterSpacing: 1,
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -278,7 +288,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             tts.toggleMute();
                           }
                         },
-                        activeColor: accentPrimary,
+                        activeColor: accentSystem,
                         contentPadding: EdgeInsets.zero,
                       );
                     },
@@ -290,6 +300,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
             // -- Rig Connection Panel -----------------------------------------
             LgPanel(
+              tag: 'CFG.RIG',
               child: Form(
                 key: _formKey,
                 child: Column(
@@ -297,11 +308,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   children: [
                     Text(
                       'LG CREDENTIALS',
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.spaceGrotesk(
                         fontWeight: FontWeight.bold,
-                        color: accentPrimary,
-                        fontSize: 14,
-                        letterSpacing: 2,
+                        color: textPrimary,
+                        fontSize: 16,
+                        letterSpacing: 1,
                       ),
                     ),
                     const SizedBox(height: 20),
@@ -351,6 +362,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       hint: 'e.g. 3, 5, 7, 9',
                       controller: _screensController,
                       keyboardType: TextInputType.number,
+                      style: GoogleFonts.vt323(color: accentSystem, fontSize: 24),
                       validator: (value) {
                         if (value == null || value.trim().isEmpty) return 'This field is required';
                         if (int.tryParse(value) == null) return 'Must be a number';
@@ -388,8 +400,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     icon: const Icon(Icons.qr_code_scanner_rounded),
                     label: const Text('Scan QR to Connect'),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: accentPrimary,
-                      side: const BorderSide(color: accentPrimary),
+                      foregroundColor: accentSystem,
+                      side: const BorderSide(color: accentSystem),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
@@ -406,10 +418,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
               icon: _isConnecting
                   ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
                   : const Icon(Icons.link),
-              label: Text(_isConnecting ? 'Connecting...' : (_isConnected ? 'Reconnect' : 'Connect to Rig')),
+              label: Text(_isConnecting ? 'CONNECTING...' : (_isConnected ? 'RECONNECT' : 'CONNECT TO RIG')),
               style: ElevatedButton.styleFrom(
-                backgroundColor: accentPrimary,
+                backgroundColor: accentSystem,
                 foregroundColor: bgDark,
+                textStyle: GoogleFonts.spaceGrotesk(fontSize: 16, fontWeight: FontWeight.bold),
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               ),
@@ -418,8 +431,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ElevatedButton.icon(
               onPressed: _isConnected ? _launchGame : null,
               icon: const Icon(Icons.rocket_launch),
-              label: const Text('Launch on Rig'),
+              label: const Text('LAUNCH ON RIG'),
               style: ElevatedButton.styleFrom(
+                backgroundColor: accentGame,
+                foregroundColor: bgDark,
+                textStyle: GoogleFonts.spaceGrotesk(fontSize: 16, fontWeight: FontWeight.bold),
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               ),
@@ -428,8 +444,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ElevatedButton.icon(
               onPressed: _isConnected ? _relaunchGame : null,
               icon: const Icon(Icons.restart_alt),
-              label: const Text('Relaunch (apply new screen count)'),
+              label: const Text('RELAUNCH'),
               style: ElevatedButton.styleFrom(
+                backgroundColor: accentGame.withValues(alpha: 0.2),
+                foregroundColor: accentGame,
+                textStyle: GoogleFonts.spaceGrotesk(fontSize: 16, fontWeight: FontWeight.bold),
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               ),
@@ -438,10 +457,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ElevatedButton.icon(
               onPressed: _isConnected ? _closeGame : null,
               icon: const Icon(Icons.stop_circle),
-              label: const Text('Shut Down on Rig'),
+              label: const Text('SHUT DOWN ON RIG'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: accentError.withValues(alpha: 0.2),
                 foregroundColor: accentError,
+                textStyle: GoogleFonts.spaceGrotesk(fontSize: 16, fontWeight: FontWeight.bold),
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               ),
@@ -450,10 +470,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ElevatedButton.icon(
               onPressed: _isConnected ? _disconnect : null,
               icon: const Icon(Icons.link_off),
-              label: const Text('Disconnect'),
+              label: const Text('DISCONNECT'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: cardFill,
                 foregroundColor: textPrimary,
+                textStyle: GoogleFonts.spaceGrotesk(fontSize: 16, fontWeight: FontWeight.bold),
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               ),
@@ -486,7 +507,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     style: GoogleFonts.inter(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: accentPrimary,
+                      color: accentSystem,
                     ),
                   ),
                   const SizedBox(height: 4),

@@ -7,7 +7,7 @@ import 'package:provider/provider.dart';
 import '../utils/constants.dart';
 import '../services/gameservice.dart';
 import '../widgets/mission_background.dart';
-import '../widgets/mission_background.dart';
+import '../widgets/lgpanel.dart';
 import '../widgets/connectionstatus.dart';
 import '../services/ssh_service.dart';
 import '../widgets/lg_bot.dart';
@@ -219,14 +219,8 @@ class _ControllerScreenState extends State<ControllerScreen>
                   Padding(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 16, vertical: 8),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: cardFill,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: borderLight),
-                      ),
+                    child: LgPanel(
+                      tag: 'SYS.CTRL',
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -275,7 +269,7 @@ class _ControllerScreenState extends State<ControllerScreen>
                                 ),
                               ),
                               const SizedBox(width: 8),
-                              ConnectionStatus(isConnected: SSHService().isConnected, label: 'RIG'),
+                              ConnectionStatus(isConnected: SSHService().isConnected, label: 'SYS.CONN'),
                               const SizedBox(width: 4),
                               IconButton(
                                 icon: const Icon(Icons.settings, color: textSecondary, size: 18),
@@ -326,7 +320,7 @@ class _ControllerScreenState extends State<ControllerScreen>
                             value: '#${service.rank}',
                             color: service.rank == 1
                                 ? accentWarning
-                                : accentPrimary,
+                                : accentSystem,
                             icon: Icons.emoji_events_rounded,
                           ),
                         ),
@@ -380,15 +374,15 @@ class _ControllerScreenState extends State<ControllerScreen>
                                 children: [
                                   Icon(
                                     service.lastCommentarySource == 'fallback' ? Icons.chat_bubble_outline_rounded : Icons.auto_awesome_rounded,
-                                    color: service.lastCommentarySource == 'fallback' ? textSecondary : accentPrimary, 
+                                    color: service.lastCommentarySource == 'fallback' ? textSecondary : accentSystem, 
                                     size: 16
                                   ),
                                   const SizedBox(width: 8),
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                                     decoration: BoxDecoration(
-                                      color: service.lastCommentarySource == 'fallback' ? Colors.transparent : accentPrimary.withValues(alpha: 0.2),
-                                      border: Border.all(color: service.lastCommentarySource == 'fallback' ? borderLight : accentPrimary),
+                                      color: service.lastCommentarySource == 'fallback' ? Colors.transparent : accentSystem.withValues(alpha: 0.2),
+                                      border: Border.all(color: service.lastCommentarySource == 'fallback' ? borderLight : accentSystem),
                                       borderRadius: BorderRadius.circular(4),
                                     ),
                                     child: Text(
@@ -396,7 +390,7 @@ class _ControllerScreenState extends State<ControllerScreen>
                                       style: GoogleFonts.spaceGrotesk(
                                         fontSize: 8,
                                         fontWeight: FontWeight.bold,
-                                        color: service.lastCommentarySource == 'fallback' ? textSecondary : accentPrimary,
+                                        color: service.lastCommentarySource == 'fallback' ? textSecondary : accentSystem,
                                       ),
                                     ),
                                   ),
@@ -822,7 +816,7 @@ class _ControllerScreenState extends State<ControllerScreen>
                                   context, '/joinchoice', (_) => false);
                             },
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: accentPrimary,
+                              backgroundColor: accentSystem,
                               foregroundColor: bgDark,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(14),
@@ -868,16 +862,16 @@ class _ControllerScreenState extends State<ControllerScreen>
           const SizedBox(height: 2),
           Text(
             value,
-            style: GoogleFonts.jetBrainsMono(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
+            style: GoogleFonts.vt323(
+              fontSize: 24,
               color: color,
             ),
           ),
+          const SizedBox(height: 2),
           Text(
             label,
-            style: GoogleFonts.inter(
-              fontSize: 8,
+            style: GoogleFonts.spaceGrotesk(
+              fontSize: 10,
               fontWeight: FontWeight.bold,
               color: textSecondary,
               letterSpacing: 1,
