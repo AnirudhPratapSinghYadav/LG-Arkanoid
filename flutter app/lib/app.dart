@@ -7,7 +7,7 @@ import 'screens/lobbyscreen.dart';
 import 'screens/manualentryscreen.dart';
 import 'screens/nameentryscreen.dart';
 import 'screens/qrscanscreen.dart';
-import 'screens/connectionscreen.dart';
+import 'screens/qrinvitescreen.dart';
 import 'screens/settingsscreen.dart';
 import 'screens/splashscreen.dart';
 import 'screens/statusscreen.dart';
@@ -35,9 +35,9 @@ class ArkanoidApp extends StatelessWidget {
         '/manualentry': (context) => const ManualEntryScreen(),
         '/nameentry': (context) => const NameEntryScreen(),
         '/connecting': (context) => const ConnectingScreen(),
-        '/connection': (context) => const ConnectionScreen(),
         '/lobby': (context) => const LobbyScreen(),
         '/qrscan': (context) => const QrScanScreen(),
+        '/qrinvite': (context) => const QrInviteScreen(),
         '/controller': (context) => const ControllerScreen(),
         '/status': (context) => const StatusScreen(),
         '/settings': (context) => const SettingsScreen(),

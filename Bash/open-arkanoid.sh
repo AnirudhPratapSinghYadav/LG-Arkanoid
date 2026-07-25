@@ -68,7 +68,7 @@ for frame in "${FRAMES[@]:0:$NUM_SCREENS}"; do
       "http://localhost:${port}/${screenNumber}" &
   else
     echo "Opening Chromium on $frame (screen $screenNumber)..."
-    sshpass -p "$LG_PASSWORD" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+    sshpass -p "$LG_PASSWORD" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 \
       lg@"$frame" \
       "DISPLAY=:0 chromium-browser \
         --window-position=0,0 \

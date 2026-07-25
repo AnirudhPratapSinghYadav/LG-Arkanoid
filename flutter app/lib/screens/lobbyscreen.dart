@@ -6,6 +6,8 @@ import '../utils/constants.dart';
 import '../services/gameservice.dart';
 import '../widgets/lgpanel.dart';
 import '../widgets/lgbutton.dart';
+import '../widgets/connectionstatus.dart';
+import '../services/ssh_service.dart';
 import '../widgets/mission_background.dart';
 
 class LobbyScreen extends StatefulWidget {
@@ -132,10 +134,16 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
                           children: [
                             Align(
                               alignment: Alignment.topRight,
-                              child: IconButton(
-                                icon: const Icon(Icons.monitor, color: accentPrimary, size: 28),
-                                tooltip: 'Rig Connection',
-                                onPressed: () => Navigator.pushNamed(context, '/connection'),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.settings, color: accentPrimary, size: 28),
+                                    tooltip: 'Settings & Rig',
+                                    onPressed: () => Navigator.pushNamed(context, '/settings'),
+                                  ),
+                                  ConnectionStatus(isConnected: SSHService().isConnected, label: 'RIG'),
+                                ],
                               ),
                             ),
                             Column(
@@ -299,10 +307,26 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
                             ],
                           ),
                           const SizedBox(height: 28),
-                          LgButton(
-                            label: 'START MATCH',
-                            onPressed: connectedCount >= 1 ? _onStartMatch : null,
-                            isPrimary: true,
+                          Row(
+                            children: [
+                              Expanded(
+                                child: LgButton(
+                                  label: 'QR INVITE',
+                                  onPressed: () {
+                                    final payload = 'LGARK|${_gameService.serverAddress}|${_gameService.serverPort}|${_gameService.sessionId}';
+                                    Navigator.pushNamed(context, '/qrinvite', arguments: payload);
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: LgButton(
+                                  label: 'START MATCH',
+                                  onPressed: connectedCount >= 1 ? _onStartMatch : null,
+                                  isPrimary: true,
+                                ),
+                              ),
+                            ],
                           ),
                         ] else
                           AnimatedBuilder(

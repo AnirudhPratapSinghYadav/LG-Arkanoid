@@ -72,10 +72,10 @@ function applyGameMasterMod(gameState, modType){
   try {
     switch(modType){
       case 'WIDE_PADDLE':
-        gameState.powerUps.push(new PowerUp('wide_paddle', (gameState.numScreens*1920)/2, 0));
+        gameState.powerUps.push(new PowerUp('wide_paddle', ((gameState.numScreens || 3)*1920)/2, 0));
         break;
       case 'EXTRA_BALL':
-        let newBall = new Ball(Date.now().toString(), (gameState.numScreens*1920)/2, 500, 3, 4, 8);
+        let newBall = new Ball(Date.now().toString(), ((gameState.numScreens || 3)*1920)/2, 500, 3, 4, 8);
         gameState.balls.push(newBall);
         break;
       case 'SLOW_BALL':
@@ -405,7 +405,7 @@ function updateGameLoop(gameState, applyPowerUpEffectCallback){
     
     if(!hasDestructibleBricks){
       gameState.level++;
-      const MAX_LEVELS = 999;
+      const MAX_LEVELS = 5;
       if(gameState.level > MAX_LEVELS){
         gameState.gameStatus = 'win';
         gameState.gameActive = false;
