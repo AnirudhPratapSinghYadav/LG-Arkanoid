@@ -147,6 +147,11 @@ function validateMessage(player, timestamp, nonce){
 
 function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameState, getWorldSnapshot) {
   io.on('connection', (socket)=>{
+    // Force the next tick to include a full bricks payload for this new connection.
+    // Without this, a screen/phone connecting after bricksDirty was already consumed
+    // by an earlier broadcast would never receive brick state until the next brick hit.
+    worldState.bricksDirty = true;
+
     let screenId = parseInt(socket.handshake.query.screenId, 10);
     if (isNaN(screenId)) {
       const referer = socket.handshake.headers.referer;
@@ -179,6 +184,7 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
       worldState.level = 1;
       worldState.currentLevel = 1;
       worldState.bricks = gameEngine.loadLevel(1, null, worldState.numScreens);
+      worldState.bricksDirty = true; // force the fresh level's bricks to broadcast — a new match's bricks were previously silently dropped by the delta-sync gate
       
       worldState.longestRally = 0;
       worldState.powerupsCollected = 0;
