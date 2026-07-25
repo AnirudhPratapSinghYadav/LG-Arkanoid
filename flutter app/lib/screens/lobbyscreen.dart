@@ -138,11 +138,11 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
                                 crossAxisAlignment: CrossAxisAlignment.end,
                                 children: [
                                   IconButton(
-                                    icon: const Icon(Icons.settings, color: accentPrimary, size: 28),
+                                    icon: const Icon(Icons.settings, color: accentSystem, size: 28),
                                     tooltip: 'Settings & Rig',
                                     onPressed: () => Navigator.pushNamed(context, '/settings'),
                                   ),
-                                  ConnectionStatus(isConnected: SSHService().isConnected, label: 'RIG'),
+                                  ConnectionStatus(isConnected: SSHService().isConnected, label: 'SYS.CONN'),
                                 ],
                               ),
                             ),
@@ -154,18 +154,18 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
                                   'LG ARKANOID',
                                   style: GoogleFonts.vt323(
                                     fontSize: 32,
-                                    color: accentPrimary,
+                                    color: accentSystem,
                                     letterSpacing: 2.0,
                                   ),
                                   textAlign: TextAlign.center,
                                 ),
                                 Text(
                                   'MULTIPLAYER LOBBY',
-                                  style: GoogleFonts.inter(
+                                  style: GoogleFonts.spaceGrotesk(
                                     fontSize: 12,
                                     color: textSecondary,
                                     letterSpacing: 3.0,
-                                    fontWeight: FontWeight.w600,
+                                    fontWeight: FontWeight.w700,
                                   ),
                                   textAlign: TextAlign.center,
                                 ),
@@ -176,6 +176,7 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
                         const SizedBox(height: 36),
 
                         LgPanel(
+                          tag: 'LOBBY.01',
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
@@ -193,10 +194,11 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
                                   ),
                                   Text(
                                     '$connectedCount/$maxPlayers CONNECTED',
-                                    style: GoogleFonts.jetBrainsMono(
-                                      fontSize: 12,
-                                      color: accentPrimary,
+                                    style: GoogleFonts.vt323(
+                                      fontSize: 24,
+                                      color: accentGame,
                                       fontWeight: FontWeight.bold,
+                                      letterSpacing: 1.5,
                                     ),
                                   ),
                                 ],
@@ -244,10 +246,10 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                                     decoration: BoxDecoration(
-                                      color: _selectedMaxPlayers == p ? accentPrimary.withValues(alpha: 0.2) : cardFill,
+                                      color: _selectedMaxPlayers == p ? accentSystem.withValues(alpha: 0.2) : cardFill,
                                       borderRadius: BorderRadius.circular(8),
                                       border: Border.all(
-                                        color: _selectedMaxPlayers == p ? accentPrimary : borderLight,
+                                        color: _selectedMaxPlayers == p ? accentSystem : borderLight,
                                       ),
                                     ),
                                     child: Text(
@@ -375,7 +377,7 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
                         '$_countdownVal',
                         style: GoogleFonts.vt323(
                           fontSize: 140,
-                          color: accentPrimary,
+                          color: accentGame,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -422,7 +424,7 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
             isPlayerMaster ? 'HOST' : 'READY',
             style: GoogleFonts.spaceGrotesk(
               fontSize: 11,
-              color: isPlayerMaster ? accentPrimary : accentSuccess,
+              color: isPlayerMaster ? accentGame : accentSuccess,
               fontWeight: FontWeight.bold,
               letterSpacing: 1.5,
             ),
@@ -443,15 +445,15 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: isSelected ? accentPrimary.withValues(alpha: 0.15) : cardFill,
+          color: isSelected ? accentSystem.withValues(alpha: 0.15) : cardFill,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: isSelected ? accentPrimary : borderLight,
+            color: isSelected ? accentSystem : borderLight,
             width: isSelected ? 1.5 : 1.0,
           ),
           boxShadow: isSelected ? [
             BoxShadow(
-              color: accentPrimary.withValues(alpha: 0.3),
+              color: accentSystem.withValues(alpha: 0.3),
               blurRadius: 10,
               spreadRadius: -2,
             )
@@ -462,7 +464,7 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
           style: GoogleFonts.spaceGrotesk(
             fontSize: 12,
             fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-            color: isSelected ? accentPrimary : textSecondary,
+            color: isSelected ? accentSystem : textSecondary,
           ),
         ),
       ),
@@ -481,10 +483,10 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: isSelected ? accentPrimary.withValues(alpha: 0.15) : cardFill,
+          color: isSelected ? accentSystem.withValues(alpha: 0.15) : cardFill,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: isSelected ? accentPrimary : borderLight,
+            color: isSelected ? accentSystem : borderLight,
             width: isSelected ? 1.5 : 1.0,
           ),
         ),
@@ -493,7 +495,7 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
           style: GoogleFonts.spaceGrotesk(
             fontSize: 12,
             fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-            color: isSelected ? accentPrimary : textSecondary,
+            color: isSelected ? accentSystem : textSecondary,
           ),
         ),
       ),

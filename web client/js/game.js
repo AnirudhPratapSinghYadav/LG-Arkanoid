@@ -26,8 +26,38 @@ const screenBoundary = SCREEN_BOUNDARIES.find(s => s.screenId === screenId) || S
 const virtualLeft = screenBoundary.virtualLeft;
 const serverUrl = window.location.origin;
 
-const ROW_COLORS = [0x4f7cac, 0x9aa4af, 0xf4a261, 0x4caf50, 0xd9534f, 0x242b35];
-const PADDLE_COLORS = [0x4f7cac, 0xf4a261, 0x4caf50];
+// ---------------------------------------------------------------------------
+// Design tokens — single source of truth for all colors, fonts, spacing.
+// Dual-channel: SYSTEM (cyan) for rig/telemetry, GAME (amber) for score/action.
+// ---------------------------------------------------------------------------
+const COLORS = {
+    bg: 0x101214, panel: 0x1a1f26, panelDark: 0x10151d, black: 0x0d1117,
+    system: 0x00e5ff, systemAlt: 0x20c5ff, game: 0xf4a261,
+    accent: 0x4f7cac, success: 0x4caf50, successBright: 0x4ade80, error: 0xd9534f,
+    textPrimary: 0xf3f4f6, textSecondary: 0x9aa4af, white: 0xffffff,
+    brickGrey: 0x666666, gridLine: 0x444444,
+    powerGreen: 0x00ff00, powerBlue: 0x0088ff, powerYellow: 0xffb800, powerRed: 0xff0000,
+    brickCyan: 0x00e5ff, brickPink: 0xff2d78, brickGold: 0xffb800,
+    trail: 0x00ffff,
+};
+const HEX = {
+    system: '#00e5ff', systemAlt: '#20c5ff', game: '#f4a261',
+    accent: '#4f7cac', success: '#4ade80', error: '#d9534f',
+    textPrimary: '#f3f4f6', textSecondary: '#9aa4af', textDim: '#888888',
+    bgPanel: '#0d1117', bgPanelAlpha: '#0d1117ee', bgDark: '#0a0e14',
+    white: '#ffffff', black: '#000000', textLight: '#e8f4f8',
+};
+const FONTS = {
+    display: '"VT323", monospace',
+    heading: '"Space Grotesk"',
+    body: '"Inter"',
+    mono: '"JetBrains Mono", monospace',
+};
+
+const REDUCED_MOTION = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const ROW_COLORS = [COLORS.accent, COLORS.textSecondary, COLORS.game, COLORS.success, COLORS.error, COLORS.panel];
+const PADDLE_COLORS = [COLORS.accent, COLORS.game, COLORS.success];
 
 class GameScene extends Phaser.Scene {
     constructor() {
@@ -45,8 +75,8 @@ class GameScene extends Phaser.Scene {
         this.load.image('lg_logo', 'assets/lg-logo.png');
     }
 
-    drawStandardPanel(graphics, x, y, width, height, alpha = 1.0, borderColor = 0xffffff) {
-        graphics.fillStyle(0x10151d, alpha);
+    drawStandardPanel(graphics, x, y, width, height, alpha = 1.0, borderColor = COLORS.white) {
+        graphics.fillStyle(COLORS.panelDark, alpha);
         graphics.fillRoundedRect(x, y, width, height, 8);
         
         graphics.lineStyle(1, borderColor, alpha * 0.1);
@@ -55,7 +85,7 @@ class GameScene extends Phaser.Scene {
 
     create() {
         const bgGraphics = this.make.graphics({x: 0, y: 0, add: false});
-        bgGraphics.fillStyle(0xffffff, 0.1);
+        bgGraphics.fillStyle(COLORS.white, 0.1);
         for(let i=0; i<30; i++) {
             bgGraphics.fillRect(Math.random() * 256, Math.random() * 256, Math.random() * 2 + 1, Math.random() * 2 + 1);
         }
@@ -63,7 +93,7 @@ class GameScene extends Phaser.Scene {
         this.bg = this.add.tileSprite(960, 540, 1920, 1080, 'bg_stars');
 
         const pGraphics = this.make.graphics({x:0, y:0, add:false});
-        pGraphics.fillStyle(0xffffff, 1);
+        pGraphics.fillStyle(COLORS.white, 1);
         pGraphics.fillRect(0, 0, 8, 8);
         pGraphics.generateTexture('particle', 8, 8);
         
@@ -82,40 +112,40 @@ class GameScene extends Phaser.Scene {
         this.robots = [];
         for (let i = 0; i < 3; i++) {
             let robotText = this.add.text(0, 0, '', {
-                fontFamily: '"Inter"',
+                fontFamily: FONTS.body,
                 fontSize: '16px',
-                color: '#e8f4f8',
+                color: HEX.textLight,
                 align: 'center',
-                backgroundColor: '#0d1117',
+                backgroundColor: HEX.bgPanel,
                 padding: { x: 10, y: 5 }
             }).setOrigin(0.5, 1).setAlpha(0);
             this.robots.push({ text: robotText, opacityTarget: 0.7 });
         }
 
         this.sessionTokenText = this.add.text(960, 580, '', {
-            fontFamily: '"Space Grotesk"',
+            fontFamily: FONTS.heading,
             fontSize: '48px',
-            color: '#00e5ff',
+            color: HEX.system,
             align: 'center'
         }).setOrigin(0.5, 0.5).setAlpha(0);
 
         this.screenLabel = this.add.text(20, 20, 'Screen ' + screenId, {
-            fontFamily: '"Inter"',
+            fontFamily: FONTS.body,
             fontSize: '24px',
-            color: '#888888'
+            color: HEX.textDim
         });
 
         this.rigStatusText = this.add.text(20, 50, `LIQUID GALAXY · ONLINE · ${numScreens} DISPLAYS`, {
-            fontFamily: '"JetBrains Mono", monospace',
+            fontFamily: FONTS.mono,
             fontSize: '14px',
-            color: '#20c5ff',
+            color: HEX.systemAlt,
             fontWeight: 'bold'
         }).setAlpha(0);
 
         this.bottomStatusText = this.add.text(40, 1020, '', {
-            fontFamily: '"JetBrains Mono", monospace',
+            fontFamily: FONTS.mono,
             fontSize: '14px',
-            color: '#9aa4af',
+            color: HEX.textSecondary,
         });
         if (screenId !== 1) this.bottomStatusText.setVisible(false);
 
@@ -123,18 +153,18 @@ class GameScene extends Phaser.Scene {
         this.hudBorderAlpha = 1.0;
 
         this.hudText = this.add.text(40, 40, '', {
-            fontFamily: '"Inter"',
+            fontFamily: FONTS.body,
             fontSize: '24px',
-            color: '#20c5ff',
+            color: HEX.systemAlt,
             lineSpacing: 16
         });
         if (screenId !== 1) this.hudText.setVisible(false);
 
         this.timerPanelGraphics = this.add.graphics();
         this.timerText = this.add.text(960, 40, '00:00', {
-            fontFamily: '"Space Grotesk"',
+            fontFamily: FONTS.heading,
             fontSize: '48px',
-            color: '#ffffff',
+            color: HEX.white,
         }).setOrigin(0.5, 0);
         if (!isCenterScreen) this.timerText.setVisible(false);
 
@@ -142,7 +172,7 @@ class GameScene extends Phaser.Scene {
         this.leaderboardTexts = [];
         for(let i = 0; i < 3; i++) {
             let txt = this.add.text(1880, 80 + (i * 40), '', {
-                fontFamily: '"Space Grotesk"',
+                fontFamily: FONTS.heading,
                 fontSize: '24px'
             }).setOrigin(1, 0);
             if (screenId !== numScreens) txt.setVisible(false);
@@ -150,26 +180,26 @@ class GameScene extends Phaser.Scene {
         }
 
         this.leaderboardTitle = this.add.text(1880, 40, '🏆 LEADERBOARD', { 
-            fontFamily: '"Space Grotesk"', 
+            fontFamily: FONTS.heading, 
             fontSize: '20px', 
-            color: '#4f7cac', 
+            color: HEX.accent, 
             fontWeight: 'bold' 
         }).setOrigin(1, 0);
         if (screenId !== numScreens) this.leaderboardTitle.setVisible(false);
         
         this.geminiCardGraphics = this.add.graphics();
         this.geminiText = this.add.text(1880, 240, '', {
-            fontFamily: '"Inter"',
+            fontFamily: FONTS.body,
             fontSize: '18px',
-            color: '#f3f4f6',
+            color: HEX.textPrimary,
             fontStyle: 'italic',
-            wordWrap: { width: 350, useAdvancedWrap: true }
+            wordWrap: { width: 400, useAdvancedWrap: true }
         }).setOrigin(1, 0);
         
         this.geminiTitle = this.add.text(1880, 210, '🛡️ MISSION ASSISTANT', {
-            fontFamily: '"Space Grotesk"',
+            fontFamily: FONTS.heading,
             fontSize: '20px',
-            color: '#4f7cac',
+            color: HEX.accent,
             fontWeight: 'bold'
         }).setOrigin(1, 0);
         
@@ -179,16 +209,16 @@ class GameScene extends Phaser.Scene {
         }
 
         this.aiTagText = this.add.text(40, 10, 'LEVEL GENERATED BY MISSION CONTROL', {
-            fontFamily: '"Inter"',
+            fontFamily: FONTS.body,
             fontSize: '14px',
-            color: '#4f7cac',
+            color: HEX.accent,
             fontStyle: 'bold'
         }).setAlpha(0);
 
         this.sessionTokenText = this.add.text(960, 560, '', {
-            fontFamily: '"Space Grotesk"',
+            fontFamily: FONTS.heading,
             fontSize: '48px',
-            color: '#00e5ff',
+            color: HEX.system,
             align: 'center'
         }).setOrigin(0.5, 0.5).setAlpha(0);
         
@@ -196,7 +226,7 @@ class GameScene extends Phaser.Scene {
         this.logo.setScale(0.5);
 
         const scanlineGraphics = this.make.graphics({x: 0, y: 0, add: false});
-        scanlineGraphics.fillStyle(0xffffff, 0.15);
+        scanlineGraphics.fillStyle(COLORS.white, 0.15);
         scanlineGraphics.fillRect(0, 0, 8, 1);
         scanlineGraphics.generateTexture('scanline', 8, 3);
 
@@ -283,22 +313,22 @@ class GameScene extends Phaser.Scene {
             const py = 540 + Math.sin(angle * 0.7) * (radius * 0.6);
             
             const hueAlpha = 0.4 + Math.sin(this.attractTime + i) * 0.3;
-            this.attractModeGraphics.fillStyle(i % 2 === 0 ? 0x00e5ff : 0x20c5ff, Math.max(0.1, hueAlpha));
+            this.attractModeGraphics.fillStyle(i % 2 === 0 ? COLORS.system : COLORS.systemAlt, Math.max(0.1, hueAlpha));
             this.attractModeGraphics.fillCircle(px, py, 3 + (i % 4));
         }
 
         if (isCenterScreen) {
             if (!this.bootTitleText) {
                 this.bootTitleText = this.add.text(960, 440, 'LIQUID GALAXY\nARKANOID', {
-                    fontFamily: '"Space Grotesk"', fontSize: '84px', fill: '#20c5ff', align: 'center', fontWeight: 'bold'
+                    fontFamily: FONTS.display, fontSize: '84px', fill: HEX.systemAlt, align: 'center', fontWeight: 'bold'
                 }).setOrigin(0.5, 0.5);
                 
                 this.bootSubTitleText = this.add.text(960, 560, 'WHERE AI MEETS ARKANOID', {
-                    fontFamily: '"Space Grotesk"', fontSize: '22px', fill: '#00e5ff', letterSpacing: 6, fontWeight: 'bold'
+                    fontFamily: FONTS.heading, fontSize: '22px', fill: HEX.system, letterSpacing: 6, fontWeight: 'bold'
                 }).setOrigin(0.5, 0.5);
 
                 this.bootLoadingText = this.add.text(960, 620, 'Powered by GeminiSoC 2026 · Liquid Galaxy', {
-                    fontFamily: '"Inter"', fontSize: '18px', fill: '#9aa4af', letterSpacing: 3
+                    fontFamily: FONTS.body, fontSize: '18px', fill: HEX.textSecondary, letterSpacing: 3
                 }).setOrigin(0.5, 0.5);
             }
             this.bootTitleText.setVisible(true);
@@ -414,7 +444,7 @@ class GameScene extends Phaser.Scene {
     drawCountdownMode() {
         if (!this.countdownText) {
             this.countdownText = this.add.text(960, 540, '', {
-                fontFamily: '"VT323", monospace', fontSize: '240px', color: '#4f7cac', fontWeight: 'bold'
+                fontFamily: FONTS.display, fontSize: '240px', color: HEX.accent, fontWeight: 'bold'
             }).setOrigin(0.5, 0.5);
         }
         
@@ -444,15 +474,15 @@ class GameScene extends Phaser.Scene {
     drawWinMode() {
         if (!this.winTitle) {
             this.winTitle = this.add.text(960, 200, '🏆 MATCH FINISHED', {
-                fontFamily: '"Space Grotesk"', fontSize: '80px', color: '#f4a261', fontWeight: 'bold'
+                fontFamily: FONTS.heading, fontSize: '80px', color: HEX.game, fontWeight: 'bold'
             }).setOrigin(0.5, 0.5);
             
             this.winName = this.add.text(960, 320, '', {
-                fontFamily: '"Space Grotesk"', fontSize: '110px', color: '#f3f4f6', fontWeight: 'bold'
+                fontFamily: FONTS.heading, fontSize: '110px', color: HEX.textPrimary, fontWeight: 'bold'
             }).setOrigin(0.5, 0.5);
             
             this.winStatsText = this.add.text(960, 540, '', {
-                fontFamily: '"Inter"', fontSize: '28px', color: '#9aa4af', align: 'center', lineSpacing: 20
+                fontFamily: FONTS.body, fontSize: '28px', color: HEX.textSecondary, align: 'center', lineSpacing: 20
             }).setOrigin(0.5, 0.5);
 
             this.winConfetti = this.add.particles(0, 0, 'particle', {
@@ -485,11 +515,16 @@ class GameScene extends Phaser.Scene {
             this.winStatsText.setText(statsStr);
             
             if (!this.winConfettiEmitted && winner && winner.connected) {
-                this.winConfetti.start();
+                if (!REDUCED_MOTION) this.winConfetti.start();
                 this.winConfettiEmitted = true;
                 
-                this.cameras.main.pan(960, 450, 2000, 'Sine.easeInOut');
-                this.cameras.main.zoomTo(1.1, 2000, 'Sine.easeInOut');
+                if (!REDUCED_MOTION) {
+                    this.cameras.main.pan(960, 450, 2000, 'Sine.easeInOut');
+                    this.cameras.main.zoomTo(1.1, 2000, 'Sine.easeInOut');
+                } else {
+                    this.cameras.main.setScroll(0, -90);
+                    this.cameras.main.setZoom(1.1);
+                }
             }
         }
     }
@@ -501,8 +536,13 @@ class GameScene extends Phaser.Scene {
             if (this.winStatsText) this.winStatsText.setVisible(false);
             if (this.winConfetti) this.winConfetti.stop();
             this.winConfettiEmitted = false;
-            this.cameras.main.pan(960, 540, 1000, 'Linear');
-            this.cameras.main.zoomTo(1, 1000, 'Linear');
+            if (!REDUCED_MOTION) {
+                this.cameras.main.pan(960, 540, 1000, 'Linear');
+                this.cameras.main.zoomTo(1, 1000, 'Linear');
+            } else {
+                this.cameras.main.setScroll(0, 0);
+                this.cameras.main.setZoom(1);
+            }
         }
     }
 
@@ -574,7 +614,7 @@ class GameScene extends Phaser.Scene {
             const panelY = bounds.y - padY;
             const panelW = bounds.width + padX * 2;
             const panelH = bounds.height + padY * 2;
-            this.drawStandardPanel(this.hudPanelGraphics, panelX, panelY, panelW, panelH);
+            this.drawStandardPanel(this.hudPanelGraphics, panelX, panelY, panelW, panelH, 1.0, COLORS.system);
         }
 
         let lineIdx = 0;
@@ -584,7 +624,7 @@ class GameScene extends Phaser.Scene {
                 const startY = bounds.y + 40 + (lineIdx * 40) + 12; 
                 const startX = bounds.x + bounds.width - 60; 
                 if (screenId === 1) {
-                    this.hudPanelGraphics.fillStyle(0x4ade80, 1);
+                    this.hudPanelGraphics.fillStyle(COLORS.successBright, 1);
                     for(let l = 0; l < Math.min(p.lives, 5); l++) {
                         this.hudPanelGraphics.fillCircle(startX + (l * 14), startY, 5);
                     }
@@ -604,22 +644,22 @@ class GameScene extends Phaser.Scene {
             const m = String(Math.floor(remaining / 60)).padStart(2, '0');
             const s = String(remaining % 60).padStart(2, '0');
             this.timerText.setText(`${m}:${s}`);
-            if (remaining <= 30) this.timerText.setColor('#ff0000');
-            else this.timerText.setColor('#ffffff');
+            if (remaining <= 30) this.timerText.setColor(HEX.error);
+            else this.timerText.setColor(HEX.white);
         } else {
             this.timerText.setText('00:00');
         }
         
         if (isCenterScreen && this.currentState.gameStartedAt && this.currentState.gameStatus === 'playing') {
             const tBounds = this.timerText.getBounds();
-            this.drawStandardPanel(this.timerPanelGraphics, tBounds.x - 30, tBounds.y - 15, tBounds.width + 60, tBounds.height + 30);
+            this.drawStandardPanel(this.timerPanelGraphics, tBounds.x - 30, tBounds.y - 15, tBounds.width + 60, tBounds.height + 30, 1.0, COLORS.game);
         }
 
         if (isCenterScreen) {
             if (!this.rigHealthText) {
                 this.rigHealthGraphics = this.add.graphics();
                 this.rigHealthText = this.add.text(960, 1040, '', {
-                    fontFamily: '"Inter"', fontSize: '14px', color: '#888888', align: 'center'
+                    fontFamily: FONTS.body, fontSize: '14px', color: HEX.textDim, align: 'center'
                 }).setOrigin(0.5, 1);
             }
             
@@ -633,7 +673,7 @@ class GameScene extends Phaser.Scene {
         let lbW = 0;
         let lbLines = 0;
         
-        const PLAYER_COLORS_HEX = ['#4f7cac', '#f4a261', '#4caf50', '#e040fb', '#ff5252'];
+        const PLAYER_COLORS_HEX = [HEX.accent, HEX.game, HEX.success, '#e040fb', '#ff5252'];
         
         for (let i = 0; i < 3; i++) {
             if (i < activePlayers.length) {
@@ -647,7 +687,7 @@ class GameScene extends Phaser.Scene {
                 lbLines++;
                 
                 if (screenId === numScreens && this._rankSwapHighlightPids && this._rankSwapHighlightPids[p.id]) {
-                    this.drawStandardPanel(this.leaderboardPanelGraphics, 1880 - lbW - 20, 80 + (i * 40), lbW + 40, 40, 1.0, 0xffffff);
+                    this.drawStandardPanel(this.leaderboardPanelGraphics, 1880 - lbW - 20, 80 + (i * 40), lbW + 40, 40, 1.0, COLORS.white);
                 }
             } else {
                 this.leaderboardTexts[i].setText('');
@@ -655,10 +695,10 @@ class GameScene extends Phaser.Scene {
         }
         
         if (screenId === numScreens && lbLines > 0) {
-            this.leaderboardPanelGraphics.fillStyle(0x4f7cac, 1);
+            this.leaderboardPanelGraphics.fillStyle(COLORS.accent, 1);
             this.leaderboardTitle.setVisible(true).setDepth(2);
             
-            this.drawStandardPanel(this.leaderboardPanelGraphics, 1880 - Math.max(lbW, 180) - 20, 25, Math.max(lbW, 180) + 40, (lbLines * 40) + 70);
+            this.drawStandardPanel(this.leaderboardPanelGraphics, 1880 - Math.max(lbW, 180) - 20, 25, Math.max(lbW, 180) + 40, (lbLines * 40) + 70, 1.0, COLORS.game);
             
             let aiText = "Analyzing game data...";
             if (this.currentState.lastCommentary) {
@@ -667,7 +707,7 @@ class GameScene extends Phaser.Scene {
             this.geminiText.setText(aiText);
             
             const gBounds = this.geminiText.getBounds();
-            this.drawStandardPanel(this.leaderboardPanelGraphics, 1880 - 350 - 20, 195, 350 + 40, gBounds.height + 60);
+            this.drawStandardPanel(this.leaderboardPanelGraphics, 1880 - 350 - 20, 195, 350 + 40, gBounds.height + 60, 1.0, COLORS.system);
         }
     }
 
@@ -685,10 +725,10 @@ class GameScene extends Phaser.Scene {
                             this.brickEmitter.emitParticleAt(localX + 300, brick.y + 15, 15);
                             this.playBeep(600 + (6 - (r % 6)) * 100, 'square', 0.1, 0.05);
                             if (brick.type === 'hard' || brick.type === 'indestructible') {
-                                this.cameras.main.shake(150, 0.005);
+                                if (!REDUCED_MOTION) this.cameras.main.shake(150, 0.005);
                                 this.playBeep(200, 'sawtooth', 0.15, 0.1);
                             } else {
-                                this.cameras.main.shake(50, 0.002);
+                                if (!REDUCED_MOTION) this.cameras.main.shake(50, 0.002);
                             }
                         }
                     }
@@ -759,11 +799,11 @@ class GameScene extends Phaser.Scene {
             const localX = p.x - virtualLeft;
             if (localX < -50 || localX > 1970) continue;
             
-            let pColor = 0xff0000;
+            let pColor = COLORS.powerRed;
             let pLetter = 'B';
-            if (p.type === 'wide_paddle') { pColor = 0x00ff00; pLetter = 'W'; }
-            else if (p.type === 'slow_ball') { pColor = 0x0088ff; pLetter = 'S'; }
-            else if (p.type === 'multi_ball') { pColor = 0xffb800; pLetter = 'M'; }
+            if (p.type === 'wide_paddle') { pColor = COLORS.powerGreen; pLetter = 'W'; }
+            else if (p.type === 'slow_ball') { pColor = COLORS.powerBlue; pLetter = 'S'; }
+            else if (p.type === 'multi_ball') { pColor = COLORS.powerYellow; pLetter = 'M'; }
             
             const pulse = 1 + Math.sin(time * 0.005) * 0.3;
             const auraRadius = 16 + (4 * pulse);
@@ -774,7 +814,7 @@ class GameScene extends Phaser.Scene {
             this.graphics.lineStyle(2, pColor, 1);
             this.graphics.strokeCircle(localX, p.y, 14);
             
-            this.graphics.fillStyle(0x0d1117, 1);
+            this.graphics.fillStyle(COLORS.black, 1);
             this.graphics.fillCircle(localX, p.y, 12);
             
             if (tIdx >= this.powerUpTexts.length) {
@@ -788,7 +828,7 @@ class GameScene extends Phaser.Scene {
             
             const txt = this.powerUpTexts[tIdx++];
             txt.setText(pLetter);
-            txt.setColor(pColor === 0x00ff00 ? '#00ff00' : pColor === 0x0088ff ? '#0088ff' : pColor === 0xffb800 ? '#ffb800' : '#ff0000');
+            txt.setColor(pColor === COLORS.powerGreen ? '#00ff00' : pColor === COLORS.powerBlue ? '#0088ff' : pColor === COLORS.powerYellow ? '#ffb800' : '#ff0000');
             txt.setPosition(localX, p.y);
             txt.setAlpha(1);
         }
@@ -825,11 +865,11 @@ class GameScene extends Phaser.Scene {
 
                 let color;
                 if (brick.type === 'indestructible') {
-                    color = 0x666666;
+                    color = COLORS.brickGrey;
                 } else if (brick.type === 'hard') {
-                    color = 0xffffff;
+                    color = COLORS.white;
                 } else {
-                    const normalColors = [0x00e5ff, 0xff2d78, 0xffb800];
+                    const normalColors = [COLORS.brickCyan, COLORS.brickPink, COLORS.brickGold];
                     color = normalColors[brick.row % 3];
                 }
                 
@@ -840,7 +880,7 @@ class GameScene extends Phaser.Scene {
                 this.graphics.fillRect(drawX, drawY, drawW, drawH);
                 
                 if (brick.type === 'indestructible') {
-                    this.graphics.lineStyle(2, 0x444444, 1);
+                    this.graphics.lineStyle(2, COLORS.gridLine, 1);
                     for (let i = -drawH; i < drawW; i += 10) {
                         let x1 = i;
                         let y1 = 0;
@@ -861,7 +901,7 @@ class GameScene extends Phaser.Scene {
                 
                 const lightColor = Phaser.Display.Color.Interpolate.ColorWithColor(
                     Phaser.Display.Color.IntegerToColor(color),
-                    Phaser.Display.Color.IntegerToColor(0xffffff),
+                    Phaser.Display.Color.IntegerToColor(COLORS.white),
                     100, 40
                 );
                 this.graphics.fillStyle(Phaser.Display.Color.GetColor(lightColor.r, lightColor.g, lightColor.b), 1);
@@ -869,7 +909,7 @@ class GameScene extends Phaser.Scene {
                 
                 const darkColor = Phaser.Display.Color.Interpolate.ColorWithColor(
                     Phaser.Display.Color.IntegerToColor(color),
-                    Phaser.Display.Color.IntegerToColor(0x000000),
+                    Phaser.Display.Color.IntegerToColor(COLORS.black),
                     100, 40
                 );
                 this.graphics.fillStyle(Phaser.Display.Color.GetColor(darkColor.r, darkColor.g, darkColor.b), 1);
@@ -901,11 +941,11 @@ class GameScene extends Phaser.Scene {
             for (let t = 0; t < this.ballTrails[i].length; t++) {
                 const pos = this.ballTrails[i][t];
                 const alpha = t / 10;
-                this.trailGraphics.fillStyle(0x00ffff, alpha * 0.5);
+                this.trailGraphics.fillStyle(COLORS.trail, alpha * 0.5);
                 this.trailGraphics.fillCircle(pos.x, pos.y, 8 * alpha);
             }
 
-            this.graphics.fillStyle(0xffffff, 1);
+            this.graphics.fillStyle(COLORS.white, 1);
             this.graphics.fillCircle(localX, ball.y, 8);
         }
     }
@@ -936,7 +976,7 @@ class GameScene extends Phaser.Scene {
                 this.graphics.fillStyle(0xffffff, 0.8);
                 this.graphics.fillRoundedRect(nameX - 40, 1000 - 35, 80, 20, 4);
                 if (!this[`paddleNameText_${i}`]) {
-                    this[`paddleNameText_${i}`] = this.add.text(0, 0, '', { fontFamily: '"Inter"', fontSize: '12px', color: '#000', fontWeight: 'bold' }).setOrigin(0.5, 0.5).setDepth(200);
+                    this[`paddleNameText_${i}`] = this.add.text(0, 0, '', { fontFamily: FONTS.body, fontSize: '12px', color: HEX.black, fontWeight: 'bold' }).setOrigin(0.5, 0.5).setDepth(200);
                 }
                 this[`paddleNameText_${i}`].setText(player.name.substring(0, 8));
                 this[`paddleNameText_${i}`].setPosition(nameX, 1000 - 25);
@@ -967,27 +1007,66 @@ class GameScene extends Phaser.Scene {
         const robotY = 1050;
         const robotSize = 40;
 
-        this.robotGraphics.fillStyle(0x0d1117, 0.9);
+        this.robotGraphics.fillStyle(COLORS.black, 0.9);
         this.robotGraphics.fillRoundedRect(robotX - robotSize/2, robotY - robotSize/2, robotSize, robotSize, 10);
-        this.robotGraphics.lineStyle(2, 0x4f7cac, 0.8);
+        this.robotGraphics.lineStyle(2, COLORS.accent, 0.8);
         this.robotGraphics.strokeRoundedRect(robotX - robotSize/2, robotY - robotSize/2, robotSize, robotSize, 10);
 
-        this.robotGraphics.fillStyle(0x00e5ff, 0.9);
-        this.robotGraphics.fillCircle(robotX - 8, robotY - 4, 4);
-        this.robotGraphics.fillCircle(robotX + 8, robotY - 4, 4);
+        let visorColor = COLORS.system;
+        if (this.robotState === 'excited') visorColor = COLORS.game;
+        else if (this.robotState === 'alert') visorColor = COLORS.error;
 
-        this.robotGraphics.lineStyle(2, 0x00e5ff, 0.6);
-        this.robotGraphics.beginPath();
-        this.robotGraphics.moveTo(robotX - 6, robotY + 8);
-        this.robotGraphics.lineTo(robotX + 6, robotY + 8);
-        this.robotGraphics.strokePath();
+        this.robotGraphics.fillStyle(visorColor, 0.9);
+        
+        if (this.robotState === 'excited') {
+            this.robotGraphics.lineStyle(2, visorColor, 0.9);
+            this.robotGraphics.beginPath();
+            this.robotGraphics.moveTo(robotX - 12, robotY - 2);
+            this.robotGraphics.lineTo(robotX - 8, robotY - 6);
+            this.robotGraphics.lineTo(robotX - 4, robotY - 2);
+            this.robotGraphics.moveTo(robotX + 4, robotY - 2);
+            this.robotGraphics.lineTo(robotX + 8, robotY - 6);
+            this.robotGraphics.lineTo(robotX + 12, robotY - 2);
+            this.robotGraphics.strokePath();
+            
+            this.robotGraphics.lineStyle(2, visorColor, 0.6);
+            this.robotGraphics.beginPath();
+            this.robotGraphics.moveTo(robotX - 8, robotY + 6);
+            this.robotGraphics.quadraticCurveTo(robotX, robotY + 12, robotX + 8, robotY + 6);
+            this.robotGraphics.strokePath();
+        } else if (this.robotState === 'alert') {
+            this.robotGraphics.lineStyle(2, visorColor, 0.9);
+            this.robotGraphics.beginPath();
+            this.robotGraphics.moveTo(robotX - 12, robotY - 6);
+            this.robotGraphics.lineTo(robotX - 4, robotY - 2);
+            this.robotGraphics.moveTo(robotX + 4, robotY - 2);
+            this.robotGraphics.lineTo(robotX + 12, robotY - 6);
+            this.robotGraphics.strokePath();
+            
+            this.robotGraphics.lineStyle(2, visorColor, 0.6);
+            this.robotGraphics.beginPath();
+            this.robotGraphics.moveTo(robotX - 6, robotY + 8);
+            this.robotGraphics.lineTo(robotX - 2, robotY + 6);
+            this.robotGraphics.lineTo(robotX + 2, robotY + 10);
+            this.robotGraphics.lineTo(robotX + 6, robotY + 8);
+            this.robotGraphics.strokePath();
+        } else {
+            this.robotGraphics.fillCircle(robotX - 8, robotY - 4, 4);
+            this.robotGraphics.fillCircle(robotX + 8, robotY - 4, 4);
 
-        this.robotGraphics.lineStyle(2, 0x4f7cac, 0.6);
+            this.robotGraphics.lineStyle(2, visorColor, 0.6);
+            this.robotGraphics.beginPath();
+            this.robotGraphics.moveTo(robotX - 6, robotY + 8);
+            this.robotGraphics.lineTo(robotX + 6, robotY + 8);
+            this.robotGraphics.strokePath();
+        }
+
+        this.robotGraphics.lineStyle(2, COLORS.accent, 0.6);
         this.robotGraphics.beginPath();
         this.robotGraphics.moveTo(robotX, robotY - robotSize/2);
         this.robotGraphics.lineTo(robotX, robotY - robotSize/2 - 10);
         this.robotGraphics.strokePath();
-        this.robotGraphics.fillStyle(0x00e5ff, 0.8);
+        this.robotGraphics.fillStyle(visorColor, 0.8);
         this.robotGraphics.fillCircle(robotX, robotY - robotSize/2 - 10, 3);
 
         const robot = this.robots[0];
@@ -996,23 +1075,28 @@ class GameScene extends Phaser.Scene {
             if (bubbleText && bubbleText.length > 0) {
                 const textWidth = Math.min(bubbleText.length * 8 + 30, 400);
                 const bubbleX = robotX;
+                
+                robot.text.setWordWrapWidth(textWidth - 20);
+                robot.text.updateText();
+                
+                const bounds = robot.text.getBounds();
+                const bubbleHeight = Math.max(bounds.height + 16, 30);
                 const bubbleY = robotY - robotSize/2 - 22;
 
-                this.robotGraphics.fillStyle(0x0d1117, 0.95);
-                this.robotGraphics.fillRoundedRect(bubbleX - textWidth/2, bubbleY - 36, textWidth, 30, 8);
-                this.robotGraphics.lineStyle(1, 0x4f7cac, 0.6);
-                this.robotGraphics.strokeRoundedRect(bubbleX - textWidth/2, bubbleY - 36, textWidth, 30, 8);
+                this.robotGraphics.fillStyle(COLORS.black, 0.95);
+                this.robotGraphics.fillRoundedRect(bubbleX - textWidth/2, bubbleY - bubbleHeight - 6, textWidth, bubbleHeight, 8);
+                this.robotGraphics.lineStyle(1, COLORS.accent, 0.6);
+                this.robotGraphics.strokeRoundedRect(bubbleX - textWidth/2, bubbleY - bubbleHeight - 6, textWidth, bubbleHeight, 8);
 
-                this.robotGraphics.fillStyle(0x0d1117, 0.95);
+                this.robotGraphics.fillStyle(COLORS.black, 0.95);
                 this.robotGraphics.fillTriangle(
                     bubbleX - 6, bubbleY - 6,
                     bubbleX + 6, bubbleY - 6,
                     bubbleX, bubbleY
                 );
 
-                robot.text.setPosition(bubbleX, bubbleY - 21);
+                robot.text.setPosition(bubbleX, bubbleY - bubbleHeight/2 - 6);
                 robot.text.setOrigin(0.5, 0.5);
-                robot.text.setWordWrapWidth(textWidth - 20);
             }
         }
     }
@@ -1075,7 +1159,7 @@ class GameScene extends Phaser.Scene {
         this.socket.on('player_connection_lost', (data) => {
             this.lostConnectionPids = this.lostConnectionPids || {};
             this.lostConnectionPids[data.playerId] = Date.now();
-            this.cameras.main.flash(300, 255, 0, 0, false);
+            if (!REDUCED_MOTION) this.cameras.main.flash(300, 255, 0, 0, false);
         });
 
         this.socket.on('player_disconnected', (data) => {
@@ -1086,8 +1170,18 @@ class GameScene extends Phaser.Scene {
 
         this.socket.on('commentary', (data) => {
             if (data.eventType === 'life_lost') {
-                this.cameras.main.shake(200, 0.01);
+                if (!REDUCED_MOTION) this.cameras.main.shake(200, 0.01);
+                this.robotState = 'alert';
+            } else if (data.eventType === 'level_cleared' || data.eventType === 'multi_ball') {
+                this.robotState = 'excited';
+            } else {
+                this.robotState = 'idle';
             }
+
+            if (this.robotStateTimer) clearTimeout(this.robotStateTimer);
+            this.robotStateTimer = setTimeout(() => {
+                this.robotState = 'idle';
+            }, 3000);
 
             let message = data.text || data.message || '';
             if (data.source === 'fallback') {
@@ -1157,20 +1251,20 @@ class GameScene extends Phaser.Scene {
 
             if (!this.joinToastText) {
                 this.joinToastText = this.add.text(960, -80, '', {
-                    fontFamily: '"VT323", monospace',
+                    fontFamily: FONTS.display,
                     fontSize: '48px',
-                    color: '#4ade80',
+                    color: HEX.successBright,
                     align: 'center',
-                    backgroundColor: '#0d1117ee',
+                    backgroundColor: HEX.bgPanelAlpha,
                     padding: { x: 40, y: 16 }
                 }).setOrigin(0.5, 0.5).setDepth(500);
             }
 
             if (!this.joinToastSubText) {
                 this.joinToastSubText = this.add.text(960, -30, '', {
-                    fontFamily: '"Inter"',
+                    fontFamily: FONTS.body,
                     fontSize: '20px',
-                    color: '#9AA4AF',
+                    color: HEX.textSecondary,
                     align: 'center'
                 }).setOrigin(0.5, 0.5).setDepth(500);
             }
@@ -1248,7 +1342,7 @@ const config = {
     type: Phaser.AUTO,
     width: 1920,
     height: 1080,
-    backgroundColor: '#0a0e14',
+    backgroundColor: HEX.bgDark,
     scene: [GameScene],
     banner: false
 };

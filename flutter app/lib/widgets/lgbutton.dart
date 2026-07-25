@@ -24,6 +24,7 @@ class LgButton extends StatefulWidget {
 class _LgButtonState extends State<LgButton> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
+  bool _isFocused = false;
 
   @override
   void initState() {
@@ -55,31 +56,49 @@ class _LgButtonState extends State<LgButton> with SingleTickerProviderStateMixin
           widget.onPressed?.call();
         },
         onTapCancel: isDisabled ? null : () => _controller.reverse(),
-        child: AnimatedBuilder(
-          animation: _scaleAnimation,
-          builder: (context, child) => Transform.scale(
-            scale: _scaleAnimation.value,
-            child: child,
-          ),
-          child: Container(
+        child: Focus(
+          onFocusChange: (focused) {
+            setState(() {
+              _isFocused = focused;
+            });
+          },
+          child: AnimatedBuilder(
+            animation: _scaleAnimation,
+            builder: (context, child) => Transform.scale(
+              scale: _scaleAnimation.value,
+              child: child,
+            ),
+            child: Container(
             height: 56,
             decoration: BoxDecoration(
               color: widget.isPrimary ? accentPrimary : Colors.transparent,
-              border: Border.all(color: widget.isPrimary ? accentPrimary : Colors.white.withValues(alpha: 0.12), width: 1.5),
+              border: Border.all(
+                color: _isFocused ? accentSystem : (widget.isPrimary ? accentPrimary : Colors.white.withValues(alpha: 0.12)),
+                width: _isFocused ? 2.5 : 1.5,
+              ),
               borderRadius: BorderRadius.circular(14),
+              boxShadow: _isFocused
+                  ? [
+                      BoxShadow(
+                        color: accentSystem.withValues(alpha: 0.4),
+                        blurRadius: 12,
+                      )
+                    ]
+                  : [],
             ),
             child: Center(
               child: Text(
                 widget.label,
-                style: GoogleFonts.inter(
+                style: GoogleFonts.spaceGrotesk(
                   color: widget.isPrimary ? bgDark : textPrimary,
                   fontSize: 16,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w700,
                   letterSpacing: 0.5,
                 ),
               ),
             ),
           ),
+        ),
         ),
       ),
     );

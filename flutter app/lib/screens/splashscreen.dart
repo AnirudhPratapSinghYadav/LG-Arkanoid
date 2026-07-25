@@ -79,10 +79,10 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                               width: 8,
                               height: 8,
                               decoration: BoxDecoration(
-                                color: accentPrimary,
+                                color: accentSystem,
                                 shape: BoxShape.circle,
                                 boxShadow: [
-                                  BoxShadow(color: accentPrimary.withValues(alpha: 0.5), blurRadius: 10)
+                                  BoxShadow(color: accentSystem.withValues(alpha: 0.5), blurRadius: 10)
                                 ],
                               ),
                             ),
@@ -104,10 +104,9 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                             ),
                             const SizedBox(height: 28),
                             Text(
-                              'Liquid Galaxy Arcade Controller',
-                              style: GoogleFonts.spaceGrotesk(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
+                              'LIQUID GALAXY ARCADE CONTROLLER',
+                              style: GoogleFonts.vt323(
+                                fontSize: 24,
                                 color: textPrimary,
                                 letterSpacing: 1.5,
                               ),
@@ -116,10 +115,10 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                             const SizedBox(height: 8),
                             Text(
                               'Where AI meets Arkanoid',
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.spaceGrotesk(
                                 fontSize: 13,
-                                color: accentPrimary,
-                                fontWeight: FontWeight.w600,
+                                color: accentSystem,
+                                fontWeight: FontWeight.bold,
                                 letterSpacing: 1.0,
                               ),
                               textAlign: TextAlign.center,

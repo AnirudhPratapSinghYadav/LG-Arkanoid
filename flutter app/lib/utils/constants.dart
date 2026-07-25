@@ -11,6 +11,19 @@ const Color accentError = Color(0xFFD9534F);
 const Color textPrimary = Color(0xFFF3F4F6);
 const Color textSecondary = Color(0xFF9AA4AF);
 
+// Dual-channel accent system
+// Cyan — rig status, telemetry, connection, system readouts
+const Color accentSystem = Color(0xFF00E5FF);
+// Amber — game action channel: scores, power-ups, player events
+const Color accentGame = Color(0xFFF4A261);
+
+// Spacing scale
+const double spaceXs = 4;
+const double spaceSm = 8;
+const double spaceMd = 16;
+const double spaceLg = 24;
+const double spaceXl = 32;
+
 const String defaultServerPort = '8128';
 const int defaultSshPort = 22;
 const String defaultSshUsername = 'lg';
