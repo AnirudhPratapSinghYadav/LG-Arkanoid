@@ -697,7 +697,7 @@ class GameScene extends Phaser.Scene {
             }
         }
         
-        for (let i = 0; i < 3; i++) {
+        for (let i = 0; i < this.currentState.players.length; i++) {
             const p = this.currentState.players[i];
             if (p && p.connected) {
                 const prevScore = this.previousScores[p.id] || 0;
