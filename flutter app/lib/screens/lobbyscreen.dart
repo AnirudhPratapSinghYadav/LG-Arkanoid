@@ -127,28 +127,41 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Column(
+                        Stack(
+                          alignment: Alignment.topCenter,
                           children: [
-                            Image.asset('assets/lg-logo.png', height: 40),
-                            const SizedBox(height: 12),
-                            Text(
-                              'LG ARKANOID',
-                              style: GoogleFonts.vt323(
-                                fontSize: 32,
-                                color: accentPrimary,
-                                letterSpacing: 2.0,
+                            Align(
+                              alignment: Alignment.topRight,
+                              child: IconButton(
+                                icon: const Icon(Icons.monitor, color: accentPrimary, size: 28),
+                                tooltip: 'Rig Connection',
+                                onPressed: () => Navigator.pushNamed(context, '/connection'),
                               ),
-                              textAlign: TextAlign.center,
                             ),
-                            Text(
-                              'MULTIPLAYER LOBBY',
-                              style: GoogleFonts.inter(
-                                fontSize: 12,
-                                color: textSecondary,
-                                letterSpacing: 3.0,
-                                fontWeight: FontWeight.w600,
-                              ),
-                              textAlign: TextAlign.center,
+                            Column(
+                              children: [
+                                Image.asset('assets/lg-logo.png', height: 40),
+                                const SizedBox(height: 12),
+                                Text(
+                                  'LG ARKANOID',
+                                  style: GoogleFonts.vt323(
+                                    fontSize: 32,
+                                    color: accentPrimary,
+                                    letterSpacing: 2.0,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                                Text(
+                                  'MULTIPLAYER LOBBY',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    color: textSecondary,
+                                    letterSpacing: 3.0,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ],
                             ),
                           ],
                         ),

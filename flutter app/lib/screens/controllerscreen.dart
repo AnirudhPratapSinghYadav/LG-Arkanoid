@@ -283,14 +283,26 @@ class _ControllerScreenState extends State<ControllerScreen>
                             ],
                           ),
 
-                          // Ping
-                          Text(
-                            '${service.latencyMs}ms',
-                            style: GoogleFonts.jetBrainsMono(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              color: textSecondary,
-                            ),
+                          // Ping + Rig connection
+                          Row(
+                            children: [
+                              Text(
+                                '${service.latencyMs}ms',
+                                style: GoogleFonts.jetBrainsMono(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: textSecondary,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              IconButton(
+                                icon: const Icon(Icons.monitor, color: textSecondary, size: 18),
+                                constraints: const BoxConstraints(),
+                                padding: EdgeInsets.zero,
+                                tooltip: 'Rig Connection',
+                                onPressed: () => Navigator.pushNamed(context, '/connection'),
+                              ),
+                            ],
                           ),
                         ],
                       ),

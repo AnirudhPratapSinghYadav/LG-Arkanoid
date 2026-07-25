@@ -78,29 +78,22 @@ export GEMINI_API_KEY=your_key_here
 node index.js
 ```
 
-**Get the screens up**
+**Get the rig connected and screens up**
 
-Open a Chromium window per physical screen (or launch automatically via `Bash/open-arkanoid.sh <num_screens>`):
+The game uses an automated SSH connection flow to manage the Liquid Galaxy rig, avoiding manual browser windows.
 
-```
-http://<master-node-ip>:8128/1
-http://<master-node-ip>:8128/2
-http://<master-node-ip>:8128/3
-```
+1. Launch the Flutter App and go to **Rig Connection**.
+2. Enter the rig's Master Node IP, Port (default 22), Username (default `lg`), Password (encrypted securely on-device), and the total number of screens. Or simply tap **Scan QR** to auto-fill these details from a rig-generated QR code.
+3. Tap **Connect to Rig**. The app automatically retries 5 times if the network is spotty.
+4. Once connected, tap **Launch on Rig**. 
+   - The app runs a script over SSH (`open-arkanoid.sh`) which automatically detects your rig topology (via `$LG_FRAMES`) and launches Chromium on all physical screens perfectly aligned.
+   - Zero manual typing required on the rig.
 
-(and so on for 4 and 5 up to 9) - or launch using the provided Liquid Galaxy shell scripts.
+Hit the "Start Match" button from the app's Lobby once your players are ready.
 
-Hit S on any screen to kick off a new game. You'll get a 4 letter code shown across the screens for about 10 seconds.
+**Connect other players via Phone**
 
-**Connect your phone**
-
-```bash
-cd "flutter app"
-flutter pub get
-flutter run
-```
-
-Type in the master node's IP, port 8128, and the session code. Drag left/right to move your paddle, there's also Power Up and Fire Ball buttons once you're in.
+Other players simply launch the app and tap **Scan Liquid Galaxy QR** to join your active session instantly. The master node handles the physics loop every 16ms and pushes state to all clients.
 
 ## Testing on iPhone
 

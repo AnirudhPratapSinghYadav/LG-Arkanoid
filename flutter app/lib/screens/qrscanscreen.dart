@@ -63,12 +63,19 @@ class _QrScanScreenState extends State<QrScanScreen> {
             },
             onDetect: (capture) {
               if (_barcodeFound) return;
+              final mode = ModalRoute.of(context)?.settings.arguments as String? ?? 'session';
               final List<Barcode> barcodes = capture.barcodes;
               for (final barcode in barcodes) {
-                if (barcode.rawValue != null && barcode.rawValue!.startsWith('LGARK|')) {
-                  _barcodeFound = true;
-                  Navigator.of(context).pop(barcode.rawValue);
-                  return;
+                if (barcode.rawValue != null) {
+                  if (mode == 'session' && barcode.rawValue!.startsWith('LGARK|')) {
+                    _barcodeFound = true;
+                    Navigator.of(context).pop(barcode.rawValue);
+                    return;
+                  } else if (mode == 'rigConnect' && barcode.rawValue!.startsWith('LGRIG|')) {
+                    _barcodeFound = true;
+                    Navigator.of(context).pop(barcode.rawValue);
+                    return;
+                  }
                 }
               }
             },

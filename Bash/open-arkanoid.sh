@@ -38,28 +38,47 @@ fi
 sleep 2
 
 # Open Chromium across rig displays
-for i in $(seq 1 "$NUM_SCREENS"); do
-  if [ "$i" -eq 1 ]; then
-    echo "Opening Chromium on master (screen 1)..."
+# Source LG shell configuration for frame list
+if [ -f "${HOME}/etc/shell.conf" ]; then
+  . "${HOME}/etc/shell.conf"
+fi
+
+# Determine the frame order to use
+if [ -n "$LG_FRAMES" ]; then
+  echo "Using LG_FRAMES from shell.conf: $LG_FRAMES"
+  FRAMES=($LG_FRAMES)
+else
+  echo "LG_FRAMES not found – falling back to sequential lg1..lg$NUM_SCREENS"
+  FRAMES=()
+  for i in $(seq 1 "$NUM_SCREENS"); do FRAMES+=("lg$i"); done
+fi
+
+port=8128
+screenNumber=0
+for frame in "${FRAMES[@]:0:$NUM_SCREENS}"; do
+  screenNumber=$((screenNumber + 1))
+  if [ "$frame" = "lg1" ]; then
+    echo "Opening Chromium on master ($frame, screen $screenNumber)..."
     chromium-browser \
       --window-position=0,0 \
       --window-size=1920,1080 \
       --kiosk \
       --no-first-run \
       --disable-infobars \
-      "http://localhost:8128/1" &
+      "http://localhost:${port}/${screenNumber}" &
   else
-    echo "Opening Chromium on slave lg$i (screen $i)..."
+    echo "Opening Chromium on $frame (screen $screenNumber)..."
     sshpass -p "$LG_PASSWORD" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-      lg@lg"$i" \
+      lg@"$frame" \
       "DISPLAY=:0 chromium-browser \
         --window-position=0,0 \
         --window-size=1920,1080 \
         --kiosk \
         --no-first-run \
         --disable-infobars \
-        'http://lg1:8128/$i' &" &
+        'http://lg1:${port}/${screenNumber}' &" &
   fi
 done
+
 
 echo "Launched $NUM_SCREENS screens successfully."
