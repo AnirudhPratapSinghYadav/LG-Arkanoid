@@ -7,7 +7,7 @@ import 'screens/lobbyscreen.dart';
 import 'screens/manualentryscreen.dart';
 import 'screens/nameentryscreen.dart';
 import 'screens/qrscanscreen.dart';
-import 'screens/rigdiscoveryscreen.dart';
+import 'screens/connectionscreen.dart';
 import 'screens/settingsscreen.dart';
 import 'screens/splashscreen.dart';
 import 'screens/statusscreen.dart';
@@ -31,11 +31,11 @@ class ArkanoidApp extends StatelessWidget {
       initialRoute: '/',
       routes: {
         '/': (context) => const SplashScreen(),
-        '/discovery': (context) => const RigDiscoveryScreen(),
         '/joinchoice': (context) => const JoinChoiceScreen(),
         '/manualentry': (context) => const ManualEntryScreen(),
         '/nameentry': (context) => const NameEntryScreen(),
         '/connecting': (context) => const ConnectingScreen(),
+        '/connection': (context) => const ConnectionScreen(),
         '/lobby': (context) => const LobbyScreen(),
         '/qrscan': (context) => const QrScanScreen(),
         '/controller': (context) => const ControllerScreen(),

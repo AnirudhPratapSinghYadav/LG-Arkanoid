@@ -4,11 +4,20 @@ import '../utils/constants.dart';
 import '../widgets/lgpanel.dart';
 import '../widgets/mission_background.dart';
 
-class JoinChoiceScreen extends StatelessWidget {
+import '../services/ssh_service.dart';
+
+class JoinChoiceScreen extends StatefulWidget {
   const JoinChoiceScreen({super.key});
 
   @override
+  State<JoinChoiceScreen> createState() => _JoinChoiceScreenState();
+}
+
+class _JoinChoiceScreenState extends State<JoinChoiceScreen> {
+  @override
   Widget build(BuildContext context) {
+    final bool isRigConnected = SSHService().isConnected;
+
     return Scaffold(
       backgroundColor: bgDark,
       body: MissionControlBackground(
@@ -59,11 +68,24 @@ class JoinChoiceScreen extends StatelessWidget {
                     const SizedBox(height: 48),
                     _buildChoiceCard(
                       context: context,
+                      title: isRigConnected ? 'RIG CONNECTED' : 'RIG CONNECTION',
+                      description: isRigConnected 
+                          ? 'Manage connection or launch game' 
+                          : 'Configure, connect, or launch on Liquid Galaxy',
+                      icon: Icons.monitor,
+                      onTap: () async {
+                        await Navigator.pushNamed(context, '/connection');
+                        if (mounted) setState(() {});
+                      },
+                    ),
+                    const SizedBox(height: 24),
+                    _buildChoiceCard(
+                      context: context,
                       title: 'SCAN LIQUID GALAXY QR',
                       description: 'Requires being on the exact same Wi-Fi network',
                       icon: Icons.qr_code_scanner_rounded,
                       onTap: () async {
-                        final result = await Navigator.pushNamed(context, '/qrscan');
+                        final result = await Navigator.pushNamed(context, '/qrscan', arguments: 'session');
                         if (result != null && result is String) {
                           final parts = result.split('|');
                           if (parts.length >= 4) {
