@@ -190,8 +190,8 @@ function checkPaddleCollision(ball, players){
       let player = players[i];
       if(!player.connected) continue;
 
-      let prevY = ball.y;
-      let nextY = ball.y + ball.vy;
+      let prevY = ball.y - ball.vy;
+      let nextY = ball.y;
       let paddleTop = player.paddleY;
 
       let crossedPaddleTop = (prevY + ball.radius <= paddleTop + 5) && (nextY + ball.radius >= paddleTop - 5);
