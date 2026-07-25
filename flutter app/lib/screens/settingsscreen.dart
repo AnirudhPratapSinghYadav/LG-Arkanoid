@@ -414,6 +414,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
             
             // Rig Action Buttons
             ElevatedButton.icon(
+              onPressed: () {
+                _saveValues();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Credentials saved successfully.'),
+                    backgroundColor: accentSuccess,
+                  ),
+                );
+              },
+              icon: const Icon(Icons.save_outlined),
+              label: const Text('SAVE CREDENTIALS'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: cardSecondary,
+                foregroundColor: textPrimary,
+                textStyle: GoogleFonts.spaceGrotesk(fontSize: 16, fontWeight: FontWeight.bold),
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+            ),
+            const SizedBox(height: 12),
+            ElevatedButton.icon(
               onPressed: _isConnecting ? null : _connectToRig,
               icon: _isConnecting
                   ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
