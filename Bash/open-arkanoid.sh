@@ -66,6 +66,10 @@ for frame in "${FRAMES[@]:0:$NUM_SCREENS}"; do
       --kiosk \
       --no-first-run \
       --disable-infobars \
+      --incognito \
+      --disable-session-crashed-bubble \
+      --disable-pinch \
+      --overscroll-history-navigation=0 \
       "http://localhost:${port}/${screenNumber}" &
   else
     echo "Opening Chromium on $frame (screen $screenNumber)..."
@@ -77,6 +81,10 @@ for frame in "${FRAMES[@]:0:$NUM_SCREENS}"; do
         --kiosk \
         --no-first-run \
         --disable-infobars \
+        --incognito \
+        --disable-session-crashed-bubble \
+        --disable-pinch \
+        --overscroll-history-navigation=0 \
         'http://lg1:${port}/${screenNumber}' &" &
   fi
 done

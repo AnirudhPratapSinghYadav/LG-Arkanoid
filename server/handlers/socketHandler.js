@@ -42,7 +42,7 @@ function clearAllPowerUpTimers(worldState){
   }
 }
 
-function applyBombPowerUp(worldState){
+function applyBombPowerUp(worldState, player){
   const activeBall = worldState.balls.find((b)=>b.active);
   if(!activeBall || !worldState.bricks) return;
 
@@ -60,6 +60,10 @@ function applyBombPowerUp(worldState){
 
       if(dist <= blastRadius){
         brick.active = false;
+        worldState.bricksDirty = true;
+        if(player) {
+          player.score += 10;
+        }
       }
     }
   }
@@ -113,7 +117,7 @@ function applyPowerUpEffect(player, powerUpType, worldState, io, getWorldSnapsho
       triggerCommentary('multi_ball', getWorldSnapshot(), io, worldState.commentaryRateLimiter);
     }
   }else if(powerUpType==='bomb'){
-    applyBombPowerUp(worldState);
+    applyBombPowerUp(worldState, player);
   }
 }
 
@@ -231,6 +235,11 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
       }
       const newMax = parseInt(data?.maxPlayers, 10);
       if(newMax >= 1 && newMax <= 5){
+        const connectedCount = worldState.players.filter(p => p.connected).length;
+        if(newMax < connectedCount) {
+          socket.emit('error', { errorCode: 1010, message: `Cannot reduce slots below connected players (${connectedCount})` });
+          return;
+        }
         worldState.maxPlayers = newMax;
         while(worldState.players.length < newMax){
           let p = new gameEngine.Player(null);
@@ -261,6 +270,11 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
       }
       const newMax = parseInt(data?.maxPlayers, 10);
       if(newMax >= 1 && newMax <= 5){
+        const connectedCount = worldState.players.filter(p => p.connected).length;
+        if(newMax < connectedCount) {
+          socket.emit('error', { errorCode: 1010, message: `Cannot reduce slots below connected players (${connectedCount})` });
+          return;
+        }
         worldState.maxPlayers = newMax;
         while(worldState.players.length < newMax){
           let p = new gameEngine.Player(null);
@@ -453,6 +467,9 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
         player.lastNonces = [];
         clearPlayerTimers(player);
         player.name = null;
+        player.paddleWidth = 300;
+        player.score = 0;
+        player.lives = 3;
         
         if (index === worldState.masterPlayerIndex) {
           let newMaster = -1;
