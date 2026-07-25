@@ -4,6 +4,7 @@ require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') }
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
+const rateLimit = require('express-rate-limit');
 
 const gameEngine = require('./gameEngine.js');
 const { PORT, TICK_MS, getLanIp, createInitialWorldState } = require('./config.js');
@@ -17,8 +18,30 @@ const pendingHandoffs = new Map();
 const app = express();
 const server = http.createServer(app);
 
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use(limiter);
+
 const io = new Server(server, {
-  cors: { origin: '*', methods: ['GET', 'POST'] },
+  cors: { 
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      const allowedOrigins = [
+        `http://localhost:${PORT}`, 
+        `http://127.0.0.1:${PORT}`, 
+        `http://${getLanIp()}:${PORT}`
+      ];
+      if (allowedOrigins.indexOf(origin) === -1) {
+        return callback(new Error('The CORS policy for this site does not allow access from the specified Origin.'), false);
+      }
+      return callback(null, true);
+    },
+    methods: ['GET', 'POST'] 
+  },
   maxHttpBufferSize: 1024,
 });
 
