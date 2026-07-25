@@ -241,9 +241,8 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
       }
       const newMax = parseInt(data?.maxPlayers, 10);
       if(newMax >= 1 && newMax <= 5){
-        const connectedCount = worldState.players.filter(p => p.connected).length;
-        if(newMax < connectedCount) {
-          socket.emit('error', { errorCode: 1010, message: `Cannot reduce slots below connected players (${connectedCount})` });
+        if (worldState.players.slice(newMax).some(p => p.connected)) {
+          socket.emit('error', { errorCode: 1011, message: 'Cannot reduce slots: active players occupy higher slots. Please wait for them to leave.' });
           return;
         }
         worldState.maxPlayers = newMax;
@@ -276,9 +275,8 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
       }
       const newMax = parseInt(data?.maxPlayers, 10);
       if(newMax >= 1 && newMax <= 5){
-        const connectedCount = worldState.players.filter(p => p.connected).length;
-        if(newMax < connectedCount) {
-          socket.emit('error', { errorCode: 1010, message: `Cannot reduce slots below connected players (${connectedCount})` });
+        if (worldState.players.slice(newMax).some(p => p.connected)) {
+          socket.emit('error', { errorCode: 1011, message: 'Cannot reduce slots: active players occupy higher slots. Please wait for them to leave.' });
           return;
         }
         worldState.maxPlayers = newMax;
