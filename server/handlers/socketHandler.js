@@ -169,7 +169,13 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
 
     broadcastGameState();
 
+    const socketRateLimits = new Map();
+    
     socket.on('ping_test', (data, callback)=>{
+      const now = Date.now();
+      const lastPing = socketRateLimits.get('ping_' + socket.id) || 0;
+      if (now - lastPing < 500) return;
+      socketRateLimits.set('ping_' + socket.id, now);
       if(typeof callback === 'function') callback();
     });
 
@@ -177,6 +183,10 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
       const slotIndex = socketToPlayerIndex.get(socket.id);
       if(slotIndex!==worldState.masterPlayerIndex){
         socket.emit('join_rejected', { errorCode: 1007, message: 'Only the host can start the game' });
+        return;
+      }
+      if (worldState.gameStatus === 'playing') {
+        socket.emit('error', { errorCode: 1010, message: 'Game is already in progress' });
         return;
       }
       
@@ -212,7 +222,9 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
       worldState.gameStatus = 'countdown';
       worldState.countdownStartedAt = Date.now();
       worldState.gameActive = false;
-      worldState.gameDurationSeconds = data?.durationSeconds || 180;
+      let dur = data?.durationSeconds || 180;
+      if (typeof dur !== 'number' || isNaN(dur)) dur = 180;
+      worldState.gameDurationSeconds = Math.max(60, Math.min(600, dur));
       
       io.emit('countdown_started', { countdown: 3 });
       broadcastGameState();
@@ -237,6 +249,10 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
       const slotIndex = socketToPlayerIndex.get(socket.id);
       if(slotIndex !== worldState.masterPlayerIndex){
         socket.emit('join_rejected', { errorCode: 1007, message: 'Only the host can configure settings' });
+        return;
+      }
+      if (worldState.gameStatus === 'playing') {
+        socket.emit('error', { errorCode: 1010, message: 'Cannot change settings during a match' });
         return;
       }
       const newMax = parseInt(data?.maxPlayers, 10);
@@ -340,7 +356,8 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
       const player = worldState.players[slotIndex];
       player.connected = true;
       player.id = PLAYER_SLOT_IDS[slotIndex] || ('player' + (slotIndex + 1));
-      player.name = (typeof playerName === 'string' && playerName.trim().length > 0) ? playerName.trim().substring(0, 12) : `Player ${slotIndex + 1}`;
+      let cleanName = (typeof playerName === 'string') ? playerName.replace(/[^a-zA-Z0-9 ]/g, '').trim() : '';
+      player.name = cleanName.length > 0 ? cleanName.substring(0, 12) : `Player ${slotIndex + 1}`;
       player.socketId = socket.id;
       player.paddleWidth = player.paddleWidth || 300;
       if (typeof player.paddleX !== 'number') {
@@ -382,9 +399,16 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
       const { player } = found;
       const { deltaX, timestamp, nonce } = data || {};
 
-      if(typeof deltaX!=='number' || isNaN(deltaX)){
+      if(typeof deltaX!=='number' || isNaN(deltaX) || !isFinite(deltaX)){
         socket.emit('error', { errorCode: 1005, message: 'Invalid payload' });
         return;
+      }
+
+      if (worldState.gameStatus === 'playing') {
+        const now = Date.now();
+        if (!player.lastPaddleTime) player.lastPaddleTime = 0;
+        if (now - player.lastPaddleTime < 16) return;
+        player.lastPaddleTime = now;
       }
 
       const validation = validateMessage(player, timestamp, nonce);
@@ -392,6 +416,8 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
         socket.emit('error', { errorCode: validation.errorCode });
         return;
       }
+
+      deltaX = Math.max(-5000, Math.min(5000, deltaX));
 
       const maxRight = (worldState.numScreens || 3)*1920;
       player.paddleX += deltaX;
