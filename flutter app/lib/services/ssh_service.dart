@@ -125,8 +125,9 @@ class SSHService {
     // The bash script requires LG_PASSWORD to be set in the environment
     // so it can SSH into slave machines. Read it from secure storage.
     final password = await _secureStorage.read(key: prefPassword) ?? '';
+    final escaped = password.replaceAll("'", "'\\''");
     return sendCommand(
-      'export LG_PASSWORD=\'$password\'; bash ~/projects/LG-Arkanoid/Bash/open-arkanoid.sh $numScreens',
+      'export LG_PASSWORD=\'$escaped\'; bash ~/projects/LG-Arkanoid/Bash/open-arkanoid.sh $numScreens',
     );
   }
 

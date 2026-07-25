@@ -29,7 +29,8 @@ fi
 # Start pm2 server if not running
 export NUM_SCREENS="$NUM_SCREENS"
 if pm2 describe lg-arkanoid > /dev/null 2>&1; then
-  echo "Server already running under pm2."
+  echo "Restarting with $NUM_SCREENS screens..."
+  pm2 restart lg-arkanoid --update-env
 else
   echo "Starting game server with $NUM_SCREENS screens..."
   pm2 start ~/projects/LG-Arkanoid/server/index.js --name lg-arkanoid
