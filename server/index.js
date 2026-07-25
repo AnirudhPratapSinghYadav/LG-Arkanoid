@@ -116,18 +116,6 @@ function broadcastGameState(){
       radius: b.radius,
       active: b.active,
     })),
-    bricks: worldState.bricks.map(row =>
-      row.map(brick => ({
-        row: brick.row,
-        col: brick.col,
-        x: brick.x,
-        y: brick.y,
-        width: brick.width,
-        height: brick.height,
-        active: brick.active,
-        type: brick.type,
-      }))
-    ),
     powerUps: worldState.powerUps.map(p => ({
       type: p.type,
       x: p.x,
@@ -154,6 +142,23 @@ function broadcastGameState(){
     lanIp: getLanIp(),
     port: PORT,
   };
+
+  if (worldState.bricksDirty) {
+    payload.bricks = worldState.bricks.map(row =>
+      row.map(brick => ({
+        row: brick.row,
+        col: brick.col,
+        x: brick.x,
+        y: brick.y,
+        width: brick.width,
+        height: brick.height,
+        active: brick.active,
+        type: brick.type,
+      }))
+    );
+    worldState.bricksDirty = false;
+  }
+
   io.emit('game_state', payload);
 }
 

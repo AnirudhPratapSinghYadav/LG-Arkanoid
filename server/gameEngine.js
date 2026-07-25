@@ -65,6 +65,7 @@ class GameState {
     this.highestCombo = 0;
     this.currentCombo = 0;
     this.lastFallenBallToucher = null;
+    this.bricksDirty = true;
   }
 }
 
@@ -76,7 +77,8 @@ function applyGameMasterMod(gameState, modType){
         break;
       case 'EXTRA_BALL':
         const speedMult = gameState.slowBallActive ? 1.5 : 3;
-        let newBall = new Ball(Date.now().toString(), ((gameState.numScreens || 3)*1920)/2, 500, speedMult, speedMult * 1.33, 8);
+        const radius = gameState.balls.length > 0 ? gameState.balls[0].radius : 8;
+        let newBall = new Ball(Date.now().toString(), ((gameState.numScreens || 3)*1920)/2, 500, speedMult, speedMult * 1.33, radius);
         gameState.balls.push(newBall);
         break;
       case 'SLOW_BALL':
@@ -163,13 +165,16 @@ function checkWallCollision(ball, gameState){
   try {
     if(ball.y-ball.radius<=0){
       ball.vy = Math.abs(ball.vy);
+      ball.y = ball.radius;
     }
     if(ball.x-ball.radius<=0){
       ball.vx = Math.abs(ball.vx);
+      ball.x = ball.radius;
     }else{
       let totalWidth = (gameState.numScreens || 3)*1920;
       if(ball.x+ball.radius>=totalWidth){
         ball.vx = -Math.abs(ball.vx);
+        ball.x = totalWidth - ball.radius;
       }
     }
   } catch(error){
@@ -240,17 +245,28 @@ function checkBrickCollision(ball, gameState){
         if(distanceSquared<=(ball.radius*ball.radius)){
           const dist = Math.sqrt(distanceSquared) || 0.01;
           const nx = dx/dist, ny = dy/dist;
+          
+          const overlap = ball.radius - dist;
+          if (overlap > 0) {
+            ball.x += nx * overlap;
+            ball.y += ny * overlap;
+          }
+
           const dot = ball.vx*nx + ball.vy*ny;
-          ball.vx -= 2*dot*nx;
-          ball.vy -= 2*dot*ny;
+          if (dot < 0) {
+            ball.vx -= 2*dot*nx;
+            ball.vy -= 2*dot*ny;
+          }
           
           if(brick.type==='indestructible'){
             return true;
           }else if(brick.type==='hard'){
             brick.type = 'normal';
+            gameState.bricksDirty = true;
             return true;
           }else{
             brick.active = false;
+            gameState.bricksDirty = true;
             
             if(ball.lastTouchedByPlayerId){
               let player = players.find(p=>p.id===ball.lastTouchedByPlayerId);
@@ -362,11 +378,13 @@ function updateGameLoop(gameState, applyPowerUpEffectCallback){
       gameState.rallyCount = 0;
       gameState.currentCombo = 0;
       let playerToDeduct = gameState.players.find(p=>p.id===gameState.lastFallenBallToucher);
-      if(!playerToDeduct){
-        const connected = gameState.players.filter(p=>p.connected);
-        if(connected.length > 0){
-          gameState._fallbackDeductCursor = ((gameState._fallbackDeductCursor || 0) + 1) % connected.length;
-          playerToDeduct = connected[gameState._fallbackDeductCursor];
+      if(!playerToDeduct || playerToDeduct.lives <= 0){
+        const connectedWithLives = gameState.players.filter(p=>p.connected && p.lives > 0);
+        if(connectedWithLives.length > 0){
+          gameState._fallbackDeductCursor = ((gameState._fallbackDeductCursor || 0) + 1) % connectedWithLives.length;
+          playerToDeduct = connectedWithLives[gameState._fallbackDeductCursor];
+        } else {
+          playerToDeduct = null;
         }
       }
       if(playerToDeduct && playerToDeduct.lives > 0){
@@ -419,6 +437,7 @@ function updateGameLoop(gameState, applyPowerUpEffectCallback){
       gameState.currentLevel = gameState.level;
       gameState.bricks = loadLevel(gameState.level, gameState.nextLevelBricks, gameState.numScreens);
       gameState.nextLevelBricks = null;
+      gameState.bricksDirty = true;
     }
 
   } catch(error){

@@ -1118,6 +1118,9 @@ class GameScene extends Phaser.Scene {
         }, 3000);
 
         this.socket.on('game_state', (state) => {
+            if (!state.bricks && this.currentState && this.currentState.bricks) {
+                state.bricks = this.currentState.bricks;
+            }
             this.currentState = state;
         });
 
