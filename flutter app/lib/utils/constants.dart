@@ -11,7 +11,7 @@ const Color accentError = Color(0xFFD9534F);
 const Color textPrimary = Color(0xFFF3F4F6);
 const Color textSecondary = Color(0xFF9AA4AF);
 
-const String defaultServerPort = '3000';
+const String defaultServerPort = '8128';
 const int defaultSshPort = 22;
 const String defaultSshUsername = 'lg';
 

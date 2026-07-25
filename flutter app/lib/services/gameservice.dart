@@ -219,6 +219,11 @@ class GameService extends ChangeNotifier {
     });
   }
 
+  void setMaxPlayers(int count){
+    if(socket==null || !connected) return;
+    socket!.emit('set_max_players', {'maxPlayers': count});
+  }
+
   void startGame(int durationSeconds){
     if(socket==null || !connected) return;
     socket!.emit('start_game', {'durationSeconds': durationSeconds});

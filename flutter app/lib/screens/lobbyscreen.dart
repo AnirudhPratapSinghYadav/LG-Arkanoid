@@ -96,6 +96,7 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
     final service = context.watch<GameService>();
     final gameState = service.latestGameState;
     final players = gameState?['players'] as List<dynamic>? ?? [];
+    final maxPlayers = gameState?['maxPlayers'] as int? ?? 3;
     
     // Count active connections
     final connectedCount = players.where((p) => p['connected'] == true).length;
@@ -108,6 +109,8 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
       const Color(0xFF20C5FF), // Player 1 - Cyan
       const Color(0xFFFF2D78), // Player 2 - Pink
       const Color(0xFFFFB800), // Player 3 - Gold
+      const Color(0xFFE040FB), // Player 4 - Purple
+      const Color(0xFFFF5252), // Player 5 - Red
     ];
 
     return Scaffold(
@@ -168,7 +171,7 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
                                     ),
                                   ),
                                   Text(
-                                    '$connectedCount/3 CONNECTED',
+                                    '$connectedCount/$maxPlayers CONNECTED',
                                     style: GoogleFonts.jetBrainsMono(
                                       fontSize: 12,
                                       color: accentPrimary,
@@ -181,14 +184,14 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
                               const Divider(color: borderLight),
                               const SizedBox(height: 12),
                               
-                              for (int i = 0; i < 3; i++) ...[
+                              for (int i = 0; i < maxPlayers; i++) ...[
                                 _buildPlayerRow(
                                   index: i,
                                   playersList: players,
                                   color: playerColors[i % playerColors.length],
                                   masterIndex: masterIndex,
                                 ),
-                                if (i < 2) const SizedBox(height: 16),
+                                if (i < maxPlayers - 1) const SizedBox(height: 16),
                               ],
                             ],
                           ),

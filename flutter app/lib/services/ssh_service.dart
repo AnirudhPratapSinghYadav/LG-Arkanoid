@@ -118,8 +118,11 @@ class SSHService {
   // script how many screens to open Chromium on.
   // --------------------------------------------------------------------------
   Future<String> launchGame(int numScreens) async {
+    // The bash script requires LG_PASSWORD to be set in the environment
+    // so it can SSH into slave machines. Read it from secure storage.
+    final password = await _secureStorage.read(key: prefPassword) ?? '';
     return sendCommand(
-      'bash ~/projects/LG-Arkanoid/Bash/open-arkanoid.sh $numScreens',
+      'export LG_PASSWORD=\'$password\'; bash ~/projects/LG-Arkanoid/Bash/open-arkanoid.sh $numScreens',
     );
   }
 

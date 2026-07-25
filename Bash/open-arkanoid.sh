@@ -27,10 +27,11 @@ if [ -z "$LG_PASSWORD" ]; then
 fi
 
 # Start pm2 server if not running
+export NUM_SCREENS="$NUM_SCREENS"
 if pm2 describe lg-arkanoid > /dev/null 2>&1; then
   echo "Server already running under pm2."
 else
-  echo "Starting game server..."
+  echo "Starting game server with $NUM_SCREENS screens..."
   pm2 start ~/projects/LG-Arkanoid/server/index.js --name lg-arkanoid
 fi
 

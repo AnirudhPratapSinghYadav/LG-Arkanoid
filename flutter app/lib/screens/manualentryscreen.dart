@@ -17,7 +17,7 @@ class ManualEntryScreen extends StatefulWidget {
 class _ManualEntryScreenState extends State<ManualEntryScreen> {
   final _tokenController = TextEditingController();
   final _ipController = TextEditingController();
-  final _portController = TextEditingController(text: '3000');
+  final _portController = TextEditingController(text: '8128');
   
   bool _developerMode = false;
   int _developerTaps = 0;
@@ -145,7 +145,7 @@ class _ManualEntryScreenState extends State<ManualEntryScreen> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'Using USB debugging? Run "adb reverse tcp:3000 tcp:3000" and use IP 127.0.0.1',
+                            'Using USB debugging? Run "adb reverse tcp:8128 tcp:8128" and use IP 127.0.0.1',
                             style: GoogleFonts.inter(
                               fontSize: 11,
                               color: textSecondary,
