@@ -122,6 +122,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final err = await SSHService().launchGame(screens);
     if (mounted && err.startsWith('ERROR')) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err), backgroundColor: accentError));
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Launched successfully.'), backgroundColor: accentSuccess));
     }
   }
 
@@ -131,6 +133,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final err = await SSHService().relaunchGame(screens);
     if (mounted && err.startsWith('ERROR')) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err), backgroundColor: accentError));
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Launched successfully.'), backgroundColor: accentSuccess));
     }
   }
 
@@ -139,6 +143,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final err = await SSHService().closeGame();
     if (mounted && err.startsWith('ERROR')) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err), backgroundColor: accentError));
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Closed successfully.'), backgroundColor: accentSuccess));
     }
   }
 

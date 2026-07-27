@@ -183,8 +183,8 @@ setInterval(() => {
   const beforeLevel = worldState.level;
   const beforeBallScreens = worldState.balls.map(b => getScreenIdForX(b.x));
 
-  gameEngine.updateGameLoop(worldState, (player, powerUpType) => {
-    applyPowerUpEffect(player, powerUpType, worldState, io, getWorldSnapshot);
+  gameEngine.updateGameLoop(worldState, (player, powerUpType, px, py) => {
+    applyPowerUpEffect(player, powerUpType, worldState, io, getWorldSnapshot, px, py);
   });
 
   if(!worldState.nextLevelBricks){

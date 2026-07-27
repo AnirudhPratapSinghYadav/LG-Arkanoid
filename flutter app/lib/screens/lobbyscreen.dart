@@ -315,7 +315,8 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
                                 child: LgButton(
                                   label: 'QR INVITE',
                                   onPressed: () {
-                                    final payload = 'LGARK|${_gameService.serverAddress}|${_gameService.serverPort}|${_gameService.sessionId}';
+                                    final token = gameState?['sessionToken'] ?? '';
+                                    final payload = 'LGARK|${_gameService.serverAddress}|${_gameService.serverPort}|$token';
                                     Navigator.pushNamed(context, '/qrinvite', arguments: payload);
                                   },
                                 ),

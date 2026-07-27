@@ -186,39 +186,50 @@ function checkPaddleCollision(ball, players){
   try {
     if (ball.vy <= 0) return false;
 
-    for(let i = 0; i < players.length; i++){
-      let player = players[i];
-      if(!player.connected) continue;
+      for(let i = 0; i < players.length; i++){
+        let player = players[i];
+        if(!player.connected) continue;
 
-      let prevY = ball.y - ball.vy;
-      let nextY = ball.y;
-      let paddleTop = player.paddleY;
+        let paddleTop = player.paddleY;
+        let paddleBottom = player.paddleY + 30; // Assuming 30px height
+        let paddleLeft = player.paddleX;
+        let paddleRight = player.paddleX + player.paddleWidth;
 
-      let crossedPaddleTop = (prevY + ball.radius <= paddleTop + 5) && (nextY + ball.radius >= paddleTop - 5);
-      let withinHorizontal = (ball.x >= player.paddleX - 10) && (ball.x <= player.paddleX + player.paddleWidth + 10);
-
-      if(crossedPaddleTop && withinHorizontal){
-        ball.y = paddleTop - ball.radius - 2;
-
-        let paddleCenter = player.paddleX + (player.paddleWidth / 2);
-        let offset = ball.x - paddleCenter;
+        let closestX = Math.max(paddleLeft, Math.min(ball.x, paddleRight));
+        let closestY = Math.max(paddleTop, Math.min(ball.y, paddleBottom));
         
-        if(player.paddleWidth <= 0) return true;
-        let normalized = Math.max(-1, Math.min(1, offset / (player.paddleWidth / 2)));
-        
-        let bounceAngle = normalized * (Math.PI / 3);
-        let speed = Math.sqrt(ball.vx * ball.vx + ball.vy * ball.vy);
-        speed = Math.min(25, Math.max(8, speed * 1.02));
+        let dx = ball.x - closestX;
+        let dy = ball.y - closestY;
+        if (dx === 0 && dy === 0) { dx = 0.001; dy = 0.001; }
 
-        ball.vx = speed * Math.sin(bounceAngle);
-        ball.vy = -speed * Math.cos(bounceAngle);
+        if ((dx*dx + dy*dy) <= (ball.radius * ball.radius)) {
+          let prevY = ball.y - ball.vy;
+          
+          if (prevY + ball.radius <= paddleTop + 5) {
+            // Top collision (bounce logic)
+            ball.y = paddleTop - ball.radius - 2;
+            let paddleCenter = player.paddleX + (player.paddleWidth / 2);
+            let offset = ball.x - paddleCenter;
+            if(player.paddleWidth <= 0) return true;
+            let normalized = Math.max(-1, Math.min(1, offset / (player.paddleWidth / 2)));
+            let bounceAngle = normalized * (Math.PI / 3);
+            let speed = Math.sqrt(ball.vx * ball.vx + ball.vy * ball.vy);
+            speed = Math.min(25, Math.max(8, speed * 1.02));
+            ball.vx = speed * Math.sin(bounceAngle);
+            ball.vy = -speed * Math.cos(bounceAngle);
+          } else {
+            // Side collision (horizontal reflect)
+            ball.vx = -ball.vx;
+            if (ball.x < paddleLeft) ball.x = paddleLeft - ball.radius - 2;
+            else if (ball.x > paddleRight) ball.x = paddleRight + ball.radius + 2;
+          }
 
-        if(player.id){
-          ball.lastTouchedByPlayerId = player.id;
+          if(player.id){
+            ball.lastTouchedByPlayerId = player.id;
+          }
+          return true;
         }
-        return true;
       }
-    }
     return false;
   } catch(error){
     console.log(error);
@@ -240,6 +251,12 @@ function checkBrickCollision(ball, gameState){
         let closestY = Math.max(brick.y, Math.min(ball.y, brick.y+brick.height));
         let dx = ball.x-closestX;
         let dy = ball.y-closestY;
+        
+        if (dx === 0 && dy === 0) {
+          dx = 0.001;
+          dy = 0.001;
+        }
+        
         let distanceSquared = (dx*dx)+(dy*dy);
 
         if(distanceSquared<=(ball.radius*ball.radius)){
@@ -320,7 +337,7 @@ function updatePowerUps(gameState, applyPowerUpEffectCallback){
           if(player.id){
             player.score += 50;
             if(applyPowerUpEffectCallback){
-              applyPowerUpEffectCallback(player, p.type);
+              applyPowerUpEffectCallback(player, p.type, p.x, p.y);
             }
           }
           break;
@@ -396,8 +413,8 @@ function updateGameLoop(gameState, applyPowerUpEffectCallback){
       let mainBall = gameState.balls[0];
       mainBall.x = ((gameState.numScreens || 3)*1920)/2;
       mainBall.y = 500;
-      mainBall.vx = 3;
-      mainBall.vy = 4;
+      mainBall.vx = gameState.slowBallActive ? 1.5 : 3;
+      mainBall.vy = gameState.slowBallActive ? 2.0 : 4;
       mainBall.active = true;
       mainBall.lastTouchedByPlayerId = null;
     }

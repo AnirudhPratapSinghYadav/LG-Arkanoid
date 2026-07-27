@@ -64,6 +64,8 @@ class SSHService {
         onPasswordRequest: () => password,
       );
 
+      await _client!.authenticated;
+
       debugPrint('[SSHService] Connected successfully to $host:$port.');
       return null;
     } catch (e) {
@@ -139,8 +141,10 @@ class SSHService {
   // game server process.
   // --------------------------------------------------------------------------
   Future<String> closeGame() async {
+    final password = await _secureStorage.read(key: prefPassword) ?? '';
+    final escaped = password.replaceAll("'", "'\\''");
     return sendCommand(
-      'bash ~/projects/LG-Arkanoid/Bash/close-arkanoid.sh',
+      'export LG_PASSWORD=\'$escaped\'; bash ~/projects/LG-Arkanoid/Bash/close-arkanoid.sh',
     );
   }
 
