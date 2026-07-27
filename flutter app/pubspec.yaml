@@ -33,7 +33,7 @@ flutter:
     - assets/app_icon_transparent.png
     - assets/lg-logo.png
 
-flutter_icons:
+flutter_launcher_icons:
   android: "launcher_icon"
   ios: true
   image_path: "assets/app_icon.png"

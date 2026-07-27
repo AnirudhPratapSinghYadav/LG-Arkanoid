@@ -42,9 +42,18 @@ function clearAllPowerUpTimers(worldState){
   }
 }
 
-function applyBombPowerUp(worldState, player){
-  const activeBall = worldState.balls.find((b)=>b.active);
-  if(!activeBall || !worldState.bricks) return;
+function applyBombPowerUp(worldState, player, px, py){
+  if(!worldState.bricks) return;
+
+  let epicenterX = px;
+  let epicenterY = py;
+
+  if(epicenterX === undefined || epicenterY === undefined){
+    const activeBall = worldState.balls.find((b)=>b.active);
+    if(!activeBall) return;
+    epicenterX = activeBall.x;
+    epicenterY = activeBall.y;
+  }
 
   const blastRadius = 350;
   for(let r = 0; r < worldState.bricks.length; r++){
@@ -56,7 +65,7 @@ function applyBombPowerUp(worldState, player){
 
       const brickCenterX = brick.x + brick.width / 2;
       const brickCenterY = brick.y + brick.height / 2;
-      const dist = Math.hypot(activeBall.x - brickCenterX, activeBall.y - brickCenterY);
+      const dist = Math.hypot(epicenterX - brickCenterX, epicenterY - brickCenterY);
 
       if(dist <= blastRadius){
         brick.active = false;
@@ -69,7 +78,7 @@ function applyBombPowerUp(worldState, player){
   }
 }
 
-function applyPowerUpEffect(player, powerUpType, worldState, io, getWorldSnapshot){
+function applyPowerUpEffect(player, powerUpType, worldState, io, getWorldSnapshot, px, py){
   if(powerUpType==='wide_paddle'){
     player.paddleWidth = 600;
     if(player.widePaddleTimer) clearTimeout(player.widePaddleTimer);
@@ -117,7 +126,7 @@ function applyPowerUpEffect(player, powerUpType, worldState, io, getWorldSnapsho
       triggerCommentary('multi_ball', getWorldSnapshot(), io, worldState.commentaryRateLimiter);
     }
   }else if(powerUpType==='bomb'){
-    applyBombPowerUp(worldState, player);
+    applyBombPowerUp(worldState, player, px, py);
   }
 }
 
@@ -277,8 +286,8 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
       if(typeof data?.ballSpeed === 'string'){
         worldState.ballSpeed = data.ballSpeed;
       }
-      if(typeof data?.durationSeconds === 'number'){
-        worldState.gameDurationSeconds = data.durationSeconds;
+      if(typeof data?.durationSeconds === 'number' && !isNaN(data.durationSeconds) && isFinite(data.durationSeconds)){
+        worldState.gameDurationSeconds = Math.max(60, Math.min(600, data.durationSeconds));
       }
       broadcastGameState();
     });
@@ -341,7 +350,14 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
       
       ipJoinAttempts.delete(ip);
 
-      const slotIndex = worldState.players.findIndex((p)=>!p.connected);
+      let slotIndex = worldState.players.findIndex((p) => !p.connected && p.name === playerName);
+      if (slotIndex === -1) {
+        slotIndex = worldState.players.findIndex((p) => !p.connected && !p.name);
+      }
+      if (slotIndex === -1) {
+        slotIndex = worldState.players.findIndex((p) => !p.connected);
+      }
+
       if(slotIndex===-1){
         socket.join('spectators');
         socket.emit('join_confirmed', {
@@ -397,7 +413,7 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
       if(!found) return;
 
       const { player } = found;
-      const { deltaX, timestamp, nonce } = data || {};
+      let { deltaX, timestamp, nonce } = data || {};
 
       if(typeof deltaX!=='number' || isNaN(deltaX) || !isFinite(deltaX)){
         socket.emit('error', { errorCode: 1005, message: 'Invalid payload' });
@@ -486,6 +502,8 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
         message: 'Connection lost, waiting to reconnect...',
       });
 
+      player.connected = false;
+
       const timer = setTimeout(()=>{
         if(playerId) disconnectTimers.delete(playerId);
 
@@ -493,7 +511,6 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
           return;
         }
 
-        player.connected = false;
         player.id = null;
         player.socketId = null;
         player.lastNonces = [];

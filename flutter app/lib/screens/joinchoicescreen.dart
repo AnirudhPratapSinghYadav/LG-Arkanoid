@@ -90,7 +90,7 @@ class _JoinChoiceScreenState extends State<JoinChoiceScreen> {
                           : 'Configure, connect, or launch on Liquid Galaxy',
                       icon: Icons.monitor,
                       onTap: () async {
-                        await Navigator.pushNamed(context, '/connection');
+                        await Navigator.pushNamed(context, '/settings');
                         if (mounted) setState(() {});
                       },
                     ),

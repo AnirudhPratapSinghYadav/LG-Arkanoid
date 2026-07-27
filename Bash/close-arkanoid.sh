@@ -2,6 +2,12 @@
 # LG Arkanoid Shutdown Script
 # Usage: bash close-arkanoid.sh
 
+if [ -z "$LG_PASSWORD" ]; then
+  echo "Error: LG_PASSWORD environment variable is not set."
+  echo "Set it first: export LG_PASSWORD='your_password'"
+  exit 1
+fi
+
 # Kill Chromium on slaves
 for i in $(seq 2 9); do
   echo "Killing Chromium on slave lg$i..."
