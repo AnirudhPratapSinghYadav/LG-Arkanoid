@@ -23,8 +23,8 @@ else
   git clone https://github.com/AnirudhPratapSinghYadav/LG-Arkanoid.git "$PROJECT_DIR"
 fi
 
-echo "Installing server npm packages..."
-cd "$PROJECT_DIR/server"
+echo "Installing npm workspace packages..."
+cd "$PROJECT_DIR"
 npm install
 
 read -p "Enter your Gemini API key (blank = offline commentary only): " geminiKey
@@ -35,4 +35,4 @@ pm2 startup systemd -u "$USER" --hp "$HOME" | tail -1 | bash
 pm2 save
 
 echo "Installation complete."
-echo "Launch with: bash ~/projects/LG-Arkanoid/Bash/open-arkanoid.sh <number_of_screens>"
+echo "Launch with: bash ~/projects/LG-Arkanoid/scripts/open-arkanoid.sh <number_of_screens>"

@@ -1,11 +1,12 @@
 node_modules/
 .env
 server/node_modules/
-flutter app/build/
-flutter app/.dart_tool/
-flutter app/.flutter-plugins
-flutter app/.flutter-plugins-dependencies
-flutter app/.packages
-flutter app/pubspec.lock
+mobile/build/
+mobile/.dart_tool/
+mobile/.flutter-plugins
+mobile/.flutter-plugins-dependencies
+mobile/.packages
+mobile/pubspec.lock
 .DS_Store
-flutter app/build_output.log
+mobile/build_output.log
+dist/

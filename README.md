@@ -44,18 +44,18 @@ End result is the ball doesn't visibly vanish at the bezels and the whole rig fe
 
 ```
 LG-Arkanoid/
-├── server/              Node.js game server
-├── web client/          Phaser 3 screen clients
-├── flutter app/         Flutter phone controller app
+├── mobile/              Flutter phone controller app
+├── client/              Phaser 3 screen clients
+├── scripts/             Liquid Galaxy integration scripts
 ├── docs/                Protocol and architecture documentation
 └── README.md
 ```
 
 `server/` - the full backend, physics, validation, boundary handoff logic, Gemini integration, all of it.
 
-`web client/` - just one HTML file really, loaded once per screen with a different screenId param each time.
+`client/` - just one HTML file really, loaded once per screen with a different screenId param each time.
 
-`flutter app/` - the Android controller app, has connect/controller/status screens.
+`mobile/` - the Android controller app, has connect/controller/status screens.
 
 `docs/` - more detailed write-ups for mentors/contributors who want the deeper technical reference.
 
@@ -130,7 +130,7 @@ Make sure your iPhone is connected to the **same Wi-Fi network**.
   `http://<YOUR-LAPTOP-IP>:5173/1`
 
 - **Live Reload:**
-  Every time you save a code change in `web client/` (HTML/CSS/JS), the browser on your iPhone automatically reloads immediately!
+  Every time you save a code change in `client/` (HTML/CSS/JS), the browser on your iPhone automatically reloads immediately!
 
 ### 4. Install as Web App ("Add to Home Screen" PWA)
 To run the web controller full-screen like a native iOS app:

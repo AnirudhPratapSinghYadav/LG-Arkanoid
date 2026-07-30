@@ -46,12 +46,12 @@ jobs:
           
       - name: Install Flutter Dependencies
         run: flutter pub get
-        working-directory: ./flutter\ app
+        working-directory: ./mobile
         
       - name: Analyze Flutter Code
         run: flutter analyze || true
-        working-directory: ./flutter\ app
+        working-directory: ./mobile
         
       - name: Build APK
         run: flutter build apk --release
-        working-directory: ./flutter\ app
+        working-directory: ./mobile

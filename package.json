@@ -4,7 +4,8 @@
   "private": true,
   "description": "LG Arkanoid Game with Phaser.js, Express, Socket.IO and Vite Live Reload Server",
   "workspaces": [
-    "server"
+    "server",
+    "client"
   ],
   "engines": {
     "node": ">=20.0.0"

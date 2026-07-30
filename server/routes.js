@@ -7,7 +7,7 @@ const fs = require('fs');
 function createRouter(worldState) {
   const router = express.Router();
   const isProd = process.env.NODE_ENV === 'production';
-  const webClientPath = isProd ? path.join(__dirname, '..', 'dist') : path.join(__dirname, '..', 'web client');
+  const webClientPath = isProd ? path.join(__dirname, '..', 'dist') : path.join(__dirname, '..', 'client');
 
   // Health check endpoint
 
@@ -59,7 +59,7 @@ function createRouter(worldState) {
   });
 
   // -- Static assets ----------------------------------------------------------
-  // Serve CSS, JS, images, and other static files from the web client folder.
+  // Serve CSS, JS, images, and other static files from the client folder.
   // This must come before the screen route so that requests for /css/style.css,
   // /js/game.js, etc. are handled as static files and not mistaken for screen
   // numbers.
