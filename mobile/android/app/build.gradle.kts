@@ -7,8 +7,8 @@ plugins {
 
 android {
     namespace = "com.example.lg_arkanoid"
-    compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
+    compileSdk = 36
+    ndkVersion = "25.1.8937393"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
