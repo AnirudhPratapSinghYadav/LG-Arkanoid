@@ -58,7 +58,7 @@ class QrInviteScreen extends StatelessWidget {
                             borderRadius: BorderRadius.circular(24),
                             boxShadow: [
                               BoxShadow(
-                                color: accentPrimary.withValues(alpha: 0.2),
+                                color: accentPrimary.withOpacity(0.2),
                                 blurRadius: 40,
                                 spreadRadius: 5,
                               ),

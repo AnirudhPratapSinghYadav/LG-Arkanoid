@@ -230,7 +230,7 @@ class _ControllerScreenState extends State<ControllerScreen>
                                   boxShadow: [
                                     BoxShadow(
                                         color:
-                                            playerColor.withValues(alpha: 0.4),
+                                            playerColor.withOpacity(0.4),
                                         blurRadius: 6,
                                         spreadRadius: 1)
                                   ],
@@ -380,7 +380,7 @@ class _ControllerScreenState extends State<ControllerScreen>
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                                     decoration: BoxDecoration(
-                                      color: service.lastCommentarySource == 'fallback' ? Colors.transparent : accentSystem.withValues(alpha: 0.2),
+                                      color: service.lastCommentarySource == 'fallback' ? Colors.transparent : accentSystem.withOpacity(0.2),
                                       border: Border.all(color: service.lastCommentarySource == 'fallback' ? borderLight : accentSystem),
                                       borderRadius: BorderRadius.circular(4),
                                     ),
@@ -472,7 +472,7 @@ class _ControllerScreenState extends State<ControllerScreen>
                               child: Container(
                                 padding: const EdgeInsets.symmetric(vertical: 8),
                                 decoration: BoxDecoration(
-                                  color: _controlMode == 'touch' ? playerColor.withValues(alpha: 0.2) : Colors.transparent,
+                                  color: _controlMode == 'touch' ? playerColor.withOpacity(0.2) : Colors.transparent,
                                   borderRadius: BorderRadius.circular(8),
                                   border: Border.all(
                                     color: _controlMode == 'touch' ? playerColor : Colors.transparent,
@@ -504,7 +504,7 @@ class _ControllerScreenState extends State<ControllerScreen>
                               child: Container(
                                 padding: const EdgeInsets.symmetric(vertical: 8),
                                 decoration: BoxDecoration(
-                                  color: _controlMode == 'dpad' ? playerColor.withValues(alpha: 0.2) : Colors.transparent,
+                                  color: _controlMode == 'dpad' ? playerColor.withOpacity(0.2) : Colors.transparent,
                                   borderRadius: BorderRadius.circular(8),
                                   border: Border.all(
                                     color: _controlMode == 'dpad' ? playerColor : Colors.transparent,
@@ -556,9 +556,9 @@ class _ControllerScreenState extends State<ControllerScreen>
                                     decoration: BoxDecoration(
                                       color: cardFill,
                                       borderRadius: BorderRadius.circular(16),
-                                      border: Border.all(color: playerColor.withValues(alpha: _glowAnimation.value), width: 1.5),
+                                      border: Border.all(color: playerColor.withOpacity(_glowAnimation.value), width: 1.5),
                                       boxShadow: [
-                                        BoxShadow(color: playerColor.withValues(alpha: _glowAnimation.value * 0.3), blurRadius: 15),
+                                        BoxShadow(color: playerColor.withOpacity(_glowAnimation.value * 0.3), blurRadius: 15),
                                       ],
                                     ),
                                     child: Column(
@@ -595,9 +595,9 @@ class _ControllerScreenState extends State<ControllerScreen>
                                     decoration: BoxDecoration(
                                       color: cardFill,
                                       borderRadius: BorderRadius.circular(16),
-                                      border: Border.all(color: playerColor.withValues(alpha: _glowAnimation.value), width: 1.5),
+                                      border: Border.all(color: playerColor.withOpacity(_glowAnimation.value), width: 1.5),
                                       boxShadow: [
-                                        BoxShadow(color: playerColor.withValues(alpha: _glowAnimation.value * 0.3), blurRadius: 15),
+                                        BoxShadow(color: playerColor.withOpacity(_glowAnimation.value * 0.3), blurRadius: 15),
                                       ],
                                     ),
                                     child: Column(
@@ -641,13 +641,13 @@ class _ControllerScreenState extends State<ControllerScreen>
                               borderRadius: BorderRadius.circular(16),
                               border: Border.all(
                                 color: playerColor
-                                    .withValues(alpha: _glowAnimation.value),
+                                    .withOpacity(_glowAnimation.value),
                                 width: 1.5,
                               ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: playerColor.withValues(
-                                      alpha: _glowAnimation.value * 0.3),
+                                  color: playerColor.withOpacity(
+                                      _glowAnimation.value * 0.3),
                                   blurRadius: 20,
                                   spreadRadius: -5,
                                 ),
@@ -665,9 +665,9 @@ class _ControllerScreenState extends State<ControllerScreen>
                                   decoration: BoxDecoration(
                                     gradient: LinearGradient(
                                       colors: [
-                                        playerColor.withValues(alpha: 0.05),
-                                        playerColor.withValues(alpha: 0.4),
-                                        playerColor.withValues(alpha: 0.05),
+                                        playerColor.withOpacity(0.05),
+                                        playerColor.withOpacity(0.4),
+                                        playerColor.withOpacity(0.05),
                                       ],
                                     ),
                                     borderRadius: BorderRadius.circular(2),
@@ -679,7 +679,7 @@ class _ControllerScreenState extends State<ControllerScreen>
                                   left: 16,
                                   child: Icon(
                                     Icons.chevron_left_rounded,
-                                    color: playerColor.withValues(alpha: 0.3),
+                                    color: playerColor.withOpacity(0.3),
                                     size: 32,
                                   ),
                                 ),
@@ -687,7 +687,7 @@ class _ControllerScreenState extends State<ControllerScreen>
                                   right: 16,
                                   child: Icon(
                                     Icons.chevron_right_rounded,
-                                    color: playerColor.withValues(alpha: 0.3),
+                                    color: playerColor.withOpacity(0.3),
                                     size: 32,
                                   ),
                                 ),
@@ -699,7 +699,7 @@ class _ControllerScreenState extends State<ControllerScreen>
                                     'SLIDE TO MOVE PADDLE',
                                     style: GoogleFonts.spaceGrotesk(
                                       fontSize: 10,
-                                      color: textSecondary.withValues(alpha: 0.4),
+                                      color: textSecondary.withOpacity(0.4),
                                       fontWeight: FontWeight.bold,
                                       letterSpacing: 3,
                                     ),
@@ -717,21 +717,21 @@ class _ControllerScreenState extends State<ControllerScreen>
                                     gradient: RadialGradient(
                                       colors: [
                                         playerColor,
-                                        playerColor.withValues(alpha: 0.6),
-                                        playerColor.withValues(alpha: 0.2),
+                                        playerColor.withOpacity(0.6),
+                                        playerColor.withOpacity(0.2),
                                       ],
                                       stops: const [0.3, 0.7, 1.0],
                                     ),
                                     boxShadow: [
                                       BoxShadow(
                                         color:
-                                            playerColor.withValues(alpha: 0.5),
+                                            playerColor.withOpacity(0.5),
                                         blurRadius: 24,
                                         spreadRadius: 4,
                                       ),
                                     ],
                                     border: Border.all(
-                                      color: Colors.white.withValues(alpha: 0.7),
+                                      color: Colors.white.withOpacity(0.7),
                                       width: 2,
                                     ),
                                   ),
@@ -756,7 +756,7 @@ class _ControllerScreenState extends State<ControllerScreen>
             // ── Game-End Overlay ──
             if (_showGameEndOverlay)
               Container(
-                color: Colors.black.withValues(alpha: 0.9),
+                color: Colors.black.withOpacity(0.9),
                 child: SafeArea(
                   child: Center(
                     child: Column(
@@ -897,17 +897,17 @@ class _ControllerScreenState extends State<ControllerScreen>
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
             color: canUse
-                ? color.withValues(alpha: 0.12)
-                : cardFill.withValues(alpha: 0.5),
+                ? color.withOpacity(0.12)
+                : cardFill.withOpacity(0.5),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: canUse ? color.withValues(alpha: 0.5) : borderLight,
+              color: canUse ? color.withOpacity(0.5) : borderLight,
               width: 1.5,
             ),
             boxShadow: canUse
                 ? [
                     BoxShadow(
-                      color: color.withValues(alpha: 0.2),
+                      color: color.withOpacity(0.2),
                       blurRadius: 8,
                       spreadRadius: -2,
                     )
@@ -918,7 +918,7 @@ class _ControllerScreenState extends State<ControllerScreen>
             children: [
               Icon(
                 icon,
-                color: canUse ? color : textSecondary.withValues(alpha: 0.3),
+                color: canUse ? color : textSecondary.withOpacity(0.3),
                 size: 24,
               ),
               const SizedBox(height: 4),
@@ -927,7 +927,7 @@ class _ControllerScreenState extends State<ControllerScreen>
                 style: GoogleFonts.spaceGrotesk(
                   fontSize: 9,
                   fontWeight: FontWeight.bold,
-                  color: canUse ? color : textSecondary.withValues(alpha: 0.3),
+                  color: canUse ? color : textSecondary.withOpacity(0.3),
                   letterSpacing: 1,
                 ),
               ),

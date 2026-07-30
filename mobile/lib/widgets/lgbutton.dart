@@ -73,14 +73,14 @@ class _LgButtonState extends State<LgButton> with SingleTickerProviderStateMixin
             decoration: BoxDecoration(
               color: widget.isPrimary ? accentPrimary : Colors.transparent,
               border: Border.all(
-                color: _isFocused ? accentSystem : (widget.isPrimary ? accentPrimary : Colors.white.withValues(alpha: 0.12)),
+                color: _isFocused ? accentSystem : (widget.isPrimary ? accentPrimary : Colors.white.withOpacity(0.12)),
                 width: _isFocused ? 2.5 : 1.5,
               ),
               borderRadius: BorderRadius.circular(14),
               boxShadow: _isFocused
                   ? [
                       BoxShadow(
-                        color: accentSystem.withValues(alpha: 0.4),
+                        color: accentSystem.withOpacity(0.4),
                         blurRadius: 12,
                       )
                     ]

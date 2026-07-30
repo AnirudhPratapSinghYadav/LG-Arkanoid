@@ -50,7 +50,7 @@ class _ConnectionStatusState extends State<ConnectionStatus> with SingleTickerPr
                 color: widget.isConnected ? accentSystem : accentError,
                 boxShadow: widget.isConnected ? [
                   BoxShadow(
-                    color: accentSystem.withValues(alpha: 0.6 * _controller.value),
+                    color: accentSystem.withOpacity(0.6 * _controller.value),
                     blurRadius: 8 * _controller.value,
                     spreadRadius: 2 * _controller.value,
                   )

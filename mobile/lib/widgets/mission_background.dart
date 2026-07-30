@@ -21,7 +21,7 @@ class MissionControlBackground extends StatelessWidget {
                 radius: 1.2,
                 colors: [
                   Colors.transparent,
-                  Colors.black.withValues(alpha: 0.6),
+                  Colors.black.withOpacity(0.6),
                 ],
                 stops: const [0.4, 1.0],
               ),
@@ -42,7 +42,7 @@ class _ScanlinePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.02)
+      ..color = Colors.white.withOpacity(0.02)
       ..strokeWidth = 1.0;
     for (double y = 0; y < size.height; y += 4) {
       canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);

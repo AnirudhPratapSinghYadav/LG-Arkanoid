@@ -196,7 +196,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           },
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: GoogleFonts.jetBrainsMono(color: textSecondary.withValues(alpha: 0.5)),
+            hintStyle: GoogleFonts.jetBrainsMono(color: textSecondary.withOpacity(0.5)),
             suffixIcon: suffixIcon,
             filled: true,
             fillColor: cardSecondary,
@@ -293,7 +293,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             tts.toggleMute();
                           }
                         },
-                        activeThumbColor: accentSystem,
+                        activeColor: accentSystem,
                         contentPadding: EdgeInsets.zero,
                       );
                     },
@@ -471,7 +471,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               icon: const Icon(Icons.restart_alt),
               label: const Text('RELAUNCH'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: accentGame.withValues(alpha: 0.2),
+                backgroundColor: accentGame.withOpacity(0.2),
                 foregroundColor: accentGame,
                 textStyle: GoogleFonts.spaceGrotesk(fontSize: 16, fontWeight: FontWeight.bold),
                 padding: const EdgeInsets.symmetric(vertical: 16),
@@ -484,7 +484,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               icon: const Icon(Icons.stop_circle),
               label: const Text('SHUT DOWN ON RIG'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: accentError.withValues(alpha: 0.2),
+                backgroundColor: accentError.withOpacity(0.2),
                 foregroundColor: accentError,
                 textStyle: GoogleFonts.spaceGrotesk(fontSize: 16, fontWeight: FontWeight.bold),
                 padding: const EdgeInsets.symmetric(vertical: 16),
