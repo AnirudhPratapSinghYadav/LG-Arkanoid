@@ -100,8 +100,8 @@ class SSHService {
       debugPrint('[SSHService] Executing: $sanitizedCommand');
 
       final session = await _client!.execute(command);
-      final stdout = await session.stdout.transform(utf8.decoder).join();
-      final stderr = await session.stderr.transform(utf8.decoder).join();
+      final stdout = await session.stdout.cast<List<int>>().transform(utf8.decoder).join();
+      final stderr = await session.stderr.cast<List<int>>().transform(utf8.decoder).join();
 
       session.close();
 

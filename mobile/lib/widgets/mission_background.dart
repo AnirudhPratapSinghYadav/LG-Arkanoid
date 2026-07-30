@@ -27,7 +27,6 @@ class MissionControlBackground extends StatelessWidget {
               ),
             ),
           ),
-          ),
           CustomPaint(
             size: Size.infinite,
             painter: _ScanlinePainter(),
@@ -36,7 +35,6 @@ class MissionControlBackground extends StatelessWidget {
         ],
       ),
     );
-  }
   }
 }
 

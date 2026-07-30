@@ -368,7 +368,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       hint: 'e.g. 3, 5, 7, 9',
                       controller: _screensController,
                       keyboardType: TextInputType.number,
-                      style: GoogleFonts.vt323(color: accentSystem, fontSize: 24),
                       validator: (value) {
                         if (value == null || value.trim().isEmpty) return 'This field is required';
                         if (int.tryParse(value) == null) return 'Must be a number';
