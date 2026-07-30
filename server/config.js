@@ -2,8 +2,8 @@ const os = require('os');
 const crypto = require('crypto');
 const gameEngine = require('./gameEngine.js');
 
-// Port 8128 is the standard convention used by Liquid Galaxy GeminiSoC 2026 projects.
-const PORT = process.env.PORT || 8128;
+// Port 3000 is used as specified in user feedback.
+const PORT = process.env.PORT || 3000;
 const CANVAS_HEIGHT = 1080;
 const BALL_RADIUS = 8;
 const TICK_MS = 16;
