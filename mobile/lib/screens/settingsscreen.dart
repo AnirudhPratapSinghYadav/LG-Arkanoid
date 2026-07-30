@@ -7,7 +7,6 @@ import '../services/ttsservice.dart';
 import '../services/ssh_service.dart';
 import '../utils/constants.dart';
 import '../widgets/lgpanel.dart';
-import '../widgets/lgbutton.dart';
 import '../widgets/connectionstatus.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -294,7 +293,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             tts.toggleMute();
                           }
                         },
-                        activeColor: accentSystem,
+                        activeThumbColor: accentSystem,
                         contentPadding: EdgeInsets.zero,
                       );
                     },

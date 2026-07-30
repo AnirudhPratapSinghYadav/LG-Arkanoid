@@ -33,9 +33,13 @@ class _LgBotState extends State<LgBot> with SingleTickerProviderStateMixin {
 
   void _setupAnimation() {
     int durationMs = 2000;
-    if (widget.state == BotState.excited) durationMs = 250;
-    else if (widget.state == BotState.alert) durationMs = 150;
-    else if (widget.state == BotState.thinking) durationMs = 800;
+    if (widget.state == BotState.excited) {
+      durationMs = 250;
+    } else if (widget.state == BotState.alert) {
+      durationMs = 150;
+    } else if (widget.state == BotState.thinking) {
+      durationMs = 800;
+    }
 
     _controller = AnimationController(
       vsync: this,
@@ -105,9 +109,13 @@ class _BotPainter extends CustomPainter {
     );
 
     Color visorColor = accentSystem;
-    if (state == BotState.excited) visorColor = accentGame;
-    else if (state == BotState.alert) visorColor = accentError;
-    else if (state == BotState.thinking) visorColor = Colors.purpleAccent;
+    if (state == BotState.excited) {
+      visorColor = accentGame;
+    } else if (state == BotState.alert) {
+      visorColor = accentError;
+    } else if (state == BotState.thinking) {
+      visorColor = Colors.purpleAccent;
+    }
 
     paint.color = visorColor;
     canvas.drawRRect(
