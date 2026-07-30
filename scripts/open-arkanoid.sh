@@ -26,7 +26,8 @@ if [ -z "$LG_PASSWORD" ]; then
   echo "Highly recommended: Set up SSH keys for better security."
   SSH_CMD="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5"
 else
-  SSH_CMD="sshpass -p $LG_PASSWORD ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5"
+  export SSHPASS="$LG_PASSWORD"
+  SSH_CMD="sshpass -e ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5"
 fi
 
 # Start pm2 server if not running
@@ -38,7 +39,7 @@ else
   echo "Starting game server with $NUM_SCREENS screens..."
   SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
   SERVER_PATH="$SCRIPT_DIR/../server/index.js"
-  pm2 start "$SERVER_PATH" --name lg-arkanoid
+  pm2 start "$SERVER_PATH" --name lg-arkanoid --env NODE_ENV=production
 fi
 
 sleep 2

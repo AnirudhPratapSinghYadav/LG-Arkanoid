@@ -26,8 +26,11 @@ fi
 echo "Installing npm workspace packages..."
 cd "$PROJECT_DIR"
 npm install
+echo "Building web client for production..."
+npm run build
 
-read -p "Enter your Gemini API key (blank = offline commentary only): " geminiKey
+read -s -p "Enter your Gemini API key (blank = offline commentary only): " geminiKey
+echo ""
 if [ -n "$geminiKey" ]; then echo "GEMINI_API_KEY=$geminiKey" >> "$HOME/projects/LG-Arkanoid/server/.env"; fi
 
 echo "Setting up pm2 autostart..."
