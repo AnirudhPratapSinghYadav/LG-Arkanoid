@@ -133,7 +133,7 @@ class SSHService {
     final remotePath = prefs.getString(prefRemotePath) ?? defaultRemotePath;
     
     return sendCommand(
-      'export LG_PASSWORD=\'$escaped\'; bash $remotePath/Bash/open-arkanoid.sh $numScreens',
+      'export LG_PASSWORD=\'$escaped\'; bash $remotePath/scripts/open-arkanoid.sh $numScreens',
     );
   }
 
@@ -152,7 +152,7 @@ class SSHService {
     final remotePath = prefs.getString(prefRemotePath) ?? defaultRemotePath;
     
     return sendCommand(
-      'export LG_PASSWORD=\'$escaped\'; bash $remotePath/Bash/close-arkanoid.sh',
+      'export LG_PASSWORD=\'$escaped\'; bash $remotePath/scripts/close-arkanoid.sh',
     );
   }
 
