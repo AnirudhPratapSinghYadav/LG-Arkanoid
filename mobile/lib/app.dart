@@ -23,7 +23,7 @@ class ArkanoidApp extends StatelessWidget {
       theme: ThemeData.dark().copyWith(
         scaffoldBackgroundColor: bgDark,
         primaryColor: accentPrimary,
-        colorScheme: ColorScheme.dark(
+        colorScheme: const ColorScheme.dark(
           primary: accentPrimary,
           secondary: accentPrimary,
         ),

@@ -35,9 +35,6 @@ class _ControllerScreenState extends State<ControllerScreen>
   String _gameEndTitle = '';
   String _gameEndSubtitle = '';
 
-  late AnimationController _pulseController;
-  late Animation<double> _pulseAnimation;
-
   late AnimationController _glowController;
   late Animation<double> _glowAnimation;
 
@@ -46,13 +43,6 @@ class _ControllerScreenState extends State<ControllerScreen>
     super.initState();
     final service = context.read<GameService>();
     service.addListener(_onGameStateUpdate);
-
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1500),
-    )..repeat(reverse: true);
-    _pulseAnimation =
-        Tween<double>(begin: 0.6, end: 1.0).animate(_pulseController);
 
     _glowController = AnimationController(
       vsync: this,
@@ -66,7 +56,6 @@ class _ControllerScreenState extends State<ControllerScreen>
   void dispose() {
     _dpadRepeatTimer?.cancel();
     context.read<GameService>().removeListener(_onGameStateUpdate);
-    _pulseController.dispose();
     _glowController.dispose();
     super.dispose();
   }
