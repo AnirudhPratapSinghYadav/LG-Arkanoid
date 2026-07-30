@@ -71,7 +71,7 @@ class _LgTextFieldState extends State<LgTextField> {
             boxShadow: _isFocused
                 ? [
                     BoxShadow(
-                      color: accentSystem.withValues(alpha: 0.15),
+                      color: accentSystem.withOpacity(0.15),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     )
@@ -91,7 +91,7 @@ class _LgTextFieldState extends State<LgTextField> {
             cursorColor: accentSystem,
             decoration: InputDecoration(
               hintText: widget.hint,
-              hintStyle: GoogleFonts.inter(color: textSecondary.withValues(alpha: 0.5)),
+              hintStyle: GoogleFonts.inter(color: textSecondary.withOpacity(0.5)),
               counterText: '',
               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               border: InputBorder.none,

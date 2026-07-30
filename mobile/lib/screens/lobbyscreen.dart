@@ -246,7 +246,7 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                                     decoration: BoxDecoration(
-                                      color: _selectedMaxPlayers == p ? accentSystem.withValues(alpha: 0.2) : cardFill,
+                                      color: _selectedMaxPlayers == p ? accentSystem.withOpacity(0.2) : cardFill,
                                       borderRadius: BorderRadius.circular(8),
                                       border: Border.all(
                                         color: _selectedMaxPlayers == p ? accentSystem : borderLight,
@@ -359,7 +359,7 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
 
             if (_countdownStarted)
               Container(
-                color: Colors.black.withValues(alpha: 0.85),
+                color: Colors.black.withOpacity(0.85),
                 child: Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -408,14 +408,14 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
       children: [
         isSlotConnected
             ? const Icon(Icons.check_rounded, color: accentSuccess, size: 20)
-            : Icon(Icons.radio_button_unchecked_rounded, color: textSecondary.withValues(alpha: 0.2), size: 18),
+            : Icon(Icons.radio_button_unchecked_rounded, color: textSecondary.withOpacity(0.2), size: 18),
         const SizedBox(width: 14),
         Expanded(
           child: Text(
             displayName,
             style: GoogleFonts.inter(
               fontSize: 15,
-              color: isSlotConnected ? textPrimary : textSecondary.withValues(alpha: 0.4),
+              color: isSlotConnected ? textPrimary : textSecondary.withOpacity(0.4),
               fontWeight: isSlotConnected ? FontWeight.w600 : FontWeight.normal,
             ),
           ),
@@ -446,7 +446,7 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: isSelected ? accentSystem.withValues(alpha: 0.15) : cardFill,
+          color: isSelected ? accentSystem.withOpacity(0.15) : cardFill,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
             color: isSelected ? accentSystem : borderLight,
@@ -454,7 +454,7 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
           ),
           boxShadow: isSelected ? [
             BoxShadow(
-              color: accentSystem.withValues(alpha: 0.3),
+              color: accentSystem.withOpacity(0.3),
               blurRadius: 10,
               spreadRadius: -2,
             )
@@ -484,7 +484,7 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: isSelected ? accentSystem.withValues(alpha: 0.15) : cardFill,
+          color: isSelected ? accentSystem.withOpacity(0.15) : cardFill,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
             color: isSelected ? accentSystem : borderLight,

@@ -199,7 +199,7 @@ class _ConnectingScreenState extends State<ConnectingScreen> {
     final bool isCompleted = index < _currentStepIndex;
     final bool isActive = index == _currentStepIndex;
     
-    Color textColor = textSecondary.withValues(alpha: 0.3);
+    Color textColor = textSecondary.withOpacity(0.3);
     Widget icon = Text('[ ]', style: GoogleFonts.jetBrainsMono(color: textColor));
 
     if (isCompleted) {
