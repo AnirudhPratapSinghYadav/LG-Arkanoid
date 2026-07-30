@@ -84,6 +84,7 @@ The game uses an automated SSH connection flow to manage the Liquid Galaxy rig, 
 
 1. Launch the Flutter App and go to **Rig Connection**.
 2. Enter the rig's Master Node IP, Port (default 22), Username (default `lg`), Password (encrypted securely on-device), and the total number of screens. Or simply tap **Scan QR** to auto-fill these details from a rig-generated QR code.
+   > **Note:** For long-term production deployments, it is highly recommended to configure **SSH Keys** on the rig instead of relying on passwords. The launcher scripts now support passwordless SSH automatically if configured.
 3. Tap **Connect to Rig**. The app automatically retries 5 times if the network is spotty.
 4. Once connected, tap **Launch on Rig**. 
    - The app runs a script over SSH (`open-arkanoid.sh`) which automatically detects your rig topology (via `$LG_FRAMES`) and launches Chromium on all physical screens perfectly aligned.

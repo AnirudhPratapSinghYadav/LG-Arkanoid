@@ -8,3 +8,4 @@ flutter app/.flutter-plugins-dependencies
 flutter app/.packages
 flutter app/pubspec.lock
 .DS_Store
+flutter app/build_output.log

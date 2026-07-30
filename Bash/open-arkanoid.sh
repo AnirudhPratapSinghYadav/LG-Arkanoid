@@ -21,9 +21,12 @@ if [ "$NUM_SCREENS" -lt 1 ] || [ "$NUM_SCREENS" -gt 9 ]; then
 fi
 
 if [ -z "$LG_PASSWORD" ]; then
-  echo "Error: LG_PASSWORD environment variable is not set."
-  echo "Set it first: export LG_PASSWORD='your_password'"
-  exit 1
+  echo "Warning: LG_PASSWORD environment variable is not set."
+  echo "Assuming SSH keys are configured for passwordless access."
+  echo "Highly recommended: Set up SSH keys for better security."
+  SSH_CMD="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5"
+else
+  SSH_CMD="sshpass -p $LG_PASSWORD ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5"
 fi
 
 # Start pm2 server if not running
@@ -33,7 +36,9 @@ if pm2 describe lg-arkanoid > /dev/null 2>&1; then
   pm2 restart lg-arkanoid --update-env
 else
   echo "Starting game server with $NUM_SCREENS screens..."
-  pm2 start ~/projects/LG-Arkanoid/server/index.js --name lg-arkanoid
+  SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+  SERVER_PATH="$SCRIPT_DIR/../server/index.js"
+  pm2 start "$SERVER_PATH" --name lg-arkanoid
 fi
 
 sleep 2
@@ -54,7 +59,7 @@ else
   for i in $(seq 1 "$NUM_SCREENS"); do FRAMES+=("lg$i"); done
 fi
 
-port=8128
+port=3000
 screenNumber=0
 for frame in "${FRAMES[@]:0:$NUM_SCREENS}"; do
   screenNumber=$((screenNumber + 1))
@@ -73,7 +78,7 @@ for frame in "${FRAMES[@]:0:$NUM_SCREENS}"; do
       "http://localhost:${port}/${screenNumber}" &
   else
     echo "Opening Chromium on $frame (screen $screenNumber)..."
-    sshpass -p "$LG_PASSWORD" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5 \
+    $SSH_CMD \
       lg@"$frame" \
       "DISPLAY=:0 chromium-browser \
         --window-position=0,0 \

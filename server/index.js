@@ -5,6 +5,7 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const rateLimit = require('express-rate-limit');
+const helmet = require('helmet');
 
 const gameEngine = require('./gameEngine.js');
 const { PORT, TICK_MS, getLanIp, createInitialWorldState } = require('./config.js');
@@ -24,6 +25,7 @@ const limiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
+app.use(helmet({ contentSecurityPolicy: false }));
 app.use(limiter);
 
 const io = new Server(server, {
