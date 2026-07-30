@@ -4,6 +4,13 @@
 
 NUM_SCREENS=$1
 
+export NODE_ENV=production
+
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+if [ -f "$SCRIPT_DIR/../server/.env" ]; then
+  source "$SCRIPT_DIR/../server/.env"
+fi
+
 if [ -z "$NUM_SCREENS" ]; then
   echo "Error: please provide the number of screens as the first argument."
   echo "Usage: bash open-arkanoid.sh <number_of_screens>"

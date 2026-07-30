@@ -85,6 +85,10 @@ const io = new Server(server, {
   maxHttpBufferSize: 1024,
 });
 
+const isProd = process.env.NODE_ENV === 'production';
+const staticPath = isProd ? require('path').join(__dirname, '..', 'dist') : require('path').join(__dirname, '..', 'web-client');
+app.use(express.static(staticPath));
+
 app.use(createRouter(worldState));
 
 function getScreenIdForX(x){

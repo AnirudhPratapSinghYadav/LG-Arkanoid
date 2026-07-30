@@ -33,6 +33,13 @@ read -s -p "Enter your Gemini API key (blank = offline commentary only): " gemin
 echo ""
 if [ -n "$geminiKey" ]; then echo "GEMINI_API_KEY=$geminiKey" >> "$HOME/projects/LG-Arkanoid/server/.env"; fi
 
+read -s -p "Enter the Liquid Galaxy Rig SSH password (default is 'lg'): " lgPass
+echo ""
+if [ -z "$lgPass" ]; then
+  lgPass="lg"
+fi
+echo "LG_PASSWORD=$lgPass" >> "$HOME/projects/LG-Arkanoid/server/.env"
+
 echo "Setting up pm2 autostart..."
 pm2 startup systemd -u "$USER" --hp "$HOME" | tail -1 | bash
 pm2 save
