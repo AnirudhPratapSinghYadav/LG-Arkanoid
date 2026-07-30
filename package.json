@@ -3,10 +3,17 @@
   "version": "1.0.0",
   "private": true,
   "description": "LG Arkanoid Game with Phaser.js, Express, Socket.IO and Vite Live Reload Server",
+  "workspaces": [
+    "server"
+  ],
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "scripts": {
     "dev": "vite",
-    "server": "npm --prefix server start",
-    "start": "concurrently --names \"SERVER,VITE\" -c \"cyan,magenta\" \"npm run server\" \"npm run dev\""
+    "server": "npm run start --workspace=server",
+    "start": "concurrently --names \"SERVER,VITE\" -c \"cyan,magenta\" \"npm run server\" \"npm run dev\"",
+    "build": "vite build"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",

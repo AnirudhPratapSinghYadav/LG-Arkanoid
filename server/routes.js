@@ -6,7 +6,8 @@ const fs = require('fs');
 
 function createRouter(worldState) {
   const router = express.Router();
-  const webClientPath = path.join(__dirname, '..', 'web client');
+  const isProd = process.env.NODE_ENV === 'production';
+  const webClientPath = isProd ? path.join(__dirname, '..', 'dist') : path.join(__dirname, '..', 'web client');
 
   // Health check endpoint
 
