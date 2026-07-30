@@ -5,6 +5,7 @@ import '../utils/constants.dart';
 class LgTextField extends StatefulWidget {
   final TextEditingController controller;
   final String label;
+  final String? hint;
   final bool obscureText;
   final int? maxLength;
   final TextInputType keyboardType;
@@ -13,6 +14,7 @@ class LgTextField extends StatefulWidget {
     super.key,
     required this.controller,
     required this.label,
+    this.hint,
     this.obscureText = false,
     this.maxLength,
     this.keyboardType = TextInputType.text,
@@ -87,9 +89,11 @@ class _LgTextFieldState extends State<LgTextField> {
               fontSize: 15,
             ),
             cursorColor: accentSystem,
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
+              hintText: widget.hint,
+              hintStyle: GoogleFonts.inter(color: textSecondary.withValues(alpha: 0.5)),
               counterText: '',
-              contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               border: InputBorder.none,
               isDense: true,
             ),
