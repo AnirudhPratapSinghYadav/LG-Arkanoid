@@ -94,7 +94,8 @@ function createRouter(worldState) {
 
       // Inject the screen ID as a global variable before the closing </head>
       // tag. This allows the Phaser client to read it immediately on load.
-      const injectedScript = `<script>
+      const nonce = res.locals.nonce || '';
+      const injectedScript = `<script nonce="${nonce}">
         window.SCREEN_ID = ${screenNum};
         window.NUM_SCREENS = ${worldState.numScreens || 3};
       </script>`;

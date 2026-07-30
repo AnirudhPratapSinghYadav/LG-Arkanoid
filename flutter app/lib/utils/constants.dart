@@ -27,6 +27,7 @@ const double spaceXl = 32;
 const String defaultServerPort = '8128';
 const int defaultSshPort = 22;
 const String defaultSshUsername = 'lg';
+const String defaultRemotePath = '~/projects/LG-Arkanoid';
 
 
 const String prefHost = 'ssh_host';
@@ -37,3 +38,4 @@ const String prefNumScreens = 'num_screens';
 const String prefServerAddress = 'last_server_address';
 const String prefServerPort = 'last_server_port';
 const String prefSessionToken = 'last_session_token';
+const String prefRemotePath = 'remote_path';

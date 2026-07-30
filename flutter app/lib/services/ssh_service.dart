@@ -128,8 +128,12 @@ class SSHService {
     // so it can SSH into slave machines. Read it from secure storage.
     final password = await _secureStorage.read(key: prefPassword) ?? '';
     final escaped = password.replaceAll("'", "'\\''");
+    
+    final prefs = await SharedPreferences.getInstance();
+    final remotePath = prefs.getString(prefRemotePath) ?? defaultRemotePath;
+    
     return sendCommand(
-      'export LG_PASSWORD=\'$escaped\'; bash ~/projects/LG-Arkanoid/Bash/open-arkanoid.sh $numScreens',
+      'export LG_PASSWORD=\'$escaped\'; bash $remotePath/Bash/open-arkanoid.sh $numScreens',
     );
   }
 
@@ -143,8 +147,12 @@ class SSHService {
   Future<String> closeGame() async {
     final password = await _secureStorage.read(key: prefPassword) ?? '';
     final escaped = password.replaceAll("'", "'\\''");
+    
+    final prefs = await SharedPreferences.getInstance();
+    final remotePath = prefs.getString(prefRemotePath) ?? defaultRemotePath;
+    
     return sendCommand(
-      'export LG_PASSWORD=\'$escaped\'; bash ~/projects/LG-Arkanoid/Bash/close-arkanoid.sh',
+      'export LG_PASSWORD=\'$escaped\'; bash $remotePath/Bash/close-arkanoid.sh',
     );
   }
 
