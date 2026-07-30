@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -12,6 +11,12 @@ import '../widgets/connectionstatus.dart';
 import '../services/ssh_service.dart';
 import '../widgets/lg_bot.dart';
 
+import '../widgets/controller_touchpad.dart';
+import '../widgets/controller_dpad.dart';
+import '../widgets/powerup_panel.dart';
+import '../widgets/player_stats_bar.dart';
+import '../widgets/game_end_overlay.dart';
+
 class ControllerScreen extends StatefulWidget {
   const ControllerScreen({super.key});
 
@@ -21,16 +26,9 @@ class ControllerScreen extends StatefulWidget {
 
 class _ControllerScreenState extends State<ControllerScreen>
     with TickerProviderStateMixin {
-  double _puckPosition = 0.0;
   String _controlMode = 'touch'; // 'touch' or 'dpad'
-  Timer? _dpadRepeatTimer;
-  DateTime _lastEmit = DateTime.now();
 
-  // Power-up cooldown tracking
-  DateTime? _lastPowerUpTime;
-  static const _powerUpCooldown = Duration(seconds: 5);
-
-  // Game-end overlay
+  // Game-end overlay state
   bool _showGameEndOverlay = false;
   String _gameEndTitle = '';
   String _gameEndSubtitle = '';
@@ -54,26 +52,9 @@ class _ControllerScreenState extends State<ControllerScreen>
 
   @override
   void dispose() {
-    _dpadRepeatTimer?.cancel();
     context.read<GameService>().removeListener(_onGameStateUpdate);
     _glowController.dispose();
     super.dispose();
-  }
-
-  void _startDpadMovement(double stepDelta) {
-    HapticFeedback.selectionClick();
-    context.read<GameService>().sendPaddleMove(stepDelta);
-    _dpadRepeatTimer?.cancel();
-    _dpadRepeatTimer = Timer.periodic(const Duration(milliseconds: 30), (_) {
-      if (mounted) {
-        context.read<GameService>().sendPaddleMove(stepDelta);
-      }
-    });
-  }
-
-  void _stopDpadMovement() {
-    _dpadRepeatTimer?.cancel();
-    _dpadRepeatTimer = null;
   }
 
   void _onGameStateUpdate() {
@@ -98,7 +79,8 @@ class _ControllerScreenState extends State<ControllerScreen>
       String winnerName = 'Nobody';
       if (sorted.isNotEmpty) {
         final winner = sorted.first as Map;
-        winnerName = winner['name'] as String? ?? 'Player ${winner['playerNumber']}';
+        winnerName =
+            winner['name'] as String? ?? 'Player ${winner['playerNumber']}';
       }
 
       setState(() {
@@ -117,65 +99,9 @@ class _ControllerScreenState extends State<ControllerScreen>
     }
   }
 
-  void _onPanUpdate(DragUpdateDetails details, double screenWidth) {
-    final trackWidth = screenWidth - 64 - 80;
-    if (trackWidth <= 0) return;
-
-    final dx = details.delta.dx;
-
-    // Acceleration curve: faster swipes move proportionally more
-    final absDx = dx.abs();
-    final acceleration = 1.0 + (absDx / 20.0).clamp(0.0, 3.0);
-    final acceleratedDelta = dx * acceleration;
-
-    // Convert to rig-scale movement
-    final rigDeltaX = acceleratedDelta * 12.0;
-    final now = DateTime.now();
-    if (now.difference(_lastEmit).inMilliseconds >= 33) {
-      context.read<GameService>().sendPaddleMove(rigDeltaX);
-      _lastEmit = now;
-    }
-
-    setState(() {
-      _puckPosition += dx;
-      double maxVisual = trackWidth / 2;
-      _puckPosition = _puckPosition.clamp(-maxVisual, maxVisual);
-    });
-  }
-
-  void _onPanEnd(DragEndDetails details) {
-    setState(() {
-      _puckPosition = 0;
-    });
-  }
-
-  bool get _canUsePowerUp {
-    if (_lastPowerUpTime == null) return true;
-    return DateTime.now().difference(_lastPowerUpTime!) >= _powerUpCooldown;
-  }
-
-  void _activatePowerUp(String type) {
-    if (!_canUsePowerUp) {
-      HapticFeedback.lightImpact();
-      return;
-    }
-    HapticFeedback.heavyImpact();
-    context.read<GameService>().activatePowerUp(type);
-    setState(() {
-      _lastPowerUpTime = DateTime.now();
-    });
-  }
-
-  String _formatTime(int totalSeconds) {
-    final m = (totalSeconds ~/ 60).toString().padLeft(2, '0');
-    final s = (totalSeconds % 60).toString().padLeft(2, '0');
-    return '$m:$s';
-  }
-
   @override
   Widget build(BuildContext context) {
     final service = context.watch<GameService>();
-    final screenWidth = MediaQuery.of(context).size.width;
     final gameState = service.latestGameState;
 
     final List<Color> playerColors = [
@@ -211,8 +137,8 @@ class _ControllerScreenState extends State<ControllerScreen>
                 children: [
                   // ── Top HUD: Player info + Connection ──
                   Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     child: LgPanel(
                       tag: 'SYS.CTRL',
                       child: Row(
@@ -229,10 +155,10 @@ class _ControllerScreenState extends State<ControllerScreen>
                                   color: playerColor,
                                   boxShadow: [
                                     BoxShadow(
-                                        color:
-                                            playerColor.withOpacity(0.4),
-                                        blurRadius: 6,
-                                        spreadRadius: 1)
+                                      color: playerColor.withOpacity(0.4),
+                                      blurRadius: 6,
+                                      spreadRadius: 1,
+                                    )
                                   ],
                                 ),
                               ),
@@ -249,7 +175,8 @@ class _ControllerScreenState extends State<ControllerScreen>
                           ),
 
                           // Connection status (Game)
-                          ConnectionStatus(isConnected: service.connected, label: 'GAME'),
+                          ConnectionStatus(
+                              isConnected: service.connected, label: 'GAME'),
 
                           // Ping + Rig connection
                           Row(
@@ -263,14 +190,18 @@ class _ControllerScreenState extends State<ControllerScreen>
                                 ),
                               ),
                               const SizedBox(width: 8),
-                              ConnectionStatus(isConnected: SSHService().isConnected, label: 'SYS.CONN'),
+                              ConnectionStatus(
+                                  isConnected: SSHService().isConnected,
+                                  label: 'SYS.CONN'),
                               const SizedBox(width: 4),
                               IconButton(
-                                icon: const Icon(Icons.settings, color: textSecondary, size: 18),
+                                icon: const Icon(Icons.settings,
+                                    color: textSecondary, size: 18),
                                 constraints: const BoxConstraints(),
                                 padding: EdgeInsets.zero,
                                 tooltip: 'Settings',
-                                onPressed: () => Navigator.pushNamed(context, '/settings'),
+                                onPressed: () =>
+                                    Navigator.pushNamed(context, '/settings'),
                               ),
                             ],
                           ),
@@ -280,60 +211,10 @@ class _ControllerScreenState extends State<ControllerScreen>
                   ),
 
                   // ── Score / Lives / Rank / Timer Row ──
-                  Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                    child: Row(
-                      children: [
-                        // Score
-                        Expanded(
-                          child: _buildStatCard(
-                            label: 'SCORE',
-                            value: service.score.toString().padLeft(5, '0'),
-                            color: playerColor,
-                            icon: Icons.stars_rounded,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        // Lives
-                        Expanded(
-                          child: _buildStatCard(
-                            label: 'LIVES',
-                            value: '${service.lives}',
-                            color: service.lives <= 1
-                                ? accentError
-                                : accentSuccess,
-                            icon: Icons.favorite_rounded,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        // Rank
-                        Expanded(
-                          child: _buildStatCard(
-                            label: 'RANK',
-                            value: '#${service.rank}',
-                            color: service.rank == 1
-                                ? accentWarning
-                                : accentSystem,
-                            icon: Icons.emoji_events_rounded,
-                          ),
-                        ),
-                        if (showTimer) ...[
-                          const SizedBox(width: 8),
-                          // Timer
-                          Expanded(
-                            child: _buildStatCard(
-                              label: 'TIME',
-                              value: _formatTime(remainingSeconds),
-                              color: remainingSeconds <= 30
-                                  ? accentError
-                                  : textPrimary,
-                              icon: Icons.timer_rounded,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
+                  PlayerStatsBar(
+                    playerColor: playerColor,
+                    remainingSeconds: remainingSeconds,
+                    showTimer: showTimer,
                   ),
 
                   const SizedBox(height: 4),
@@ -346,10 +227,13 @@ class _ControllerScreenState extends State<ControllerScreen>
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           LgBot(
-                            state: service.robotState == 'excited' ? BotState.excited :
-                                   service.robotState == 'alert' ? BotState.alert :
-                                   service.robotState == 'thinking' ? BotState.thinking :
-                                   BotState.idle
+                            state: service.robotState == 'excited'
+                                ? BotState.excited
+                                : service.robotState == 'alert'
+                                    ? BotState.alert
+                                    : service.robotState == 'thinking'
+                                        ? BotState.thinking
+                                        : BotState.idle,
                           ),
                           const SizedBox(width: 4),
                           // Speech bubble tail
@@ -357,7 +241,10 @@ class _ControllerScreenState extends State<ControllerScreen>
                             padding: const EdgeInsets.only(bottom: 12),
                             child: CustomPaint(
                               size: const Size(8, 12),
-                              painter: _BubbleTailPainter(color: cardFill, borderColor: borderLight),
+                              painter: _BubbleTailPainter(
+                                color: cardFill,
+                                borderColor: borderLight,
+                              ),
                             ),
                           ),
                           Expanded(
@@ -366,30 +253,50 @@ class _ControllerScreenState extends State<ControllerScreen>
                                   horizontal: 14, vertical: 10),
                               decoration: BoxDecoration(
                                 color: cardFill,
-                                borderRadius: BorderRadius.circular(10).copyWith(bottomLeft: Radius.zero),
+                                borderRadius: BorderRadius.circular(10)
+                                    .copyWith(bottomLeft: Radius.zero),
                                 border: Border.all(color: borderLight),
                               ),
                               child: Row(
                                 children: [
                                   Icon(
-                                    service.lastCommentarySource == 'fallback' ? Icons.chat_bubble_outline_rounded : Icons.auto_awesome_rounded,
-                                    color: service.lastCommentarySource == 'fallback' ? textSecondary : accentSystem, 
-                                    size: 16
+                                    service.lastCommentarySource == 'fallback'
+                                        ? Icons.chat_bubble_outline_rounded
+                                        : Icons.auto_awesome_rounded,
+                                    color:
+                                        service.lastCommentarySource == 'fallback'
+                                            ? textSecondary
+                                            : accentSystem,
+                                    size: 16,
                                   ),
                                   const SizedBox(width: 8),
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 4, vertical: 2),
                                     decoration: BoxDecoration(
-                                      color: service.lastCommentarySource == 'fallback' ? Colors.transparent : accentSystem.withOpacity(0.2),
-                                      border: Border.all(color: service.lastCommentarySource == 'fallback' ? borderLight : accentSystem),
+                                      color: service.lastCommentarySource ==
+                                              'fallback'
+                                          ? Colors.transparent
+                                          : accentSystem.withOpacity(0.2),
+                                      border: Border.all(
+                                        color: service.lastCommentarySource ==
+                                                'fallback'
+                                            ? borderLight
+                                            : accentSystem,
+                                      ),
                                       borderRadius: BorderRadius.circular(4),
                                     ),
                                     child: Text(
-                                      service.lastCommentarySource == 'fallback' ? 'CANNED' : 'GEMINI',
+                                      service.lastCommentarySource == 'fallback'
+                                          ? 'CANNED'
+                                          : 'GEMINI',
                                       style: GoogleFonts.spaceGrotesk(
                                         fontSize: 8,
                                         fontWeight: FontWeight.bold,
-                                        color: service.lastCommentarySource == 'fallback' ? textSecondary : accentSystem,
+                                        color: service.lastCommentarySource ==
+                                                'fallback'
+                                            ? textSecondary
+                                            : accentSystem,
                                       ),
                                     ),
                                   ),
@@ -417,40 +324,7 @@ class _ControllerScreenState extends State<ControllerScreen>
                   const Spacer(),
 
                   // ── Power-Up Buttons Row ──
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Row(
-                      children: [
-                        _buildPowerUpButton(
-                          icon: Icons.swap_horiz_rounded,
-                          label: 'WIDE',
-                          color: const Color(0xFF4CAF50),
-                          type: 'wide_paddle',
-                        ),
-                        const SizedBox(width: 8),
-                        _buildPowerUpButton(
-                          icon: Icons.speed_rounded,
-                          label: 'SLOW',
-                          color: const Color(0xFF2196F3),
-                          type: 'slow_ball',
-                        ),
-                        const SizedBox(width: 8),
-                        _buildPowerUpButton(
-                          icon: Icons.control_point_duplicate_rounded,
-                          label: 'MULTI',
-                          color: const Color(0xFFFFB800),
-                          type: 'multi_ball',
-                        ),
-                        const SizedBox(width: 8),
-                        _buildPowerUpButton(
-                          icon: Icons.local_fire_department_rounded,
-                          label: 'BOMB',
-                          color: const Color(0xFFD9534F),
-                          type: 'bomb',
-                        ),
-                      ],
-                    ),
-                  ),
+                  const PowerupPanel(),
 
                   const SizedBox(height: 12),
 
@@ -468,28 +342,42 @@ class _ControllerScreenState extends State<ControllerScreen>
                         children: [
                           Expanded(
                             child: GestureDetector(
-                              onTap: () => setState(() => _controlMode = 'touch'),
+                              onTap: () =>
+                                  setState(() => _controlMode = 'touch'),
                               child: Container(
-                                padding: const EdgeInsets.symmetric(vertical: 8),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 8),
                                 decoration: BoxDecoration(
-                                  color: _controlMode == 'touch' ? playerColor.withOpacity(0.2) : Colors.transparent,
+                                  color: _controlMode == 'touch'
+                                      ? playerColor.withOpacity(0.2)
+                                      : Colors.transparent,
                                   borderRadius: BorderRadius.circular(8),
                                   border: Border.all(
-                                    color: _controlMode == 'touch' ? playerColor : Colors.transparent,
+                                    color: _controlMode == 'touch'
+                                        ? playerColor
+                                        : Colors.transparent,
                                     width: 1,
                                   ),
                                 ),
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Icon(Icons.touch_app_rounded, size: 16, color: _controlMode == 'touch' ? playerColor : textSecondary),
+                                    Icon(
+                                      Icons.touch_app_rounded,
+                                      size: 16,
+                                      color: _controlMode == 'touch'
+                                          ? playerColor
+                                          : textSecondary,
+                                    ),
                                     const SizedBox(width: 6),
                                     Text(
                                       'DRAG STRIP',
                                       style: GoogleFonts.spaceGrotesk(
                                         fontSize: 11,
                                         fontWeight: FontWeight.bold,
-                                        color: _controlMode == 'touch' ? textPrimary : textSecondary,
+                                        color: _controlMode == 'touch'
+                                            ? textPrimary
+                                            : textSecondary,
                                       ),
                                     ),
                                   ],
@@ -500,28 +388,42 @@ class _ControllerScreenState extends State<ControllerScreen>
                           const SizedBox(width: 4),
                           Expanded(
                             child: GestureDetector(
-                              onTap: () => setState(() => _controlMode = 'dpad'),
+                              onTap: () =>
+                                  setState(() => _controlMode = 'dpad'),
                               child: Container(
-                                padding: const EdgeInsets.symmetric(vertical: 8),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 8),
                                 decoration: BoxDecoration(
-                                  color: _controlMode == 'dpad' ? playerColor.withOpacity(0.2) : Colors.transparent,
+                                  color: _controlMode == 'dpad'
+                                      ? playerColor.withOpacity(0.2)
+                                      : Colors.transparent,
                                   borderRadius: BorderRadius.circular(8),
                                   border: Border.all(
-                                    color: _controlMode == 'dpad' ? playerColor : Colors.transparent,
+                                    color: _controlMode == 'dpad'
+                                        ? playerColor
+                                        : Colors.transparent,
                                     width: 1,
                                   ),
                                 ),
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Icon(Icons.gamepad_rounded, size: 16, color: _controlMode == 'dpad' ? playerColor : textSecondary),
+                                    Icon(
+                                      Icons.gamepad_rounded,
+                                      size: 16,
+                                      color: _controlMode == 'dpad'
+                                          ? playerColor
+                                          : textSecondary,
+                                    ),
                                     const SizedBox(width: 6),
                                     Text(
                                       'D-PAD ARROWS',
                                       style: GoogleFonts.spaceGrotesk(
                                         fontSize: 11,
                                         fontWeight: FontWeight.bold,
-                                        color: _controlMode == 'dpad' ? textPrimary : textSecondary,
+                                        color: _controlMode == 'dpad'
+                                            ? textPrimary
+                                            : textSecondary,
                                       ),
                                     ),
                                   ],
@@ -538,216 +440,21 @@ class _ControllerScreenState extends State<ControllerScreen>
 
                   // ── Main Controller (Touch Drag or D-Pad) ──
                   if (_controlMode == 'dpad')
-                    Container(
-                      width: double.infinity,
-                      height: 200,
-                      margin: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Listener(
-                              onPointerDown: (_) => _startDpadMovement(-24.0),
-                              onPointerUp: (_) => _stopDpadMovement(),
-                              onPointerCancel: (_) => _stopDpadMovement(),
-                              child: AnimatedBuilder(
-                                animation: _glowAnimation,
-                                builder: (context, child) {
-                                  return Container(
-                                    decoration: BoxDecoration(
-                                      color: cardFill,
-                                      borderRadius: BorderRadius.circular(16),
-                                      border: Border.all(color: playerColor.withOpacity(_glowAnimation.value), width: 1.5),
-                                      boxShadow: [
-                                        BoxShadow(color: playerColor.withOpacity(_glowAnimation.value * 0.3), blurRadius: 15),
-                                      ],
-                                    ),
-                                    child: Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Icon(Icons.arrow_back_ios_new_rounded, size: 48, color: playerColor),
-                                        const SizedBox(height: 12),
-                                        Text(
-                                          'HOLD LEFT',
-                                          style: GoogleFonts.spaceGrotesk(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.bold,
-                                            color: textPrimary,
-                                            letterSpacing: 2,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Listener(
-                              onPointerDown: (_) => _startDpadMovement(24.0),
-                              onPointerUp: (_) => _stopDpadMovement(),
-                              onPointerCancel: (_) => _stopDpadMovement(),
-                              child: AnimatedBuilder(
-                                animation: _glowAnimation,
-                                builder: (context, child) {
-                                  return Container(
-                                    decoration: BoxDecoration(
-                                      color: cardFill,
-                                      borderRadius: BorderRadius.circular(16),
-                                      border: Border.all(color: playerColor.withOpacity(_glowAnimation.value), width: 1.5),
-                                      boxShadow: [
-                                        BoxShadow(color: playerColor.withOpacity(_glowAnimation.value * 0.3), blurRadius: 15),
-                                      ],
-                                    ),
-                                    child: Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Icon(Icons.arrow_forward_ios_rounded, size: 48, color: playerColor),
-                                        const SizedBox(height: 12),
-                                        Text(
-                                          'HOLD RIGHT',
-                                          style: GoogleFonts.spaceGrotesk(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.bold,
-                                            color: textPrimary,
-                                            letterSpacing: 2,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+                    ControllerDpad(
+                      glowAnimation: _glowAnimation,
+                      playerColor: playerColor,
+                      onPaddleMove: (delta) {
+                        context.read<GameService>().sendPaddleMove(delta);
+                      },
                     )
                   else
-                    GestureDetector(
-                      onPanUpdate: (details) =>
-                          _onPanUpdate(details, screenWidth),
-                      onPanEnd: _onPanEnd,
-                      child: AnimatedBuilder(
-                        animation: _glowAnimation,
-                        builder: (context, child) {
-                          return Container(
-                            width: double.infinity,
-                            height: 200,
-                            margin: const EdgeInsets.symmetric(horizontal: 16),
-                            decoration: BoxDecoration(
-                              color: cardFill,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: playerColor
-                                    .withOpacity(_glowAnimation.value),
-                                width: 1.5,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: playerColor.withOpacity(
-                                      _glowAnimation.value * 0.3),
-                                  blurRadius: 20,
-                                  spreadRadius: -5,
-                                ),
-                              ],
-                            ),
-                            child: Stack(
-                              alignment: Alignment.center,
-                              children: [
-                                // Track line
-                                Container(
-                                  width: double.infinity,
-                                  height: 4,
-                                  margin:
-                                      const EdgeInsets.symmetric(horizontal: 50),
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      colors: [
-                                        playerColor.withOpacity(0.05),
-                                        playerColor.withOpacity(0.4),
-                                        playerColor.withOpacity(0.05),
-                                      ],
-                                    ),
-                                    borderRadius: BorderRadius.circular(2),
-                                  ),
-                                ),
-
-                                // Left/Right arrows
-                                Positioned(
-                                  left: 16,
-                                  child: Icon(
-                                    Icons.chevron_left_rounded,
-                                    color: playerColor.withOpacity(0.3),
-                                    size: 32,
-                                  ),
-                                ),
-                                Positioned(
-                                  right: 16,
-                                  child: Icon(
-                                    Icons.chevron_right_rounded,
-                                    color: playerColor.withOpacity(0.3),
-                                    size: 32,
-                                  ),
-                                ),
-
-                                // Label
-                                Positioned(
-                                  bottom: 20,
-                                  child: Text(
-                                    'SLIDE TO MOVE PADDLE',
-                                    style: GoogleFonts.spaceGrotesk(
-                                      fontSize: 10,
-                                      color: textSecondary.withOpacity(0.4),
-                                      fontWeight: FontWeight.bold,
-                                      letterSpacing: 3,
-                                    ),
-                                  ),
-                                ),
-
-                              // Puck
-                              Transform.translate(
-                                offset: Offset(_puckPosition, 0),
-                                child: Container(
-                                  width: 72,
-                                  height: 72,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    gradient: RadialGradient(
-                                      colors: [
-                                        playerColor,
-                                        playerColor.withOpacity(0.6),
-                                        playerColor.withOpacity(0.2),
-                                      ],
-                                      stops: const [0.3, 0.7, 1.0],
-                                    ),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color:
-                                            playerColor.withOpacity(0.5),
-                                        blurRadius: 24,
-                                        spreadRadius: 4,
-                                      ),
-                                    ],
-                                    border: Border.all(
-                                      color: Colors.white.withOpacity(0.7),
-                                      width: 2,
-                                    ),
-                                  ),
-                                  child: const Icon(
-                                    Icons.drag_handle_rounded,
-                                    color: Colors.white,
-                                    size: 36,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
+                    ControllerTouchpad(
+                      glowAnimation: _glowAnimation,
+                      playerColor: playerColor,
+                      onPaddleMove: (delta) {
+                        context.read<GameService>().sendPaddleMove(delta);
                       },
                     ),
-                  ),
                   const SizedBox(height: 16),
                 ],
               ),
@@ -755,184 +462,21 @@ class _ControllerScreenState extends State<ControllerScreen>
 
             // ── Game-End Overlay ──
             if (_showGameEndOverlay)
-              Container(
-                color: Colors.black.withOpacity(0.9),
-                child: SafeArea(
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(
-                          Icons.emoji_events_rounded,
-                          color: accentWarning,
-                          size: 80,
-                        ),
-                        const SizedBox(height: 24),
-                        Text(
-                          _gameEndTitle,
-                          style: GoogleFonts.spaceGrotesk(
-                            fontSize: 48,
-                            fontWeight: FontWeight.bold,
-                            color: accentWarning,
-                            letterSpacing: 4,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          _gameEndSubtitle,
-                          style: GoogleFonts.inter(
-                            fontSize: 24,
-                            color: textPrimary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          'Your Score: ${service.score}',
-                          style: GoogleFonts.jetBrainsMono(
-                            fontSize: 18,
-                            color: playerColor,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Text(
-                          'Final Rank: #${service.rank}',
-                          style: GoogleFonts.jetBrainsMono(
-                            fontSize: 16,
-                            color: textSecondary,
-                          ),
-                        ),
-                        const SizedBox(height: 48),
-                        SizedBox(
-                          width: 240,
-                          height: 56,
-                          child: ElevatedButton(
-                            onPressed: () {
-                              setState(() {
-                                _showGameEndOverlay = false;
-                              });
-                              Navigator.pushNamedAndRemoveUntil(
-                                  context, '/joinchoice', (_) => false);
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: accentSystem,
-                              foregroundColor: bgDark,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                            ),
-                            child: Text(
-                              'BACK TO LOBBY',
-                              style: GoogleFonts.spaceGrotesk(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 1,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+              GameEndOverlay(
+                title: _gameEndTitle,
+                subtitle: _gameEndSubtitle,
+                score: service.score,
+                rank: service.rank,
+                playerColor: playerColor,
+                onBackToLobby: () {
+                  setState(() {
+                    _showGameEndOverlay = false;
+                  });
+                  Navigator.pushNamedAndRemoveUntil(
+                      context, '/joinchoice', (_) => false);
+                },
               ),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatCard({
-    required String label,
-    required String value,
-    required Color color,
-    required IconData icon,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: cardFill,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: borderLight),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: color, size: 16),
-          const SizedBox(height: 2),
-          Text(
-            value,
-            style: GoogleFonts.vt323(
-              fontSize: 24,
-              color: color,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            style: GoogleFonts.spaceGrotesk(
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-              color: textSecondary,
-              letterSpacing: 1,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPowerUpButton({
-    required IconData icon,
-    required String label,
-    required Color color,
-    required String type,
-  }) {
-    final canUse = _canUsePowerUp;
-
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => _activatePowerUp(type),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(
-            color: canUse
-                ? color.withOpacity(0.12)
-                : cardFill.withOpacity(0.5),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: canUse ? color.withOpacity(0.5) : borderLight,
-              width: 1.5,
-            ),
-            boxShadow: canUse
-                ? [
-                    BoxShadow(
-                      color: color.withOpacity(0.2),
-                      blurRadius: 8,
-                      spreadRadius: -2,
-                    )
-                  ]
-                : [],
-          ),
-          child: Column(
-            children: [
-              Icon(
-                icon,
-                color: canUse ? color : textSecondary.withOpacity(0.3),
-                size: 24,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                label,
-                style: GoogleFonts.spaceGrotesk(
-                  fontSize: 9,
-                  fontWeight: FontWeight.bold,
-                  color: canUse ? color : textSecondary.withOpacity(0.3),
-                  letterSpacing: 1,
-                ),
-              ),
-            ],
-          ),
         ),
       ),
     );
@@ -949,13 +493,13 @@ class _BubbleTailPainter extends CustomPainter {
     final paint = Paint()
       ..color = color
       ..style = PaintingStyle.fill;
-    
+
     final path = Path()
       ..moveTo(size.width, 0)
       ..lineTo(0, size.height / 2)
       ..lineTo(size.width, size.height)
       ..close();
-      
+
     canvas.drawPath(path, paint);
 
     final borderPaint = Paint()
@@ -967,7 +511,7 @@ class _BubbleTailPainter extends CustomPainter {
       ..moveTo(size.width, 0)
       ..lineTo(0, size.height / 2)
       ..lineTo(size.width, size.height);
-      
+
     canvas.drawPath(borderPath, borderPaint);
   }
 
