@@ -8,7 +8,15 @@ const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
 
 const gameEngine = require('./gameEngine.js');
-const { PORT, TICK_MS, getLanIp, createInitialWorldState } = require('./config.js');
+const { PORT, TICK_MS, getLanIp, createInitialWorldState, GEMINI_API_KEY, LG_PASSWORD } = require('./config.js');
+
+if (!GEMINI_API_KEY) {
+  console.warn('WARNING: GEMINI_API_KEY is missing. AI commentary and level generation will be disabled.');
+}
+if (LG_PASSWORD === undefined || LG_PASSWORD === null || LG_PASSWORD === '') {
+  console.error('FATAL: LG_PASSWORD cannot be strictly empty. Please configure it in .env');
+  process.exit(1);
+}
 const { triggerCommentary, pollGameMasterAsync, generateNextLevelAsync } = require('./services/geminiService.js');
 const { registerSocketHandlers, applyPowerUpEffect } = require('./handlers/socketHandler.js');
 const createRouter = require('./routes.js');
