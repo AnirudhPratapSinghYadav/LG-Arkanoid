@@ -6,7 +6,6 @@ mobile/.dart_tool/
 mobile/.flutter-plugins
 mobile/.flutter-plugins-dependencies
 mobile/.packages
-mobile/pubspec.lock
 .DS_Store
 mobile/build_output.log
 dist/
