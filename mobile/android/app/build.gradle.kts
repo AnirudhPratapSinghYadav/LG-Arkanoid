@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "com.example.lg_arkanoid"
-    compileSdk = 36
+    compileSdk = flutter.compileSdkVersion
     ndkVersion = "25.1.8937393"
 
     compileOptions {
@@ -20,8 +20,8 @@ android {
         applicationId = "com.example.lg_arkanoid"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = 24
-        targetSdk = 36
+        minSdk = flutter.minSdkVersion
+        targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
