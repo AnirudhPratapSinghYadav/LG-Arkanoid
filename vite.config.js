@@ -5,10 +5,10 @@ import { defineConfig } from 'vite';
 //
 // This is used only during local development on a laptop/desktop. On the
 // actual Liquid Galaxy rig, Chromium connects directly to the Express
-// server on port 8128 -- Vite is not involved in production at all.
+// server on port 3000 -- Vite is not involved in production at all.
 //
 // The proxy rules forward Socket.IO and health-check requests from the
-// Vite dev server (port 5173) to the Express game server (port 8128).
+// Vite dev server (port 5173) to the Express game server (port 3000).
 // ---------------------------------------------------------------------------
 
 export default defineConfig({
@@ -19,12 +19,12 @@ export default defineConfig({
     strictPort: true,
     proxy: {
       '/socket.io': {
-        target: 'http://localhost:8128',
+        target: 'http://localhost:3000',
         ws: true,
         changeOrigin: true
       },
       '/health': {
-        target: 'http://localhost:8128',
+        target: 'http://localhost:3000',
         changeOrigin: true
       }
     }
