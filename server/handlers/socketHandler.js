@@ -133,12 +133,8 @@ function applyPowerUpEffect(player, powerUpType, worldState, io, getWorldSnapsho
 function validateMessage(player, timestamp, nonce){
   const now = Date.now();
 
-  if(typeof timestamp!=='number' || typeof nonce!=='string' || nonce.length > 32){
+  if(typeof timestamp !== 'number' || typeof nonce !== 'string' || nonce.length > 32){
     return { valid: false, errorCode: 1003 };
-  }
-
-  if(Math.abs(now-timestamp) > 3000){
-    return { valid: false, errorCode: 1008 };
   }
 
   const recentDuplicate = player.lastNonces.some((entry)=>entry.nonce===nonce);

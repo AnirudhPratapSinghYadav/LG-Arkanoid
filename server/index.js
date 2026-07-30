@@ -19,13 +19,42 @@ const pendingHandoffs = new Map();
 const app = express();
 const server = http.createServer(app);
 
+const crypto = require('crypto');
+
+app.use((req, res, next) => {
+  res.locals.nonce = crypto.randomBytes(16).toString('base64');
+  next();
+});
+
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
   standardHeaders: true,
   legacyHeaders: false,
 });
-app.use(helmet({ contentSecurityPolicy: false }));
+app.use(helmet({ 
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: [
+        "'self'", 
+        "https://cdnjs.cloudflare.com",
+        (req, res) => `'nonce-${res.locals.nonce}'`
+      ],
+      styleSrc: [
+        "'self'", 
+        "'unsafe-inline'", 
+        "https://fonts.googleapis.com"
+      ],
+      fontSrc: [
+        "'self'",
+        "https://fonts.gstatic.com"
+      ],
+      connectSrc: ["'self'", "ws:", "wss:"],
+      imgSrc: ["'self'", "data:"]
+    }
+  }
+}));
 app.use(limiter);
 
 const io = new Server(server, {
@@ -169,8 +198,13 @@ registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameState, getW
 
 let previousRanks = {};
 
-setInterval(() => {
-  if(worldState.gameStatus !== 'playing') return;
+function gameLoop() {
+  const loopStartTime = Date.now();
+
+  if(worldState.gameStatus !== 'playing') {
+    setTimeout(gameLoop, TICK_MS);
+    return;
+  }
 
   if (worldState.gameStartedAt && worldState.gameDurationSeconds > 0) {
     if (Date.now() - worldState.gameStartedAt > worldState.gameDurationSeconds * 1000) {
@@ -284,7 +318,13 @@ setInterval(() => {
   });
 
   broadcastGameState();
-}, TICK_MS);
+
+  const elapsed = Date.now() - loopStartTime;
+  const delay = Math.max(0, TICK_MS - elapsed);
+  setTimeout(gameLoop, delay);
+}
+
+gameLoop();
 
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`LG Arkanoid game server running on port ${PORT}`);
