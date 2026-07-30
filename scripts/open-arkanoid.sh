@@ -62,12 +62,12 @@ if [ -n "$LG_FRAMES" ]; then
   echo "Using LG_FRAMES from shell.conf: $LG_FRAMES"
   FRAMES=($LG_FRAMES)
 else
-  echo "LG_FRAMES not found – falling back to sequential lg1..lg$NUM_SCREENS"
+  echo "LG_FRAMES not found - falling back to sequential lg1..lg$NUM_SCREENS"
   FRAMES=()
   for i in $(seq 1 "$NUM_SCREENS"); do FRAMES+=("lg$i"); done
 fi
 
-port=3000
+port=${PORT:-3000}
 screenNumber=0
 for frame in "${FRAMES[@]:0:$NUM_SCREENS}"; do
   screenNumber=$((screenNumber + 1))
