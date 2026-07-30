@@ -2,6 +2,11 @@
 # LG Arkanoid Shutdown Script
 # Usage: bash close-arkanoid.sh
 
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+if [ -f "$SCRIPT_DIR/../server/.env" ]; then
+  source "$SCRIPT_DIR/../server/.env"
+fi
+
 if [ -z "$LG_PASSWORD" ]; then
   echo "Error: LG_PASSWORD environment variable is not set."
   echo "Set it first: export LG_PASSWORD='your_password'"

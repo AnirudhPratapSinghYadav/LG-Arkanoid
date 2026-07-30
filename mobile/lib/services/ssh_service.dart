@@ -124,16 +124,11 @@ class SSHService {
   // script how many screens to open Chromium on.
   // --------------------------------------------------------------------------
   Future<String> launchGame(int numScreens) async {
-    // The bash script requires LG_PASSWORD to be set in the environment
-    // so it can SSH into slave machines. Read it from secure storage.
-    final password = await _secureStorage.read(key: prefPassword) ?? '';
-    final escaped = password.replaceAll("'", "'\\''");
-    
     final prefs = await SharedPreferences.getInstance();
     final remotePath = prefs.getString(prefRemotePath) ?? defaultRemotePath;
     
     return sendCommand(
-      'export LG_PASSWORD=\'$escaped\'; bash $remotePath/scripts/open-arkanoid.sh $numScreens',
+      'bash $remotePath/scripts/open-arkanoid.sh $numScreens',
     );
   }
 
@@ -145,14 +140,11 @@ class SSHService {
   // game server process.
   // --------------------------------------------------------------------------
   Future<String> closeGame() async {
-    final password = await _secureStorage.read(key: prefPassword) ?? '';
-    final escaped = password.replaceAll("'", "'\\''");
-    
     final prefs = await SharedPreferences.getInstance();
     final remotePath = prefs.getString(prefRemotePath) ?? defaultRemotePath;
     
     return sendCommand(
-      'export LG_PASSWORD=\'$escaped\'; bash $remotePath/scripts/close-arkanoid.sh',
+      'bash $remotePath/scripts/close-arkanoid.sh',
     );
   }
 
