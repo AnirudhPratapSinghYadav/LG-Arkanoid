@@ -7,6 +7,9 @@ const PORT = process.env.PORT || 3000;
 const CANVAS_HEIGHT = 1080;
 const BALL_RADIUS = 8;
 const TICK_MS = 16;
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
+const LG_PASSWORD = process.env.LG_PASSWORD || 'lg';
+const NUM_SCREENS = process.env.NUM_SCREENS ? parseInt(process.env.NUM_SCREENS, 10) : 3;
 
 const FALLBACK_COMMENTARY = [
   'Great shot',
@@ -79,7 +82,7 @@ function createInitialWorldState(maxPlayers){
   const state = new gameEngine.GameState();
   
   state.maxPlayers = maxPlayers || 3;
-  state.numScreens = process.env.NUM_SCREENS ? parseInt(process.env.NUM_SCREENS, 10) : 3;
+  state.numScreens = NUM_SCREENS;
   
   const centerX = (state.numScreens * 1920) / 2;
   state.balls = [
@@ -123,6 +126,9 @@ module.exports = {
   CANVAS_HEIGHT,
   BALL_RADIUS,
   TICK_MS,
+  GEMINI_API_KEY,
+  LG_PASSWORD,
+  NUM_SCREENS,
   FALLBACK_COMMENTARY,
   COMMENTARY_COOLDOWNS,
   PLAYER_SLOT_IDS,

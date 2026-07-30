@@ -7,7 +7,7 @@ const fs = require('fs');
 function createRouter(worldState) {
   const router = express.Router();
   const isProd = process.env.NODE_ENV === 'production';
-  const webClientPath = isProd ? path.join(__dirname, '..', 'dist') : path.join(__dirname, '..', 'client');
+  const webClientPath = isProd ? path.join(__dirname, '..', 'dist') : path.join(__dirname, '..', 'web-client');
 
   // Health check endpoint
 
@@ -22,7 +22,7 @@ function createRouter(worldState) {
   // -- Controller page --------------------------------------------------------
   // On a real LG rig, players use the Flutter mobile app as a controller.
   // This simple HTML page is shown if someone navigates to /controller in a
-  // desktop browser, directing them to use the Flutter app instead.
+  // desktop browser, directing them to use the mobile app instead.
 
   router.get('/controller', (req, res) => {
     res.send(`<!DOCTYPE html>
@@ -50,7 +50,7 @@ function createRouter(worldState) {
 </head>
 <body>
   <h1>LG Arkanoid</h1>
-  <p>Use the Flutter app to control this game.</p>
+  <p>Use the mobile app to control this game.</p>
   <p style="margin-top: 2rem; font-size: 0.8rem; color: #555;">
     GeminiSoC 2026 - Liquid Galaxy
   </p>
@@ -59,7 +59,7 @@ function createRouter(worldState) {
   });
 
   // -- Static assets ----------------------------------------------------------
-  // Serve CSS, JS, images, and other static files from the client folder.
+  // Serve CSS, JS, images, and other static files from the web-client folder.
   // This must come before the screen route so that requests for /css/style.css,
   // /js/game.js, etc. are handled as static files and not mistaken for screen
   // numbers.

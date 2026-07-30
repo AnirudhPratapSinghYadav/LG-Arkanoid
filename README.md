@@ -45,7 +45,7 @@ End result is the ball doesn't visibly vanish at the bezels and the whole rig fe
 ```
 LG-Arkanoid/
 ├── mobile/              Flutter phone controller app
-├── client/              Phaser 3 screen clients
+├── web-client/          Phaser 3 screen clients
 ├── scripts/             Liquid Galaxy integration scripts
 ├── docs/                Protocol and architecture documentation
 └── README.md
@@ -53,7 +53,7 @@ LG-Arkanoid/
 
 `server/` - the full backend, physics, validation, boundary handoff logic, Gemini integration, all of it.
 
-`client/` - just one HTML file really, loaded once per screen with a different screenId param each time.
+`web-client/` - just one HTML file really, loaded once per screen with a different screenId param each time.
 
 `mobile/` - the Android controller app, has connect/controller/status screens.
 
@@ -82,7 +82,7 @@ node index.js
 
 The game uses an automated SSH connection flow to manage the Liquid Galaxy rig, avoiding manual browser windows.
 
-1. Launch the Flutter App and go to **Rig Connection**.
+1. Launch the mobile app and go to **Rig Connection**.
 2. Enter the rig's Master Node IP, Port (default 22), Username (default `lg`), Password (encrypted securely on-device), and the total number of screens. Or simply tap **Scan QR** to auto-fill these details from a rig-generated QR code.
    > **Note:** For long-term production deployments, it is highly recommended to configure **SSH Keys** on the rig instead of relying on passwords. The launcher scripts now support passwordless SSH automatically if configured.
 3. Tap **Connect to Rig**. The app automatically retries 5 times if the network is spotty.
@@ -130,7 +130,7 @@ Make sure your iPhone is connected to the **same Wi-Fi network**.
   `http://<YOUR-LAPTOP-IP>:5173/1`
 
 - **Live Reload:**
-  Every time you save a code change in `client/` (HTML/CSS/JS), the browser on your iPhone automatically reloads immediately!
+  Every time you save a code change in `web-client/` (HTML/CSS/JS), the browser on your iPhone automatically reloads immediately!
 
 ### 4. Install as Web App ("Add to Home Screen" PWA)
 To run the web controller full-screen like a native iOS app:

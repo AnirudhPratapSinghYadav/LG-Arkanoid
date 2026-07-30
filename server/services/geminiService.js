@@ -5,8 +5,10 @@ const { FALLBACK_COMMENTARY, COMMENTARY_COOLDOWNS } = require('../config.js');
 let isGeneratingLevel = false;
 let isPollingGameMaster = false;
 
+const config = require('../config.js');
+
 async function callGemini(prompt){
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = config.GEMINI_API_KEY;
   if(!apiKey){
     throw new Error('GEMINI_API_KEY not configured');
   }
@@ -162,7 +164,7 @@ Make it interesting and symmetric where appropriate. Return ONLY valid JSON 2D a
       }
     }
   } catch(err){
-    if(process.env.GEMINI_API_KEY){
+    if(config.GEMINI_API_KEY){
       console.error('Failed to generate level via Gemini:', err.message);
     }
   } finally {

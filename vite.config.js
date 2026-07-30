@@ -12,7 +12,7 @@ import { defineConfig } from 'vite';
 // ---------------------------------------------------------------------------
 
 export default defineConfig({
-  root: 'client',
+  root: 'web-client',
   build: {
     outDir: '../dist',
     emptyOutDir: true,
