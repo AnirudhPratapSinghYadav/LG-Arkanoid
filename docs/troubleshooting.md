@@ -15,3 +15,25 @@
 
 ## CI/CD Failure
 - The mobile app strictly requires Flutter 3.24.x due to dartssh2 and meta package dependencies. Do not downgrade the CI runner.
+
+### Node fails with GLIBC version errors on the rig
+
+**Symptom:**
+```
+node: /lib/x86_64-linux-gnu/libm.so.6: version `GLIBC_2.27' not found (required by node)
+node: /lib/x86_64-linux-gnu/libc.so.6: version `GLIBC_2.28' not found (required by node)
+```
+
+**Cause:** The Liquid Galaxy rig runs Ubuntu 16.04 LTS (glibc 2.23). Node.js 18 and above require glibc 2.28+, which does not exist on this OS. This is a hardware/OS-image limitation, not an installation mistake — reinstalling or switching Node versions above 16 will not fix it.
+
+**Fix:** Install Node 16 via nvm, which supports glibc 2.17+:
+```bash
+nvm install 16
+nvm alias default 16
+```
+Verify in a fresh terminal:
+```bash
+node -v   # must show v16.x.x
+```
+
+**Why the project's minimum supported Node version is 16:** This is a deliberate ceiling, not an oversight — it matches the oldest rig OS this project has been tested against. See `package.json`'s `engines` field and `.nvmrc`.
