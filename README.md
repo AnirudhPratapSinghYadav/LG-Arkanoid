@@ -40,6 +40,14 @@ End result is the ball doesn't visibly vanish at the bezels and the whole rig fe
 - Commentary: Gemini 2.0 Flash via the Google Generative Language API (running off some redeemed GCP credit)
 - The phone app also uses shared preferences to remember the last server address you connected to, so reconnecting is quicker
 
+## Tested Environment
+
+| Component | Version |
+|---|---|
+| Node.js | 16.x (rig-required minimum; also verified 18/20/22 on dev machines and CI) |
+
+> The physical Liquid Galaxy rigs run Ubuntu 16.04 LTS, which caps Node.js at v16 due to glibc 2.23. Development machines and CI can use newer Node versions freely, but any code depending on Node ≥18 features will break the rig deployment — treat 16 as the real target, not the dev-convenience version.
+
 ## Repo layout
 
 ```
