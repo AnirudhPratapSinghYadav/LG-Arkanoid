@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+### Fixed
+- Removed unused `jsdom` dependency that blocked Node 16 support on rig hardware.
+- Downgraded `vite` from ^8.1.5 to 4.5.14 to restore Node 16 compatibility for rig deployment, while keeping dev/CI machines on newer Node versions working via the CI matrix.
+
+
 ## [1.0.0] - 2026-07-30
 ### Added
 - Complete Liquid Galaxy architectural setup.
