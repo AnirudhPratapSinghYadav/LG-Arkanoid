@@ -36,7 +36,7 @@ Verify in a fresh terminal:
 node -v   # must show v16.x.x
 ```
 
-**Why the project's minimum supported Node version is 16:** This is a deliberate ceiling, not an oversight — it matches the oldest rig OS this project has been tested against. See `package.json`'s `engines` field and `.nvmrc`.
+**Why the project's minimum supported Node version is 14:** This is a deliberate ceiling, not an oversight. The sister Liquid Galaxy Lab project `galaxy-pacman` documents Node 14 as its master-machine requirement, confirming this project's rig (Ubuntu 16.04 / glibc 2.23) reflects a known constraint across the LG ecosystem, not a one-off. This project's `engines` field targets Node >=14 for that reason, with the full matrix (14/16/18/20/22) verified in CI. See `package.json`'s `engines` field.
 
 ### Why jsdom and a newer Vite were removed
 
