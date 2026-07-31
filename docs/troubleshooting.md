@@ -37,3 +37,16 @@ node -v   # must show v16.x.x
 ```
 
 **Why the project's minimum supported Node version is 16:** This is a deliberate ceiling, not an oversight — it matches the oldest rig OS this project has been tested against. See `package.json`'s `engines` field and `.nvmrc`.
+
+### Why jsdom and a newer Vite were removed
+
+`jsdom` was an unused dependency (never imported anywhere in the codebase)
+that required Node ^22/^24/^26 and blocked rig deployment for no actual
+benefit. It has been removed entirely.
+
+`vite` was downgraded from ^8.1.5 to 4.5.14, the newest 4.x release that
+still supports Node 16 (confirmed via its published `engines` field).
+If you need to upgrade Vite again in the future, check the new version's
+`engines.node` requirement against the rig's actual Node ceiling (currently
+16, due to Ubuntu 16.04 / glibc 2.23 — see the GLIBC entry above) before
+upgrading, or you will silently re-break rig compatibility.
