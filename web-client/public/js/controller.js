@@ -15,7 +15,12 @@ function joinGame() {
     const playerName = document.getElementById('nameInput').value.trim() || 'Web Player';
     if (!token || token.length !== 4) return alert('Enter a 4-letter session code');
 
-    socket = io(window.location.origin, {
+    let serverOrigin = window.location.origin;
+    if (window.location.port === '5173') {
+        serverOrigin = window.location.protocol + '//' + window.location.hostname + ':3000';
+    }
+
+    socket = io(serverOrigin, {
         query: { controller: 'true' },
         transports: ['websocket', 'polling']
     });
