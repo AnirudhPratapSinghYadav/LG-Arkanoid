@@ -8,7 +8,7 @@
     "web-client"
   ],
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=16.0.0"
   },
   "scripts": {
     "dev": "vite",
@@ -18,6 +18,6 @@
   },
   "devDependencies": {
     "concurrently": "^8.2.2",
-    "vite": "^8.2.0"
+    "vite": "^4.5.14"
   }
 }
