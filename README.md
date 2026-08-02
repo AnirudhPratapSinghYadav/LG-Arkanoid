@@ -72,9 +72,9 @@ Hit the "Start Match" button from the app's Lobby once your players are ready.
 
 Other players simply launch the app and tap **Scan Liquid Galaxy QR** to join your active session instantly. The master node handles the physics loop every 16ms and pushes state to all clients.
 
-## Testing on iPhone
+## Local Network Testing
 
-You can run the live reload Vite dev server on your Windows Lenovo laptop and instantly preview and control the game from your iPhone over the same Wi-Fi network.
+You can run the live reload Vite dev server on your development machine and instantly preview and control the game from any mobile device over the same Wi-Fi network.
 
 ### 1. Start the Dev Server
 From the project root directory, run:
@@ -82,45 +82,35 @@ From the project root directory, run:
 npm start
 ```
 This single command runs both the Node.js backend server (`0.0.0.0:3000`) and the Vite live-reload dev server (`0.0.0.0:5173`) concurrently.
-### 2. Find Your Laptop IP Address
-Open PowerShell / Command Prompt and run:
-```cmd
-ipconfig
-```
-Look for your Wireless LAN adapter Wi-Fi **IPv4 Address** (e.g. `10.11.77.106` or `192.168.x.x`).
 
-Alternatively, run this Node command:
+### 2. Find Your Local IP Address
+Run this Node command to quickly find your local IPv4 address:
 ```bash
 node -e "const os = require('os'); const nets = os.networkInterfaces(); for (const k in nets) for (const n of nets[k]) if (n.family === 'IPv4' && !n.internal) console.log(k, n.address);"
 ```
+(Alternatively, use `ipconfig` on Windows, or `ifconfig`/`ip a` on macOS/Linux).
 
-### 3. Open on iPhone Safari
-Make sure your iPhone is connected to the **same Wi-Fi network**.
+### 3. Open on Your Mobile Device
+Make sure your mobile device is connected to the **same Wi-Fi network**.
 
 - **Web Controller (Mobile):**
-  Open Safari and navigate to:
-  `http://<YOUR-LAPTOP-IP>:5173` (e.g., `http://10.11.77.106:5173`)
+  Open any browser on your phone and navigate to:
+  `http://<YOUR-LOCAL-IP>:5173` (e.g., `http://192.168.1.10:5173`)
 
 - **Game Screen Preview:**
-  Open Safari (or desktop browser) and navigate to:
-  `http://<YOUR-LAPTOP-IP>:5173/1`
+  Open a browser on your phone or desktop and navigate to:
+  `http://<YOUR-LOCAL-IP>:5173/1`
 
 - **Live Reload:**
-  Every time you save a code change in `web-client/` (HTML/CSS/JS), the browser on your iPhone automatically reloads immediately!
+  Every time you save a code change in `web-client/` (HTML/CSS/JS), all connected browsers automatically reload immediately!
 
-### 4. Install as Web App ("Add to Home Screen" PWA)
-To run the web controller full-screen like a native iOS app:
-1. Open `http://<YOUR-LAPTOP-IP>:5173` in Safari on your iPhone.
-2. Tap the **Share** button (the box with an upward arrow at the bottom of Safari).
-3. Scroll down and tap **Add to Home Screen**.
-4. Tap **Add** in the top right.
-5. Launch **LG Arkanoid** directly from your iPhone home screen to play in full-screen standalone mode.
+### 4. Install as Web App (PWA)
+To run the web controller full-screen like a native app:
+- **iOS (Safari):** Tap the **Share** button, scroll down, and tap **Add to Home Screen**.
+- **Android (Chrome):** Tap the three-dot menu icon, and tap **Add to Home screen**.
 
-### 5. Windows Firewall Troubleshooting
-If Safari cannot reach the server:
-- Open **Windows Defender Firewall** -> **Allow an app or feature through Windows Defender Firewall**.
-- Ensure **Node.js JavaScript Runtime** is allowed for **Private** (and Public if on home/work Wi-Fi) networks.
-- Or allow incoming TCP connections on ports **5173** and **3000**.
+### 5. Firewall Troubleshooting
+If your device cannot reach the server, ensure your firewall allows incoming connections on ports **5173** and **3000**. On Windows, you may need to allow the **Node.js JavaScript Runtime** through the Windows Defender Firewall.
 
 
 ## GeminiSoC 2026
