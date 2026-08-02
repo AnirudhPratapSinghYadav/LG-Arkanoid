@@ -65,6 +65,9 @@ function createRouter(worldState) {
   // numbers.
 
   router.use(express.static(webClientPath));
+  if (!isProd) {
+    router.use(express.static(path.join(webClientPath, 'public')));
+  }
 
   // -- Screen route (LG convention) -------------------------------------------
   // Each screen on the Liquid Galaxy rig is addressed by its screen number:
