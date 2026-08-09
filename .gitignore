@@ -33,6 +33,11 @@ Thumbs.db
 .cache/
 .vite/
 
+# Local E2E artifacts
+server/tests/e2e-report.json
+server/tests/e2e-browser-report.json
+server/tests/e2e-screenshots/
+
 # Audit dumps
 .agents/
 BASELINE_CURRENT.md
