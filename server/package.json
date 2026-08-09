@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "test": "node tests/gameEngine.test.js"
+    "test": "node tests/gameEngine.test.js",
+    "test:e2e": "node tests/e2e-multi-client.test.js"
   },
   "engines": {
     "node": ">=16.0.0"
@@ -20,5 +21,8 @@
     "socket.io": "^4.8.0",
     "socket.io-adapter": "^2.5.8",
     "ws": "^8.21.1"
+  },
+  "devDependencies": {
+    "socket.io-client": "4.8.0"
   }
 }
