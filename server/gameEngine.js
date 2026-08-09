@@ -60,7 +60,7 @@ class GameState {
     this.bricks = [];
     this.powerUps = [];
     this.level = 1;
-    this.gameStatus = 'waiting';
+    this.gameStatus = 'lobby';
     this.nextLevelBricks = null;
     this.rallyCount = 0;
     this.longestRally = 0;
