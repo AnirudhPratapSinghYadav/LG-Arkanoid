@@ -248,7 +248,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         title: Row(
           children: [
             Text(
-              'SYS.CFG',
+              'SETTINGS',
               style: GoogleFonts.jetBrainsMono(
                 fontSize: 20,
                 color: accentSystem,
@@ -257,7 +257,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
             const Spacer(),
-            ConnectionStatus(isConnected: _isConnected, label: 'SYS.CONN'),
+            ConnectionStatus(isConnected: _isConnected, label: 'LG LINK'),
           ],
         ),
       ),

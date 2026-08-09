@@ -114,7 +114,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              'Where AI meets Arkanoid',
+                              'Phone controller for panoramic play',
                               style: GoogleFonts.spaceGrotesk(
                                 fontSize: 13,
                                 color: accentSystem,
@@ -125,7 +125,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                             ),
                             const SizedBox(height: 6),
                             Text(
-                              'Built by Anirudh Pratap Singh Yadav for Liquid Galaxy\npowered by GeminiSOC 2026',
+                              'Anirudh Pratap Singh Yadav · Liquid Galaxy',
                               style: GoogleFonts.inter(
                                 fontSize: 11,
                                 color: textSecondary,
@@ -143,7 +143,6 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                 ),
               ),
 
-              // GeminiSoC badge in the top-right corner, always visible.
               Positioned(
                 top: MediaQuery.of(context).padding.top + 12,
                 right: 14,
@@ -151,7 +150,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
-                      'GeminiSoC 2026',
+                      'LG Arkanoid',
                       style: GoogleFonts.inter(
                         fontSize: 11,
                         color: Colors.white,

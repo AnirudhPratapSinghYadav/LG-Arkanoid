@@ -142,7 +142,7 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
                                     tooltip: 'Settings & Rig',
                                     onPressed: () => Navigator.pushNamed(context, '/settings'),
                                   ),
-                                  ConnectionStatus(isConnected: SSHService().isConnected, label: 'SYS.CONN'),
+                                  ConnectionStatus(isConnected: SSHService().isConnected, label: 'LG LINK'),
                                 ],
                               ),
                             ),

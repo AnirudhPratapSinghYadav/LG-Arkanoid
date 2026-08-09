@@ -14,6 +14,8 @@ class GameService extends ChangeNotifier {
   String? playerId;
   int? playerNumber;
   String? sessionId;
+  String? sessionToken;
+  bool isSpectator = false;
   int score = 0;
   int lives = 3;
   int rank = 0;
@@ -70,11 +72,15 @@ class GameService extends ChangeNotifier {
       );
 
       socket!.onConnect((_){
-        debugPrint('[GameService] ✅ Socket connected successfully');
+        debugPrint('[GameService] Socket connected');
         connected = true;
         startLatencyPing();
-        if (playerId != null && sessionId != null) {
-          socket!.emit('resume_request', {'playerId': playerId, 'sessionId': sessionId});
+        if (playerId != null && sessionId != null && sessionToken != null && !isSpectator) {
+          socket!.emit('resume_request', {
+            'playerId': playerId,
+            'sessionId': sessionId,
+            'sessionToken': sessionToken,
+          });
         }
         notifyListeners();
       });
@@ -97,9 +103,9 @@ class GameService extends ChangeNotifier {
         playerId = map['playerId'] as String?;
         playerNumber = map['playerNumber'] as int?;
         sessionId = map['sessionId'] as String?;
+        isSpectator = map['isSpectator'] as bool? ?? false;
         isJoinConfirmed = true;
         joinError = null;
-        bool isSpectator = map['isSpectator'] as bool? ?? false;
         if (onJoinConfirmed != null) onJoinConfirmed!(isSpectator);
         notifyListeners();
       });
@@ -210,11 +216,13 @@ class GameService extends ChangeNotifier {
     }
   }
 
-  void joinGame(String sessionToken, String playerName){
+  void joinGame(String token, String playerName){
     isJoinConfirmed = false;
     joinError = null;
+    isSpectator = false;
+    sessionToken = token;
     socket?.emit('player_join', {
-      'sessionToken': sessionToken,
+      'sessionToken': token,
       'playerName': playerName
     });
   }
@@ -257,6 +265,13 @@ class GameService extends ChangeNotifier {
     socket!.emit('start_game', {'durationSeconds': durationSeconds});
   }
 
+  void leaveGame(){
+    if (socket != null && connected && playerId != null && !isSpectator) {
+      socket!.emit('leave_game');
+    }
+    disconnect();
+  }
+
   void disconnect(){
     stopLatencyPing();
     socket?.dispose();
@@ -264,6 +279,15 @@ class GameService extends ChangeNotifier {
     connected = false;
     isJoinConfirmed = false;
     joinError = null;
+    playerId = null;
+    playerNumber = null;
+    sessionId = null;
+    sessionToken = null;
+    isSpectator = false;
+    score = 0;
+    lives = 3;
+    rank = 0;
+    latestGameState = null;
     notifyListeners();
   }
 

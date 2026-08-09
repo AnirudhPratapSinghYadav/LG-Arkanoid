@@ -8,7 +8,7 @@ const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
 
 const gameEngine = require('./gameEngine.js');
-const { PORT, TICK_MS, SCREEN_WIDTH, getLanIp, createInitialWorldState, GEMINI_API_KEY, LG_PASSWORD } = require('./config.js');
+const { PORT, TICK_MS, SCREEN_WIDTH, BALL_RADIUS, getLanIp, createInitialWorldState, GEMINI_API_KEY, LG_PASSWORD } = require('./config.js');
 
 if (!GEMINI_API_KEY) {
   console.warn('WARNING: GEMINI_API_KEY is missing. AI commentary and level generation will be disabled.');
@@ -18,7 +18,7 @@ if (LG_PASSWORD === undefined || LG_PASSWORD === null || LG_PASSWORD === '') {
   process.exit(1);
 }
 const { triggerCommentary, pollGameMasterAsync, generateNextLevelAsync } = require('./services/geminiService.js');
-const { registerSocketHandlers, applyPowerUpEffect } = require('./handlers/socketHandler.js');
+const { registerSocketHandlers, applyPowerUpEffect, clearAllPowerUpTimers } = require('./handlers/socketHandler.js');
 const createRouter = require('./routes.js');
 
 let worldState = createInitialWorldState();
@@ -36,17 +36,21 @@ app.use((req, res, next) => {
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  max: 2000,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => {
+    const p = req.path || '';
+    if (p.startsWith('/socket.io')) return true;
+    return /\.(js|css|png|jpe?g|gif|svg|woff2?|ttf|ico|map|webmanifest)$/i.test(p);
+  },
 });
 app.use(helmet({ 
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
       scriptSrc: [
-        "'self'", 
-        "https://cdnjs.cloudflare.com",
+        "'self'",
         (req, res) => `'nonce-${res.locals.nonce}'`
       ],
       styleSrc: [
@@ -142,7 +146,6 @@ function getWorldSnapshot(){
     highestCombo: worldState.highestCombo || 0,
     lanIp: getLanIp(),
     port: PORT,
-    sessionToken: worldState.sessionToken,
     masterPlayerIndex: worldState.masterPlayerIndex,
     maxPlayers: worldState.maxPlayers || 3,
     gameDurationSeconds: worldState.gameDurationSeconds ?? 180,
@@ -183,7 +186,6 @@ function broadcastGameState(){
       inventory: Array.isArray(p.inventory) ? p.inventory.slice() : [],
     })),
     currentLevel: worldState.currentLevel,
-    sessionToken: worldState.sessionToken,
     gameStatus: worldState.gameStatus,
     gameStartedAt: worldState.gameStartedAt || null,
     lobbyStartedAt: worldState.lobbyStartedAt,
@@ -220,6 +222,68 @@ function broadcastGameState(){
 registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameState, getWorldSnapshot);
 
 let previousRanks = {};
+let lobbyReturnTimer = null;
+
+function returnToLobby() {
+  if (lobbyReturnTimer) {
+    clearTimeout(lobbyReturnTimer);
+    lobbyReturnTimer = null;
+  }
+  if (!['time_up', 'game_over', 'win'].includes(worldState.gameStatus)) {
+    return;
+  }
+
+  clearAllPowerUpTimers(worldState);
+  if (worldState.slowBallTimer) {
+    clearTimeout(worldState.slowBallTimer);
+  }
+  worldState.slowBallActive = false;
+  worldState.slowBallTimer = null;
+  worldState.powerUps = [];
+  worldState.nextLevelBricks = null;
+  worldState.gameStatus = 'lobby';
+  worldState.gameActive = false;
+  worldState.gameStartedAt = null;
+  worldState.countdownStartedAt = null;
+  worldState.level = 1;
+  worldState.currentLevel = 1;
+  worldState.longestRally = 0;
+  worldState.powerupsCollected = 0;
+  worldState.highestCombo = 0;
+  worldState.rallyCount = 0;
+  worldState.currentCombo = 0;
+  worldState.bricks = gameEngine.loadLevel(1, null, worldState.numScreens);
+  worldState.bricksDirty = true;
+
+  const centerX = ((worldState.numScreens || 3) * SCREEN_WIDTH) / 2;
+  worldState.balls = [
+    new gameEngine.Ball('ball1', centerX, 500, 3, 4, BALL_RADIUS),
+    new gameEngine.Ball('ball2', centerX, 500, -3, 4, BALL_RADIUS),
+  ];
+  worldState.balls[1].active = false;
+
+  for (const p of worldState.players) {
+    if (p.widePaddleTimer) {
+      clearTimeout(p.widePaddleTimer);
+      p.widePaddleTimer = null;
+    }
+    p.score = 0;
+    p.lives = 3;
+    p.inventory = [];
+    p.paddleWidth = 300;
+  }
+
+  io.emit('lobby_ready', { sessionId: worldState.sessionId });
+  broadcastGameState();
+}
+
+function scheduleReturnToLobby(delayMs = 12000) {
+  if (lobbyReturnTimer) return;
+  lobbyReturnTimer = setTimeout(() => {
+    lobbyReturnTimer = null;
+    returnToLobby();
+  }, delayMs);
+}
 
 function gameLoop() {
   const loopStartTime = Date.now();
@@ -234,6 +298,7 @@ function gameLoop() {
       worldState.gameStatus = 'time_up';
       worldState.gameActive = false;
       broadcastGameState();
+      scheduleReturnToLobby();
       setTimeout(gameLoop, TICK_MS);
       return;
     }
@@ -274,6 +339,10 @@ function gameLoop() {
     worldState.currentLevel = worldState.level;
     triggerCommentary('level_cleared', getWorldSnapshot(), io, worldState.commentaryRateLimiter);
     pollGameMasterAsync(worldState, io);
+  }
+
+  if (worldState.gameStatus === 'game_over' || worldState.gameStatus === 'win') {
+    scheduleReturnToLobby();
   }
 
   const currentRanks = computePlayerRanks();

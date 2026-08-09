@@ -196,10 +196,17 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
       }
       
       clearAllPowerUpTimers(worldState);
+      if (worldState.slowBallTimer) {
+        clearTimeout(worldState.slowBallTimer);
+      }
+      worldState.slowBallActive = false;
+      worldState.slowBallTimer = null;
+      worldState.powerUps = [];
+      worldState.nextLevelBricks = null;
       worldState.level = 1;
       worldState.currentLevel = 1;
       worldState.bricks = gameEngine.loadLevel(1, null, worldState.numScreens);
-      worldState.bricksDirty = true; // force the fresh level's bricks to broadcast — a new match's bricks were previously silently dropped by the delta-sync gate
+      worldState.bricksDirty = true;
       
       worldState.longestRally = 0;
       worldState.powerupsCollected = 0;
@@ -239,7 +246,6 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
               worldState.gameActive = true;
               worldState.gameStartedAt = Date.now();
               io.emit('game_started', {
-                  sessionToken: worldState.sessionToken,
                   sessionId: worldState.sessionId,
                   gameStartedAt: worldState.gameStartedAt,
                   gameDurationSeconds: worldState.gameDurationSeconds,
@@ -255,7 +261,7 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
         socket.emit('join_rejected', { errorCode: 1007, message: 'Only the host can configure settings' });
         return;
       }
-      if (worldState.gameStatus === 'playing') {
+      if (worldState.gameStatus === 'playing' || worldState.gameStatus === 'countdown') {
         socket.emit('error', { errorCode: 1010, message: 'Cannot change settings during a match' });
         return;
       }
@@ -293,6 +299,10 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
         socket.emit('join_rejected', { errorCode: 1007, message: 'Only the host can configure settings' });
         return;
       }
+      if (worldState.gameStatus === 'playing' || worldState.gameStatus === 'countdown') {
+        socket.emit('error', { errorCode: 1010, message: 'Cannot change lobby size during a match' });
+        return;
+      }
       const newMax = parseInt(data?.maxPlayers, 10);
       if(newMax >= 1 && newMax <= 5){
         if (worldState.players.slice(newMax).some(p => p.connected)) {
@@ -308,11 +318,20 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
         if(worldState.players.length > newMax){
           worldState.players = worldState.players.slice(0, newMax);
         }
+        if(worldState.masterPlayerIndex >= worldState.players.length){
+          worldState.masterPlayerIndex = Math.max(0, worldState.players.findIndex((p) => p.connected));
+          if(worldState.masterPlayerIndex < 0) worldState.masterPlayerIndex = 0;
+        }
         broadcastGameState();
       }
     });
 
     const handleJoin = (data)=>{
+      if (socketToPlayerIndex.has(socket.id)) {
+        socket.emit('join_rejected', { errorCode: 1013, message: 'Already joined from this connection' });
+        return;
+      }
+
       const ip = socket.handshake.address;
       let attempts = ipJoinAttempts.get(ip) || { count: 0, lockedUntil: 0 };
       
@@ -476,13 +495,17 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
     });
 
     socket.on('resume_request', (data)=>{
-      const { playerId, sessionId } = data || {};
-      if(typeof playerId !== 'string' || typeof sessionId !== 'string'){
+      const { playerId, sessionId, sessionToken } = data || {};
+      if(typeof playerId !== 'string' || typeof sessionId !== 'string' || typeof sessionToken !== 'string'){
         socket.emit('join_rejected', { errorCode: 1005, message: 'Invalid resume payload' });
         return;
       }
       if(sessionId !== worldState.sessionId){
         socket.emit('join_rejected', { errorCode: 1001, message: 'Session expired' });
+        return;
+      }
+      if(!timingSafeTokenCompare(sessionToken, String(worldState.sessionToken || ''))){
+        socket.emit('join_rejected', { errorCode: 1001, message: 'Invalid session token' });
         return;
       }
 
@@ -518,6 +541,42 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
       broadcastGameState();
     });
 
+    socket.on('leave_game', ()=>{
+      const found = findPlayerBySocket(socket.id, worldState);
+      if(!found) return;
+      const { player, index } = found;
+      const playerNumber = index + 1;
+      const playerId = player.id;
+
+      if(playerId && disconnectTimers.has(playerId)){
+        clearTimeout(disconnectTimers.get(playerId));
+        disconnectTimers.delete(playerId);
+      }
+
+      clearPlayerTimers(player);
+      player.connected = false;
+      player.id = null;
+      player.socketId = null;
+      player.lastNonces = [];
+      player.name = null;
+      player.paddleWidth = 300;
+      player.score = 0;
+      player.lives = 3;
+      player.inventory = [];
+      socketToPlayerIndex.delete(socket.id);
+
+      if (index === worldState.masterPlayerIndex) {
+        let newMaster = worldState.players.findIndex((p) => p.connected);
+        worldState.masterPlayerIndex = newMaster >= 0 ? newMaster : 0;
+      }
+
+      io.emit('player_disconnected', {
+        playerNumber,
+        message: 'Player left the game',
+      });
+      broadcastGameState();
+    });
+
     socket.on('boundary_ack', (data)=>{
       const { handoffId, screenId } = data || {};
       const pending = pendingHandoffs.get(handoffId);
@@ -543,19 +602,41 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
       if(playerId && disconnectTimers.has(playerId)){
         clearTimeout(disconnectTimers.get(playerId));
       }
+
+      socketToPlayerIndex.delete(disconnectedSocketId);
+      player.connected = false;
+      if (player.socketId === disconnectedSocketId) {
+        player.socketId = null;
+      }
+
+      // Reassign host immediately so lobby is not stuck without a starter.
+      if (index === worldState.masterPlayerIndex) {
+        let newMaster = -1;
+        for (let i = 0; i < worldState.players.length; i++) {
+          if (worldState.players[i].connected) {
+            newMaster = i;
+            break;
+          }
+        }
+        if (newMaster !== -1) {
+          worldState.masterPlayerIndex = newMaster;
+        }
+      }
       
       io.emit('player_connection_lost', {
         playerNumber,
-        playerId: player.id,
+        playerId,
         message: 'Connection lost, waiting to reconnect...',
       });
-
-      player.connected = false;
+      broadcastGameState();
 
       const timer = setTimeout(()=>{
         if(playerId) disconnectTimers.delete(playerId);
 
-        if(player.connected && player.socketId!==disconnectedSocketId){
+        if(player.connected && player.socketId && player.socketId !== disconnectedSocketId){
+          return;
+        }
+        if(player.id !== playerId){
           return;
         }
 
@@ -568,21 +649,6 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
         player.score = 0;
         player.lives = 3;
         player.inventory = [];
-        
-        if (index === worldState.masterPlayerIndex) {
-          let newMaster = -1;
-          for (let i = 0; i < worldState.players.length; i++) {
-            if (worldState.players[i].connected) {
-              newMaster = i;
-              break;
-            }
-          }
-          if (newMaster !== -1) {
-            worldState.masterPlayerIndex = newMaster;
-          }
-        }
-
-        socketToPlayerIndex.delete(disconnectedSocketId);
 
         io.emit('player_disconnected', {
           playerNumber,
