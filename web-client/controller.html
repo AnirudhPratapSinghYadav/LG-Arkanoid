@@ -57,43 +57,43 @@
             </div>
         </div>
 
-        <!-- Commentary Bar -->
         <div class="commentary-bar" id="commentaryBar">
             <div class="commentary-inner">
-                <span class="material-icons-round" style="font-size:16px;color:#F4A261;">smart_toy</span>
-                <div class="commentary-text" id="commentaryText">Welcome to Liquid Galaxy Arkanoid!</div>
+                <div class="commentary-text" id="commentaryText">Welcome to LG Arkanoid</div>
             </div>
         </div>
 
-        <!-- Power-Up Buttons -->
-        <div class="powerups-row">
-            <div class="powerup-btn" onclick="activatePowerUp('wide_paddle')">
-                <span class="pu-icon" style="color:#4CAF50;">unfold_more</span>
+        <div id="spectatorNote" style="display:none;text-align:center;color:#9AA4AF;padding:12px;font-family:'Space Grotesk',sans-serif;">
+            Lobby is full. You are spectating this match.
+        </div>
+
+        <div id="hostControls" style="display:none;padding:0 16px 12px 16px;">
+            <button class="join-btn" style="max-width:100%;" onclick="startMatch()">START MATCH</button>
+        </div>
+
+        <div class="powerups-row" id="powerupsRow">
+            <div class="powerup-btn disabled" data-type="wide_paddle" onclick="activatePowerUp('wide_paddle')">
+                <span class="pu-count">0</span>
                 <div class="pu-label" style="color:#4CAF50;">WIDE</div>
             </div>
-            <div class="powerup-btn" onclick="activatePowerUp('slow_ball')">
-                <span class="pu-icon" style="color:#20c5ff;">speed</span>
+            <div class="powerup-btn disabled" data-type="slow_ball" onclick="activatePowerUp('slow_ball')">
+                <span class="pu-count">0</span>
                 <div class="pu-label" style="color:#20c5ff;">SLOW</div>
             </div>
-            <div class="powerup-btn" onclick="activatePowerUp('multi_ball')">
-                <span class="pu-icon" style="color:#F4A261;">filter_tilt_shift</span>
+            <div class="powerup-btn disabled" data-type="multi_ball" onclick="activatePowerUp('multi_ball')">
+                <span class="pu-count">0</span>
                 <div class="pu-label" style="color:#F4A261;">MULTI</div>
             </div>
-            <div class="powerup-btn" onclick="activatePowerUp('bomb')">
-                <span class="pu-icon" style="color:#E76F51;">local_fire_department</span>
+            <div class="powerup-btn disabled" data-type="bomb" onclick="activatePowerUp('bomb')">
+                <span class="pu-count">0</span>
                 <div class="pu-label" style="color:#E76F51;">BOMB</div>
             </div>
         </div>
 
-        <!-- Touch Pad Drag Strip -->
-        <div class="touch-pad-wrap">
+        <div class="touch-pad-wrap" id="touchPadWrap">
             <div class="touch-pad" id="touchPad">
                 <div class="touch-track" id="touchTrack"></div>
-                <span class="material-icons-round touch-arrows left">chevron_left</span>
-                <span class="material-icons-round touch-arrows right">chevron_right</span>
-                <div class="puck" id="touchPuck">
-                    <span class="material-icons-round">drag_indicator</span>
-                </div>
+                <div class="puck" id="touchPuck"></div>
                 <div class="touch-label">DRAG TO MOVE PADDLE</div>
             </div>
         </div>
@@ -120,7 +120,7 @@
         </div>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.8.0/socket.io.min.js" integrity="sha384-OoIbkvzsFFQAG88r+IqMAjyOtYDPGO0cqK5HF5Uosdy/zUEGySeAzytENMDynREd" crossorigin="anonymous"></script>
+    <script src="/socket.io/socket.io.js"></script>
     <script src="js/controller.js"></script>
 </body>
 </html>

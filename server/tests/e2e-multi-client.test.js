@@ -116,8 +116,13 @@ async function main() {
   );
   record(
     'All screens receive game_state',
-    screenStates.every((st) => st && !st.__err && st.sessionToken),
-    screenStates.map((st) => (st && st.sessionToken) || st.__err).join('|')
+    screenStates.every((st) => st && !st.__err && st.gameStatus),
+    screenStates.map((st) => (st && st.gameStatus) || st.__err).join('|')
+  );
+  record(
+    'game_state does not leak sessionToken',
+    screenStates.every((st) => st && !st.__err && !st.sessionToken),
+    screenStates.map((st) => (st && st.sessionToken) || 'ok').join('|')
   );
 
   // 3) Two controller clients join
@@ -246,8 +251,17 @@ async function main() {
   await new Promise((r) => setTimeout(r, 500));
 
   const p1b = await connectSocket({ controller: 'true' }, 'player1-resume');
-  const resumeConfirm = once(p1b, 'join_confirmed', 5000);
+  const badResume = once(p1b, 'join_rejected', 3000);
   p1b.emit('resume_request', { playerId: p1Id, sessionId });
+  const badResumeResult = await badResume.catch(() => null);
+  record(
+    'resume_request without token rejected',
+    !!badResumeResult,
+    JSON.stringify(badResumeResult)
+  );
+
+  const resumeConfirm = once(p1b, 'join_confirmed', 5000);
+  p1b.emit('resume_request', { playerId: p1Id, sessionId, sessionToken: token });
   const resumed = await resumeConfirm.catch((e) => ({ __err: e.message }));
   record(
     'resume_request restores player',

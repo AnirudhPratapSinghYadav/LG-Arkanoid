@@ -23,11 +23,10 @@ class _ConnectingScreenState extends State<ConnectingScreen> {
   Timer? _timeoutTimer;
 
   final List<String> _stages = [
-    'Searching for Session…',
+    'Checking server…',
     'Connecting…',
-    'Authenticating…',
-    'Synchronizing…',
-    'Connected'
+    'Joining lobby…',
+    'Ready',
   ];
 
   @override
@@ -50,28 +49,27 @@ class _ConnectingScreenState extends State<ConnectingScreen> {
   void _onServiceUpdate() {
     if (!mounted) return;
 
-    if (_gameService.isJoinConfirmed && _currentStepIndex < 4) {
+    if (_gameService.isJoinConfirmed && _currentStepIndex < 3) {
       _timeoutTimer?.cancel();
-      _proceedToStep(3); // Synchronizing...
-      
-      // Artificial delay for UI polish, then transition to Lobby
-      Future.delayed(const Duration(milliseconds: 600), () {
-        if (mounted) {
-          _proceedToStep(4); // Connected
-          
-          final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
-          const storage = FlutterSecureStorage();
-          storage.write(key: prefServerAddress, value: args['ip']);
-          storage.write(key: prefServerPort, value: args['port']);
-          storage.write(key: prefSessionToken, value: args['token']);
 
-          Future.delayed(const Duration(milliseconds: 300), () {
-            if (mounted) {
-              Navigator.pushReplacementNamed(context, '/lobby');
-            }
-          });
-        }
-      });
+      if (_gameService.isSpectator) {
+        setState(() {
+          _errorMessage = 'Lobby is full. Try again when a slot opens.';
+        });
+        _gameService.disconnect();
+        return;
+      }
+
+      _proceedToStep(3);
+      final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+      const storage = FlutterSecureStorage();
+      storage.write(key: prefServerAddress, value: args['ip']);
+      storage.write(key: prefServerPort, value: args['port']);
+      storage.write(key: prefSessionToken, value: args['token']);
+
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, '/lobby');
+      }
     } else if (_gameService.joinError != null) {
       _timeoutTimer?.cancel();
       setState(() {
@@ -117,8 +115,7 @@ class _ConnectingScreenState extends State<ConnectingScreen> {
       return;
     }
 
-    _proceedToStep(1); // Connecting...
-
+    _proceedToStep(1);
     _proceedToStep(2);
     _gameService.joinGame(token, name);
 
@@ -173,7 +170,7 @@ class _ConnectingScreenState extends State<ConnectingScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                'CONNECTION ESTABLISHMENT',
+                'JOINING SESSION',
                 style: GoogleFonts.spaceGrotesk(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,

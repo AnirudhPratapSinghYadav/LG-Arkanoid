@@ -209,7 +209,7 @@ function checkPaddleCollision(ball, players){
 
       for(let i = 0; i < players.length; i++){
         let player = players[i];
-        if(!player.connected) continue;
+        if(!player.connected || player.lives <= 0) continue;
 
         let paddleTop = player.paddleY;
         let paddleBottom = player.paddleY + 30; // Assuming 30px height
