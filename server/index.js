@@ -70,10 +70,12 @@ const io = new Server(server, {
     origin: (origin, callback) => {
       if (!origin) return callback(null, true);
       const allowedOrigins = [
-        `http://localhost:${PORT}`, 
-        `http://127.0.0.1:${PORT}`, 
+        `http://localhost:${PORT}`,
+        `http://127.0.0.1:${PORT}`,
         `http://${getLanIp()}:${PORT}`,
-        `http://lg1:${PORT}`
+        `http://lg1:${PORT}`,
+        'http://localhost:5173',
+        'http://127.0.0.1:5173',
       ];
       if (allowedOrigins.indexOf(origin) === -1) {
         return callback(new Error('The CORS policy for this site does not allow access from the specified Origin.'), false);
@@ -148,6 +150,7 @@ function getWorldSnapshot(){
 }
 
 function broadcastGameState(){
+  const ranks = computePlayerRanks();
   const payload = {
     sessionId: worldState.sessionId,
     numScreens: worldState.numScreens || 3,
@@ -176,13 +179,21 @@ function broadcastGameState(){
       score: p.score,
       lives: p.lives,
       connected: p.connected,
+      rank: ranks[p.id] || null,
+      inventory: Array.isArray(p.inventory) ? p.inventory.slice() : [],
     })),
     currentLevel: worldState.currentLevel,
     sessionToken: worldState.sessionToken,
     gameStatus: worldState.gameStatus,
+    gameStartedAt: worldState.gameStartedAt || null,
     lobbyStartedAt: worldState.lobbyStartedAt,
     countdownStartedAt: worldState.countdownStartedAt,
     masterPlayerIndex: worldState.masterPlayerIndex,
+    maxPlayers: worldState.maxPlayers || 3,
+    gameDurationSeconds: worldState.gameDurationSeconds || 180,
+    longestRally: worldState.longestRally || 0,
+    powerupsCollected: worldState.powerupsCollected || 0,
+    highestCombo: worldState.highestCombo || 0,
     lanIp: getLanIp(),
     port: PORT,
   };
@@ -221,7 +232,9 @@ function gameLoop() {
   if (worldState.gameStartedAt && worldState.gameDurationSeconds > 0) {
     if (Date.now() - worldState.gameStartedAt > worldState.gameDurationSeconds * 1000) {
       worldState.gameStatus = 'time_up';
+      worldState.gameActive = false;
       broadcastGameState();
+      setTimeout(gameLoop, TICK_MS);
       return;
     }
   }

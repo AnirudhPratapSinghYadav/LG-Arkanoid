@@ -57,4 +57,4 @@ const FONTS = {
 const REDUCED_MOTION = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 const ROW_COLORS = [COLORS.accent, COLORS.textSecondary, COLORS.game, COLORS.success, COLORS.error, COLORS.panel];
-const PADDLE_COLORS = [COLORS.accent, COLORS.game, COLORS.success];
+const PADDLE_COLORS = [COLORS.accent, COLORS.game, COLORS.success, 0xe040fb, 0xff5252];

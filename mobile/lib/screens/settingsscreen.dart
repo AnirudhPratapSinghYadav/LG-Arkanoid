@@ -115,9 +115,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  int _parseScreenCount() {
+    final parsed = int.tryParse(_screensController.text.trim()) ?? 3;
+    return parsed.clamp(1, 12);
+  }
+
   Future<void> _launchGame() async {
     if (!_isConnected) return;
-    final screens = int.tryParse(_screensController.text.trim()) ?? 3;
+    final screens = _parseScreenCount();
     final err = await SSHService().launchGame(screens);
     if (mounted && err.startsWith('ERROR')) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err), backgroundColor: accentError));
@@ -128,7 +133,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _relaunchGame() async {
     if (!_isConnected) return;
-    final screens = int.tryParse(_screensController.text.trim()) ?? 3;
+    final screens = _parseScreenCount();
     final err = await SSHService().relaunchGame(screens);
     if (mounted && err.startsWith('ERROR')) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err), backgroundColor: accentError));
@@ -364,7 +369,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     const SizedBox(height: 16),
                     _buildTextField(
                       label: 'NUMBER OF SCREENS',
-                      hint: 'e.g. 3, 5, 7, 9',
+                      hint: 'e.g. 3, 5, 7, 9, 12',
                       controller: _screensController,
                       keyboardType: TextInputType.number,
                       validator: (value) {
@@ -528,7 +533,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Where AI meets Arkanoid',
+                    'Panoramic Arkanoid for Liquid Galaxy',
                     style: GoogleFonts.inter(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
@@ -537,7 +542,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Built by Anirudh Pratap Singh Yadav for Liquid Galaxy\npowered by GeminiSOC 2026',
+                    'Built by Anirudh Pratap Singh Yadav for Liquid Galaxy\nGemini SoC 2026',
                     style: GoogleFonts.inter(
                       fontSize: 11,
                       color: textSecondary,

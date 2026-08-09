@@ -4,7 +4,8 @@
   "description": "LG Arkanoid authoritative game server for Liquid Galaxy",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "test": "node tests/gameEngine.test.js"
   },
   "engines": {
     "node": ">=16.0.0"
