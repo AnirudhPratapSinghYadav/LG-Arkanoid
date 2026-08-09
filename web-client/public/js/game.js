@@ -576,7 +576,7 @@ class GameScene extends Phaser.Scene {
 
         if (this.currentState.gameStartedAt && this.currentState.gameStatus === 'playing') {
             const elapsed = Math.floor((Date.now() - this.currentState.gameStartedAt) / 1000);
-            const duration = this.currentState.gameDurationSeconds || 180;
+            const duration = this.currentState.gameDurationSeconds ?? 180;
             const remaining = Math.max(0, duration - elapsed);
             const m = String(Math.floor(remaining / 60)).padStart(2, '0');
             const s = String(remaining % 60).padStart(2, '0');

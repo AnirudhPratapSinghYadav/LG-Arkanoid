@@ -71,20 +71,16 @@ function createRouter(worldState) {
 
   // -- Screen route (LG convention) -------------------------------------------
   // Each screen on the Liquid Galaxy rig is addressed by its screen number:
-  //   http://lg1:8128/1  -- master screen
-  //   http://lg1:3000/2  -- second screen
-  //   http://lg1:3000/3  -- third screen
-  //
-  // The server reads the game HTML file, then injects a script tag that sets
-  // window.SCREEN_ID to the requested screen number. The Phaser game client
-  // reads this variable to know which portion of the virtual world to render.
+  //   http://lg1:3000/1  -- screen 1
+  //   http://lg1:3000/2  -- screen 2
+  // Injects SCREEN_ID + NUM_SCREENS for the Phaser client (Pacman-style routes).
 
   router.get('/:screenNum(\\d+)', (req, res) => {
     const screenNum = parseInt(req.params.screenNum, 10);
+    const configured = worldState.numScreens || 3;
 
-    // Valid range: 1..12 (covers common LG rigs: 3,5,7,9,12).
-    if (screenNum < 1 || screenNum > 12) {
-      return res.status(400).send('Screen number must be between 1 and 12.');
+    if (screenNum < 1 || screenNum > configured || screenNum > 12) {
+      return res.status(400).send(`Screen number must be between 1 and ${configured}.`);
     }
 
     const htmlPath = path.join(webClientPath, 'index.html');

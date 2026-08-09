@@ -1,5 +1,5 @@
 const gameEngine = require('../gameEngine.js');
-const { PLAYER_SLOT_IDS, BALL_RADIUS, PORT, getLanIp, createInitialWorldState } = require('../config.js');
+const { PLAYER_SLOT_IDS, BALL_RADIUS, SCREEN_WIDTH, normalizeDurationSeconds } = require('../config.js');
 const { triggerCommentary } = require('../services/geminiService.js');
 
 const socketToPlayerIndex = new Map();
@@ -207,7 +207,7 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
       worldState.rallyCount = 0;
       worldState.currentCombo = 0;
       
-      const centerX = (worldState.numScreens * 1920) / 2;
+      const centerX = (worldState.numScreens * SCREEN_WIDTH) / 2;
       const ballCount = Math.max(1, worldState.maxPlayers || 3);
       const speedMult = worldState.ballSpeed === 'slow' ? 0.75 : (worldState.ballSpeed === 'fast' ? 1.4 : (worldState.ballSpeed === 'insane' ? 1.8 : 1.0));
       worldState.balls = [];
@@ -215,7 +215,7 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
         const vxDir = (b % 2 === 0 ? 1 : -1) * (2.5 + (b * 0.8)) * speedMult;
         const vyDir = (3.5 + (b * 0.5)) * speedMult;
         const ball = new gameEngine.Ball(`ball_${b + 1}`, centerX + ((b - Math.floor(ballCount / 2)) * 120), 500, vxDir, vyDir, BALL_RADIUS);
-        ball.active = (b < Math.min(2, ballCount)); // Start active balls capped by total ballCount
+        ball.active = (b < Math.min(2, ballCount));
         worldState.balls.push(ball);
       }
       
@@ -228,9 +228,7 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
       worldState.gameStatus = 'countdown';
       worldState.countdownStartedAt = Date.now();
       worldState.gameActive = false;
-      let dur = data?.durationSeconds || 180;
-      if (typeof dur !== 'number' || isNaN(dur)) dur = 180;
-      worldState.gameDurationSeconds = Math.max(60, Math.min(600, dur));
+      worldState.gameDurationSeconds = normalizeDurationSeconds(data?.durationSeconds, 180);
       
       io.emit('countdown_started', { countdown: 3 });
       broadcastGameState();
@@ -283,8 +281,8 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
       if(typeof data?.ballSpeed === 'string'){
         worldState.ballSpeed = data.ballSpeed;
       }
-      if(typeof data?.durationSeconds === 'number' && !isNaN(data.durationSeconds) && isFinite(data.durationSeconds)){
-        worldState.gameDurationSeconds = Math.max(60, Math.min(600, data.durationSeconds));
+      if(data?.durationSeconds !== undefined && data?.durationSeconds !== null){
+        worldState.gameDurationSeconds = normalizeDurationSeconds(data.durationSeconds, worldState.gameDurationSeconds || 180);
       }
       broadcastGameState();
     });
@@ -374,7 +372,7 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
       player.socketId = socket.id;
       player.paddleWidth = player.paddleWidth || 300;
       if (typeof player.paddleX !== 'number') {
-        player.paddleX = ((worldState.numScreens || 3)*1920)/2 - (player.paddleWidth/2);
+        player.paddleX = ((worldState.numScreens || 3) * SCREEN_WIDTH) / 2 - (player.paddleWidth / 2);
       }
       if (!Array.isArray(player.inventory)) player.inventory = [];
       player.lastNonces = [];
@@ -433,10 +431,10 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
 
       deltaX = Math.max(-5000, Math.min(5000, deltaX));
 
-      const maxRight = (worldState.numScreens || 3)*1920;
+      const maxRight = (worldState.numScreens || 3) * SCREEN_WIDTH;
       player.paddleX += deltaX;
       const pw = player.paddleWidth || 300;
-      player.paddleX = Math.max(0, Math.min(maxRight-pw, Math.round(player.paddleX)));
+      player.paddleX = Math.max(0, Math.min(maxRight - pw, Math.round(player.paddleX)));
     });
 
     socket.on('power_up_activate', (data)=>{
