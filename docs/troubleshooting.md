@@ -1,9 +1,10 @@
 # Troubleshooting
 
 ## Server Won't Start
-- Ensure Node.js 18+ is installed.
+- On the LG rig, use Node.js **16** (via nvm). On a modern laptop, Node 16+ is fine.
 - Ensure `.env` is created and `LG_PASSWORD` is configured.
 - Run `npm run server` and check for syntax errors.
+- Phone controller must use port **3000** (not Pacman's 8128).
 
 ## Screens Won't Open on Slaves
 - Ensure the master node has passwordless SSH access to the slave nodes (or the correct password in the scripts).
@@ -36,7 +37,7 @@ Verify in a fresh terminal:
 node -v   # must show v16.x.x
 ```
 
-**Why the project's minimum supported Node version is 14:** This is a deliberate ceiling, not an oversight. The sister Liquid Galaxy Lab project `galaxy-pacman` documents Node 14 as its master-machine requirement, confirming this project's rig (Ubuntu 16.04 / glibc 2.23) reflects a known constraint across the LG ecosystem, not a one-off. This project's `engines` field targets Node >=14 for that reason, with the full matrix (14/16/18/20/22) verified in CI. See `package.json`'s `engines` field.
+**Why the project's minimum supported Node version is 16:** Ubuntu 16.04 / glibc 2.23 cannot run Node 18+. Sister LG games historically mention Node 14; this project targets **Node >=16** (see `package.json` `engines` and `.nvmrc`). CI verifies Node 16/18/20. Do not upgrade Vite past 4.x on the rig — Vite 5+ needs newer Node.
 
 ### Why jsdom and a newer Vite were removed
 

@@ -24,6 +24,8 @@ class Player {
     this.paddleWidth = 300;
     this.connected = false;
     this.socketId = null;
+    this.inventory = [];
+    this.lastNonces = [];
   }
 }
 
@@ -82,10 +84,28 @@ function applyGameMasterMod(gameState, modType){
         gameState.balls.push(newBall);
         break;
       case 'SLOW_BALL':
-        gameState.balls.forEach(b=>{
-          b.vx *= 0.5;
-          b.vy *= 0.5;
-        });
+        if(!gameState.slowBallActive){
+          gameState.balls.forEach(b=>{
+            if(b.active){
+              b.vx *= 0.5;
+              b.vy *= 0.5;
+            }
+          });
+          gameState.slowBallActive = true;
+          if(gameState.slowBallTimer) clearTimeout(gameState.slowBallTimer);
+          gameState.slowBallTimer = setTimeout(()=>{
+            if(gameState.slowBallActive){
+              gameState.balls.forEach(b=>{
+                if(b.active){
+                  b.vx *= 2.0;
+                  b.vy *= 2.0;
+                }
+              });
+              gameState.slowBallActive = false;
+              gameState.slowBallTimer = null;
+            }
+          }, 8000);
+        }
         break;
     }
   } catch(e){
@@ -336,8 +356,14 @@ function updatePowerUps(gameState, applyPowerUpEffectCallback){
           gameState.powerupsCollected = (gameState.powerupsCollected || 0) + 1;
           if(player.id){
             player.score += 50;
-            if(applyPowerUpEffectCallback){
-              applyPowerUpEffectCallback(player, p.type, p.x, p.y);
+            if(!Array.isArray(player.inventory)) player.inventory = [];
+            // Store for controller activation (max 3). Bomb auto-fires on catch.
+            if(p.type === 'bomb'){
+              if(applyPowerUpEffectCallback){
+                applyPowerUpEffectCallback(player, p.type, p.x, p.y);
+              }
+            } else if(player.inventory.length < 3){
+              player.inventory.push(p.type);
             }
           }
           break;
@@ -409,14 +435,21 @@ function updateGameLoop(gameState, applyPowerUpEffectCallback){
         playerToDeduct.score = Math.max(0, playerToDeduct.score-10);
       }
       gameState.lastFallenBallToucher = null;
-      
-      let mainBall = gameState.balls[0];
+
+      // Respawn a single ball; prefer slot 0, otherwise first existing ball object.
+      let mainBall = gameState.balls[0] || gameState.balls.find(Boolean);
+      if(!mainBall){
+        mainBall = new Ball('ball_1', 0, 0, 0, 0, 8);
+        gameState.balls.push(mainBall);
+      }
       mainBall.x = ((gameState.numScreens || 3)*1920)/2;
       mainBall.y = 500;
       mainBall.vx = gameState.slowBallActive ? 1.5 : 3;
       mainBall.vy = gameState.slowBallActive ? 2.0 : 4;
       mainBall.active = true;
       mainBall.lastTouchedByPlayerId = null;
+      mainBall.rallyCount = 0;
+      mainBall.currentCombo = 0;
     }
 
     updatePowerUps(gameState, applyPowerUpEffectCallback);
@@ -444,6 +477,8 @@ function updateGameLoop(gameState, applyPowerUpEffectCallback){
     }
     
     if(!hasDestructibleBricks){
+      // Only indestructible (or empty) bricks remain — advance level.
+      // Reject AI grids with zero destructible cells to avoid instant win-skip.
       gameState.level++;
       const MAX_LEVELS = 5;
       if(gameState.level > MAX_LEVELS){
@@ -452,7 +487,15 @@ function updateGameLoop(gameState, applyPowerUpEffectCallback){
         return;
       }
       gameState.currentLevel = gameState.level;
-      gameState.bricks = loadLevel(gameState.level, gameState.nextLevelBricks, gameState.numScreens);
+      const nextGrid = gameState.nextLevelBricks;
+      let safeGrid = nextGrid;
+      if(Array.isArray(nextGrid)){
+        const gridHasDestructible = nextGrid.some(row =>
+          Array.isArray(row) && row.some(cell => cell !== 3 && cell !== 0)
+        );
+        if(!gridHasDestructible) safeGrid = null;
+      }
+      gameState.bricks = loadLevel(gameState.level, safeGrid, gameState.numScreens);
       gameState.nextLevelBricks = null;
       gameState.bricksDirty = true;
     }

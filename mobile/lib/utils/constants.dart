@@ -24,7 +24,7 @@ const double spaceMd = 16;
 const double spaceLg = 24;
 const double spaceXl = 32;
 
-const String defaultServerPort = '8128';
+const String defaultServerPort = '3000';
 const int defaultSshPort = 22;
 const String defaultSshUsername = 'lg';
 const String defaultRemotePath = '~/projects/LG-Arkanoid';
