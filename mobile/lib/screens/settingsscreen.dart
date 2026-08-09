@@ -268,7 +268,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           children: [
             // -- TTS toggle panel ---------------------------------------------
             LgPanel(
-              tag: 'CFG.TTS',
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -310,7 +309,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
             // -- Rig Connection Panel -----------------------------------------
             LgPanel(
-              tag: 'CFG.RIG',
               child: Form(
                 key: _formKey,
                 child: Column(

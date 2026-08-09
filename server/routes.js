@@ -14,48 +14,27 @@ function createRouter(worldState) {
   router.get('/health', (req, res) => {
     res.json({
       status: 'ok',
+      numScreens: worldState.numScreens || 3,
+      gameStatus: worldState.gameStatus,
       gameActive: worldState.gameStatus === 'playing',
       connectedPlayers: worldState.players.filter((p) => p.connected).length,
+      sessionToken: worldState.sessionToken,
+      port: process.env.PORT || 3000,
     });
   });
 
-  // -- Controller page --------------------------------------------------------
-  // On a real LG rig, players use the Flutter mobile app as a controller.
-  // This simple HTML page is shown if someone navigates to /controller in a
-  // desktop browser, directing them to use the mobile app instead.
-
+  // Pacman-style browser controller (optional). Flutter app is preferred on phone.
   router.get('/controller', (req, res) => {
-    res.send(`<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LG Arkanoid Controller</title>
-  <style>
-    body {
-      margin: 0;
-      background: #080b11;
-      color: #e8f4f8;
-      font-family: 'Inter', sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      text-align: center;
+    const candidates = [
+      path.join(webClientPath, 'controller.html'),
+      path.join(__dirname, '..', 'web-client', 'controller.html'),
+    ];
+    for (const file of candidates) {
+      if (fs.existsSync(file)) {
+        return res.sendFile(file);
+      }
     }
-    h1 { font-size: 2rem; margin-bottom: 1rem; color: #4F7CAC; }
-    p { font-size: 1.1rem; color: #9AA4AF; max-width: 400px; line-height: 1.6; }
-  </style>
-</head>
-<body>
-  <h1>LG Arkanoid</h1>
-  <p>Use the mobile app to control this game.</p>
-  <p style="margin-top: 2rem; font-size: 0.8rem; color: #555;">
-    GeminiSoC 2026 - Liquid Galaxy
-  </p>
-</body>
-</html>`);
+    res.status(404).send('Controller page not found. Use the Flutter mobile app.');
   });
 
   // -- Static assets ----------------------------------------------------------
@@ -71,20 +50,16 @@ function createRouter(worldState) {
 
   // -- Screen route (LG convention) -------------------------------------------
   // Each screen on the Liquid Galaxy rig is addressed by its screen number:
-  //   http://lg1:8128/1  -- master screen
-  //   http://lg1:3000/2  -- second screen
-  //   http://lg1:3000/3  -- third screen
-  //
-  // The server reads the game HTML file, then injects a script tag that sets
-  // window.SCREEN_ID to the requested screen number. The Phaser game client
-  // reads this variable to know which portion of the virtual world to render.
+  //   http://lg1:3000/1  -- screen 1
+  //   http://lg1:3000/2  -- screen 2
+  // Injects SCREEN_ID + NUM_SCREENS for the Phaser client (Pacman-style routes).
 
   router.get('/:screenNum(\\d+)', (req, res) => {
     const screenNum = parseInt(req.params.screenNum, 10);
+    const configured = worldState.numScreens || 3;
 
-    // Valid range: 1..12 (covers common LG rigs: 3,5,7,9,12).
-    if (screenNum < 1 || screenNum > 12) {
-      return res.status(400).send('Screen number must be between 1 and 12.');
+    if (screenNum < 1 || screenNum > configured || screenNum > 12) {
+      return res.status(400).send(`Screen number must be between 1 and ${configured}.`);
     }
 
     const htmlPath = path.join(webClientPath, 'index.html');

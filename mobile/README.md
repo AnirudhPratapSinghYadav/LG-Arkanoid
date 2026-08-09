@@ -1,17 +1,26 @@
-# lg_arkanoid
+# LG Arkanoid — mobile controller
 
-A new Flutter project.
+Flutter phone controller for the panoramic LG Arkanoid game.
 
-## Getting Started
+## Requirements
 
-This project is a starting point for a mobile application.
+- Flutter **3.24.x**
+- Android device or emulator on the same network as the game server
 
-A few resources to get you started if this is your first Flutter project:
+## Run
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first mobile app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+```bash
+cd mobile
+flutter pub get
+flutter run
+```
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+Release APK:
+
+```bash
+flutter build apk --release
+```
+
+Connect with master IP, port **3000**, and the session token shown on the Liquid Galaxy screens (or `/health`).
+
+See the root [README.md](../README.md) and [docs/mobile-setup.md](../docs/mobile-setup.md).

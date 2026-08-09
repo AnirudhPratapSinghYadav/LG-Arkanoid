@@ -8,7 +8,7 @@ const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
 
 const gameEngine = require('./gameEngine.js');
-const { PORT, TICK_MS, getLanIp, createInitialWorldState, GEMINI_API_KEY, LG_PASSWORD } = require('./config.js');
+const { PORT, TICK_MS, SCREEN_WIDTH, getLanIp, createInitialWorldState, GEMINI_API_KEY, LG_PASSWORD } = require('./config.js');
 
 if (!GEMINI_API_KEY) {
   console.warn('WARNING: GEMINI_API_KEY is missing. AI commentary and level generation will be disabled.');
@@ -95,14 +95,14 @@ app.use(createRouter(worldState));
 
 function getScreenIdForX(x){
   const numScreens = worldState.numScreens || 3;
-  const maxRight = numScreens * 1920 - 1;
+  const maxRight = numScreens * SCREEN_WIDTH - 1;
   const clampedX = Math.max(0, Math.min(x, maxRight));
-  return Math.floor(clampedX / 1920) + 1;
+  return Math.floor(clampedX / SCREEN_WIDTH) + 1;
 }
 
 function getScreenById(screenId){
-  const left = (screenId - 1) * 1920;
-  const right = screenId * 1920 - 1;
+  const left = (screenId - 1) * SCREEN_WIDTH;
+  const right = screenId * SCREEN_WIDTH - 1;
   return { screenId, virtualLeft: left, virtualRight: right };
 }
 
@@ -145,7 +145,7 @@ function getWorldSnapshot(){
     sessionToken: worldState.sessionToken,
     masterPlayerIndex: worldState.masterPlayerIndex,
     maxPlayers: worldState.maxPlayers || 3,
-    gameDurationSeconds: worldState.gameDurationSeconds || 180,
+    gameDurationSeconds: worldState.gameDurationSeconds ?? 180,
   };
 }
 
@@ -190,7 +190,7 @@ function broadcastGameState(){
     countdownStartedAt: worldState.countdownStartedAt,
     masterPlayerIndex: worldState.masterPlayerIndex,
     maxPlayers: worldState.maxPlayers || 3,
-    gameDurationSeconds: worldState.gameDurationSeconds || 180,
+    gameDurationSeconds: worldState.gameDurationSeconds ?? 180,
     longestRally: worldState.longestRally || 0,
     powerupsCollected: worldState.powerupsCollected || 0,
     highestCombo: worldState.highestCombo || 0,
