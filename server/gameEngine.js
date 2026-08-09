@@ -1,3 +1,4 @@
+const SCREEN_WIDTH = 1920;
 
 class Ball {
   constructor(id, x, y, vx, vy, radius){
@@ -59,7 +60,7 @@ class GameState {
     this.bricks = [];
     this.powerUps = [];
     this.level = 1;
-    this.gameStatus = 'waiting';
+    this.gameStatus = 'lobby';
     this.nextLevelBricks = null;
     this.rallyCount = 0;
     this.longestRally = 0;
@@ -75,12 +76,12 @@ function applyGameMasterMod(gameState, modType){
   try {
     switch(modType){
       case 'WIDE_PADDLE':
-        gameState.powerUps.push(new PowerUp('wide_paddle', ((gameState.numScreens || 3)*1920)/2, 0));
+        gameState.powerUps.push(new PowerUp('wide_paddle', ((gameState.numScreens || 3) * SCREEN_WIDTH)/2, 0));
         break;
       case 'EXTRA_BALL':
         const speedMult = gameState.slowBallActive ? 1.5 : 3;
         const radius = gameState.balls.length > 0 ? gameState.balls[0].radius : 8;
-        let newBall = new Ball(Date.now().toString(), ((gameState.numScreens || 3)*1920)/2, 500, speedMult, speedMult * 1.33, radius);
+        let newBall = new Ball(Date.now().toString(), ((gameState.numScreens || 3) * SCREEN_WIDTH)/2, 500, speedMult, speedMult * 1.33, radius);
         gameState.balls.push(newBall);
         break;
       case 'SLOW_BALL':
@@ -140,7 +141,7 @@ function loadLevel(levelNumber, aiGeneratedGrid = null, numScreens = 3){
       return newBricks;
     }
 
-    let numCols = Math.floor(((numScreens * 1920) - 48) / 144);
+    let numCols = Math.floor(((numScreens * SCREEN_WIDTH) - 48) / 144);
     for(let row = 0; row < 8; row++){
       let rowBricks = [];
       for(let col = 0; col < numCols; col++){
@@ -191,7 +192,7 @@ function checkWallCollision(ball, gameState){
       ball.vx = Math.abs(ball.vx);
       ball.x = ball.radius;
     }else{
-      let totalWidth = (gameState.numScreens || 3)*1920;
+      let totalWidth = (gameState.numScreens || 3) * SCREEN_WIDTH;
       if(ball.x+ball.radius>=totalWidth){
         ball.vx = -Math.abs(ball.vx);
         ball.x = totalWidth - ball.radius;
@@ -442,7 +443,7 @@ function updateGameLoop(gameState, applyPowerUpEffectCallback){
         mainBall = new Ball('ball_1', 0, 0, 0, 0, 8);
         gameState.balls.push(mainBall);
       }
-      mainBall.x = ((gameState.numScreens || 3)*1920)/2;
+      mainBall.x = ((gameState.numScreens || 3) * SCREEN_WIDTH)/2;
       mainBall.y = 500;
       mainBall.vx = gameState.slowBallActive ? 1.5 : 3;
       mainBall.vy = gameState.slowBallActive ? 2.0 : 4;

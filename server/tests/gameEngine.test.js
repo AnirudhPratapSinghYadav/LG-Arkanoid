@@ -117,4 +117,13 @@ test('all lives lost sets game_over', () => {
   assert.strictEqual(state.gameStatus, 'game_over');
 });
 
+test('normalizeDurationSeconds keeps endless (0)', () => {
+  const { normalizeDurationSeconds } = require('../config.js');
+  assert.strictEqual(normalizeDurationSeconds(0), 0);
+  assert.strictEqual(normalizeDurationSeconds(180), 180);
+  assert.strictEqual(normalizeDurationSeconds(30), 60);
+  assert.strictEqual(normalizeDurationSeconds(9999), 600);
+  assert.strictEqual(normalizeDurationSeconds(undefined, 120), 120);
+});
+
 console.log('All gameEngine tests passed.');

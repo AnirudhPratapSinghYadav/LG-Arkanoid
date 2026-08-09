@@ -9,8 +9,6 @@ import '../widgets/mission_background.dart';
 import '../widgets/lgpanel.dart';
 import '../widgets/connectionstatus.dart';
 import '../services/ssh_service.dart';
-import '../widgets/lg_bot.dart';
-
 import '../widgets/controller_touchpad.dart';
 import '../widgets/controller_dpad.dart';
 import '../widgets/powerup_panel.dart';
@@ -140,11 +138,9 @@ class _ControllerScreenState extends State<ControllerScreen>
                     padding:
                         const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     child: LgPanel(
-                      tag: 'SYS.CTRL',
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          // Player indicator
                           Row(
                             children: [
                               Container(
@@ -153,13 +149,6 @@ class _ControllerScreenState extends State<ControllerScreen>
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
                                   color: playerColor,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: playerColor.withOpacity(0.4),
-                                      blurRadius: 6,
-                                      spreadRadius: 1,
-                                    )
-                                  ],
                                 ),
                               ),
                               const SizedBox(width: 6),
@@ -173,12 +162,8 @@ class _ControllerScreenState extends State<ControllerScreen>
                               ),
                             ],
                           ),
-
-                          // Connection status (Game)
                           ConnectionStatus(
                               isConnected: service.connected, label: 'GAME'),
-
-                          // Ping + Rig connection
                           Row(
                             children: [
                               Text(
@@ -192,7 +177,7 @@ class _ControllerScreenState extends State<ControllerScreen>
                               const SizedBox(width: 8),
                               ConnectionStatus(
                                   isConnected: SSHService().isConnected,
-                                  label: 'SYS.CONN'),
+                                  label: 'RIG'),
                               const SizedBox(width: 4),
                               IconButton(
                                 icon: const Icon(Icons.settings,
@@ -219,105 +204,27 @@ class _ControllerScreenState extends State<ControllerScreen>
 
                   const SizedBox(height: 4),
 
-                  // ── Commentary Feed ──
                   if (service.lastCommentary.isNotEmpty)
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          LgBot(
-                            state: service.robotState == 'excited'
-                                ? BotState.excited
-                                : service.robotState == 'alert'
-                                    ? BotState.alert
-                                    : service.robotState == 'thinking'
-                                        ? BotState.thinking
-                                        : BotState.idle,
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: cardFill,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: borderLight),
+                        ),
+                        child: Text(
+                          service.lastCommentary,
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            color: textSecondary,
                           ),
-                          const SizedBox(width: 4),
-                          // Speech bubble tail
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
-                            child: CustomPaint(
-                              size: const Size(8, 12),
-                              painter: _BubbleTailPainter(
-                                color: cardFill,
-                                borderColor: borderLight,
-                              ),
-                            ),
-                          ),
-                          Expanded(
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 14, vertical: 10),
-                              decoration: BoxDecoration(
-                                color: cardFill,
-                                borderRadius: BorderRadius.circular(10)
-                                    .copyWith(bottomLeft: Radius.zero),
-                                border: Border.all(color: borderLight),
-                              ),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    service.lastCommentarySource == 'fallback'
-                                        ? Icons.chat_bubble_outline_rounded
-                                        : Icons.auto_awesome_rounded,
-                                    color:
-                                        service.lastCommentarySource == 'fallback'
-                                            ? textSecondary
-                                            : accentSystem,
-                                    size: 16,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 4, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: service.lastCommentarySource ==
-                                              'fallback'
-                                          ? Colors.transparent
-                                          : accentSystem.withOpacity(0.2),
-                                      border: Border.all(
-                                        color: service.lastCommentarySource ==
-                                                'fallback'
-                                            ? borderLight
-                                            : accentSystem,
-                                      ),
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: Text(
-                                      service.lastCommentarySource == 'fallback'
-                                          ? 'CANNED'
-                                          : 'GEMINI',
-                                      style: GoogleFonts.spaceGrotesk(
-                                        fontSize: 8,
-                                        fontWeight: FontWeight.bold,
-                                        color: service.lastCommentarySource ==
-                                                'fallback'
-                                            ? textSecondary
-                                            : accentSystem,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Text(
-                                      service.lastCommentary,
-                                      style: GoogleFonts.inter(
-                                        fontSize: 11,
-                                        color: textSecondary,
-                                        fontStyle: FontStyle.italic,
-                                      ),
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     ),
 
@@ -371,7 +278,7 @@ class _ControllerScreenState extends State<ControllerScreen>
                                     ),
                                     const SizedBox(width: 6),
                                     Text(
-                                      'DRAG STRIP',
+                                      'TOUCH',
                                       style: GoogleFonts.spaceGrotesk(
                                         fontSize: 11,
                                         fontWeight: FontWeight.bold,
@@ -417,7 +324,7 @@ class _ControllerScreenState extends State<ControllerScreen>
                                     ),
                                     const SizedBox(width: 6),
                                     Text(
-                                      'D-PAD ARROWS',
+                                      'D-PAD',
                                       style: GoogleFonts.spaceGrotesk(
                                         fontSize: 11,
                                         fontWeight: FontWeight.bold,
@@ -483,38 +390,3 @@ class _ControllerScreenState extends State<ControllerScreen>
   }
 }
 
-class _BubbleTailPainter extends CustomPainter {
-  final Color color;
-  final Color borderColor;
-  _BubbleTailPainter({required this.color, required this.borderColor});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.fill;
-
-    final path = Path()
-      ..moveTo(size.width, 0)
-      ..lineTo(0, size.height / 2)
-      ..lineTo(size.width, size.height)
-      ..close();
-
-    canvas.drawPath(path, paint);
-
-    final borderPaint = Paint()
-      ..color = borderColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.0;
-
-    final borderPath = Path()
-      ..moveTo(size.width, 0)
-      ..lineTo(0, size.height / 2)
-      ..lineTo(size.width, size.height);
-
-    canvas.drawPath(borderPath, borderPaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
