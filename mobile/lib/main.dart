@@ -15,7 +15,11 @@ class DevHttpOverrides extends HttpOverrides {
 }
 
 void main() {
-  HttpOverrides.global = DevHttpOverrides();
+  // Only bypass TLS checks during local/debug development — never in release APKs.
+  assert(() {
+    HttpOverrides.global = DevHttpOverrides();
+    return true;
+  }());
   runApp(
     MultiProvider(
       providers: [

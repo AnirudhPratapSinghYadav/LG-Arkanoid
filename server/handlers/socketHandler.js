@@ -190,7 +190,7 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
         socket.emit('join_rejected', { errorCode: 1007, message: 'Only the host can start the game' });
         return;
       }
-      if (worldState.gameStatus === 'playing') {
+      if (worldState.gameStatus === 'playing' || worldState.gameStatus === 'countdown') {
         socket.emit('error', { errorCode: 1010, message: 'Game is already in progress' });
         return;
       }
@@ -222,6 +222,7 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
       for (let p of worldState.players) {
         p.score = 0;
         p.lives = 3;
+        p.inventory = [];
       }
       
       worldState.gameStatus = 'countdown';
@@ -375,6 +376,7 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
       if (typeof player.paddleX !== 'number') {
         player.paddleX = ((worldState.numScreens || 3)*1920)/2 - (player.paddleWidth/2);
       }
+      if (!Array.isArray(player.inventory)) player.inventory = [];
       player.lastNonces = [];
       socketToPlayerIndex.set(socket.id, slotIndex);
 
@@ -450,12 +452,18 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
         return;
       }
 
+      if(!Array.isArray(player.inventory)) player.inventory = [];
+      const invIndex = player.inventory.indexOf(powerUpType);
+      if(invIndex === -1){
+        socket.emit('error', { errorCode: 1012, message: 'Power-up not in inventory' });
+        return;
+      }
+
       const now = Date.now();
-      if(player.lastPowerUpTime && now-player.lastPowerUpTime < 5000){
+      if(player.lastPowerUpTime && now-player.lastPowerUpTime < 1000){
         socket.emit('error', { errorCode: 1006, message: 'Power-up on cooldown' });
         return;
       }
-      player.lastPowerUpTime = now;
 
       const validation = validateMessage(player, timestamp, nonce);
       if(!validation.valid){
@@ -463,7 +471,53 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
         return;
       }
 
+      player.inventory.splice(invIndex, 1);
+      player.lastPowerUpTime = now;
       applyPowerUpEffect(player, powerUpType, worldState, io, getWorldSnapshot);
+      broadcastGameState();
+    });
+
+    socket.on('resume_request', (data)=>{
+      const { playerId, sessionId } = data || {};
+      if(typeof playerId !== 'string' || typeof sessionId !== 'string'){
+        socket.emit('join_rejected', { errorCode: 1005, message: 'Invalid resume payload' });
+        return;
+      }
+      if(sessionId !== worldState.sessionId){
+        socket.emit('join_rejected', { errorCode: 1001, message: 'Session expired' });
+        return;
+      }
+
+      const slotIndex = worldState.players.findIndex((p) => p.id === playerId);
+      if(slotIndex === -1){
+        socket.emit('join_rejected', { errorCode: 1008, message: 'Player slot no longer available' });
+        return;
+      }
+
+      const player = worldState.players[slotIndex];
+      if(player.connected && player.socketId && player.socketId !== socket.id){
+        const oldSocket = io.sockets.sockets.get(player.socketId);
+        if(oldSocket) oldSocket.disconnect(true);
+      }
+
+      player.connected = true;
+      player.socketId = socket.id;
+      player.lastNonces = [];
+      socketToPlayerIndex.set(socket.id, slotIndex);
+
+      if(disconnectTimers.has(playerId)){
+        clearTimeout(disconnectTimers.get(playerId));
+        disconnectTimers.delete(playerId);
+      }
+
+      socket.emit('join_confirmed', {
+        playerId: player.id,
+        playerNumber: slotIndex + 1,
+        isSpectator: false,
+        sessionId: worldState.sessionId,
+        resumed: true,
+      });
+      broadcastGameState();
     });
 
     socket.on('boundary_ack', (data)=>{
@@ -515,6 +569,7 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
         player.paddleWidth = 300;
         player.score = 0;
         player.lives = 3;
+        player.inventory = [];
         
         if (index === worldState.masterPlayerIndex) {
           let newMaster = -1;

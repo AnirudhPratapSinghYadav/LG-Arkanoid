@@ -22,8 +22,8 @@ if ! [[ "$NUM_SCREENS" =~ ^[0-9]+$ ]]; then
   exit 1
 fi
 
-if [ "$NUM_SCREENS" -lt 1 ] || [ "$NUM_SCREENS" -gt 9 ]; then
-  echo "Error: number_of_screens must be in range 1..9."
+if [ "$NUM_SCREENS" -lt 1 ] || [ "$NUM_SCREENS" -gt 12 ]; then
+  echo "Error: number_of_screens must be in range 1..12."
   exit 1
 fi
 

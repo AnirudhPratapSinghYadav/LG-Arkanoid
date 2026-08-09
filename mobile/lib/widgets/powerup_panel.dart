@@ -5,125 +5,129 @@ import 'package:provider/provider.dart';
 import '../services/gameservice.dart';
 import '../utils/constants.dart';
 
-class PowerupPanel extends StatefulWidget {
+class PowerupPanel extends StatelessWidget {
   const PowerupPanel({super.key});
 
+  static const _defs = <String, _PowerDef>{
+    'wide_paddle': _PowerDef('WIDE', Icons.swap_horiz_rounded, Color(0xFF4CAF50)),
+    'slow_ball': _PowerDef('SLOW', Icons.speed_rounded, Color(0xFF2196F3)),
+    'multi_ball': _PowerDef('MULTI', Icons.control_point_duplicate_rounded, Color(0xFFFFB800)),
+    'bomb': _PowerDef('BOMB', Icons.local_fire_department_rounded, Color(0xFFD9534F)),
+  };
+
   @override
-  State<PowerupPanel> createState() => _PowerupPanelState();
-}
+  Widget build(BuildContext context) {
+    final game = context.watch<GameService>();
+    final inventory = _playerInventory(game);
 
-class _PowerupPanelState extends State<PowerupPanel> {
-  DateTime? _lastPowerUpTime;
-  static const _powerUpCooldown = Duration(seconds: 5);
-
-  bool get _canUsePowerUp {
-    if (_lastPowerUpTime == null) return true;
-    return DateTime.now().difference(_lastPowerUpTime!) >= _powerUpCooldown;
-  }
-
-  void _activatePowerUp(String type) {
-    if (!_canUsePowerUp) {
-      HapticFeedback.lightImpact();
-      return;
-    }
-    HapticFeedback.heavyImpact();
-    context.read<GameService>().activatePowerUp(type);
-    setState(() {
-      _lastPowerUpTime = DateTime.now();
-    });
-  }
-
-  Widget _buildPowerUpButton({
-    required IconData icon,
-    required String label,
-    required Color color,
-    required String type,
-  }) {
-    final canUse = _canUsePowerUp;
-
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => _activatePowerUp(type),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(
-            color: canUse
-                ? color.withOpacity(0.12)
-                : cardFill.withOpacity(0.5),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: canUse ? color.withOpacity(0.5) : borderLight,
-              width: 1.5,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            inventory.isEmpty
+                ? 'Catch power-ups with your paddle'
+                : 'Tap a power-up to activate',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.spaceGrotesk(
+              fontSize: 11,
+              color: textSecondary,
+              letterSpacing: 0.5,
             ),
-            boxShadow: canUse
-                ? [
-                    BoxShadow(
-                      color: color.withOpacity(0.2),
-                      blurRadius: 8,
-                      spreadRadius: -2,
-                    )
-                  ]
-                : [],
           ),
-          child: Column(
-            children: [
-              Icon(
-                icon,
-                color: canUse ? color : textSecondary.withOpacity(0.3),
-                size: 24,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                label,
-                style: GoogleFonts.spaceGrotesk(
-                  fontSize: 9,
-                  fontWeight: FontWeight.bold,
-                  color: canUse ? color : textSecondary.withOpacity(0.3),
-                  letterSpacing: 1,
+          const SizedBox(height: 8),
+          Row(
+            children: _defs.entries.map((entry) {
+              final count = inventory.where((t) => t == entry.key).length;
+              return Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: _PowerButton(
+                    def: entry.value,
+                    count: count,
+                    onTap: count > 0
+                        ? () {
+                            HapticFeedback.mediumImpact();
+                            context.read<GameService>().activatePowerUp(entry.key);
+                          }
+                        : null,
+                  ),
                 ),
-              ),
-            ],
+              );
+            }).toList(),
           ),
-        ),
+        ],
       ),
     );
   }
 
+  List<String> _playerInventory(GameService game) {
+    final state = game.latestGameState;
+    if (state == null || game.playerId == null) return const [];
+    final players = state['players'] as List<dynamic>? ?? [];
+    for (final raw in players) {
+      if (raw is! Map) continue;
+      if (raw['id'] != game.playerId) continue;
+      final inv = raw['inventory'];
+      if (inv is! List) return const [];
+      return inv.map((e) => e.toString()).toList();
+    }
+    return const [];
+  }
+}
+
+class _PowerDef {
+  final String label;
+  final IconData icon;
+  final Color color;
+  const _PowerDef(this.label, this.icon, this.color);
+}
+
+class _PowerButton extends StatelessWidget {
+  final _PowerDef def;
+  final int count;
+  final VoidCallback? onTap;
+
+  const _PowerButton({
+    required this.def,
+    required this.count,
+    required this.onTap,
+  });
+
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
-        children: [
-          _buildPowerUpButton(
-            icon: Icons.swap_horiz_rounded,
-            label: 'WIDE',
-            color: const Color(0xFF4CAF50),
-            type: 'wide_paddle',
+    final enabled = onTap != null;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: enabled ? def.color.withOpacity(0.15) : cardFill,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: enabled ? def.color.withOpacity(0.6) : borderLight,
           ),
-          const SizedBox(width: 8),
-          _buildPowerUpButton(
-            icon: Icons.speed_rounded,
-            label: 'SLOW',
-            color: const Color(0xFF2196F3),
-            type: 'slow_ball',
-          ),
-          const SizedBox(width: 8),
-          _buildPowerUpButton(
-            icon: Icons.control_point_duplicate_rounded,
-            label: 'MULTI',
-            color: const Color(0xFFFFB800),
-            type: 'multi_ball',
-          ),
-          const SizedBox(width: 8),
-          _buildPowerUpButton(
-            icon: Icons.local_fire_department_rounded,
-            label: 'BOMB',
-            color: const Color(0xFFD9534F),
-            type: 'bomb',
-          ),
-        ],
+        ),
+        child: Column(
+          children: [
+            Icon(
+              def.icon,
+              color: enabled ? def.color : textSecondary.withOpacity(0.35),
+              size: 22,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              count > 0 ? '${def.label} ×$count' : def.label,
+              style: GoogleFonts.spaceGrotesk(
+                fontSize: 9,
+                fontWeight: FontWeight.w700,
+                color: enabled ? def.color : textSecondary.withOpacity(0.35),
+                letterSpacing: 0.8,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
