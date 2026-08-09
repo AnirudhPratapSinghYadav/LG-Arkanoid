@@ -23,17 +23,13 @@ function parseScreenCount(value, fallback = 3) {
 const NUM_SCREENS = parseScreenCount(process.env.NUM_SCREENS, 3);
 
 const FALLBACK_COMMENTARY = [
-  'Great shot',
-  'Keep it up',
-  'Incoming',
-  'Watch out',
   'Nice hit',
-  'Classic arcade reborn',
-  'Lock and load',
-  'Eyes on the ball',
-  'Score milestone reached',
-  'Multi ball mayhem',
-  'Victory is close',
+  'Keep going',
+  'Watch the ball',
+  'Good save',
+  'Level clear',
+  'Multi-ball',
+  'Close one',
 ];
 
 const COMMENTARY_COOLDOWNS = {
