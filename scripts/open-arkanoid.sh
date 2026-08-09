@@ -1,14 +1,18 @@
 #!/bin/bash
-# LG Arkanoid Launcher Script
+# LG Arkanoid launcher (galaxy-pacman pattern).
 # Usage: bash open-arkanoid.sh <number_of_screens>
+# Supports 1..12 (typical LG: 3,5,7,9,12).
 
 NUM_SCREENS=$1
-
 export NODE_ENV=production
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-if [ -f "$SCRIPT_DIR/../server/.env" ]; then
-  source "$SCRIPT_DIR/../server/.env"
+PROJECT_DIR="$( cd "$SCRIPT_DIR/.." && pwd )"
+SERVER_PATH="$PROJECT_DIR/server/index.js"
+
+if [ -f "$PROJECT_DIR/server/.env" ]; then
+  # shellcheck disable=SC1091
+  source "$PROJECT_DIR/server/.env"
 fi
 
 if [ -z "$NUM_SCREENS" ]; then
@@ -27,53 +31,56 @@ if [ "$NUM_SCREENS" -lt 1 ] || [ "$NUM_SCREENS" -gt 12 ]; then
   exit 1
 fi
 
+if [ ! -f "$SERVER_PATH" ]; then
+  echo "Error: server entry not found at $SERVER_PATH"
+  exit 1
+fi
+
+port=${PORT:-3000}
+
 if [ -z "$LG_PASSWORD" ]; then
-  echo "Warning: LG_PASSWORD environment variable is not set."
-  echo "Assuming SSH keys are configured for passwordless access."
-  echo "Highly recommended: Set up SSH keys for better security."
-  SSH_CMD="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5"
+  echo "LG_PASSWORD not set — using SSH keys (BatchMode)."
+  SSH_CMD="ssh -o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5"
 else
   export SSHPASS="$LG_PASSWORD"
   SSH_CMD="sshpass -e ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5"
 fi
 
-# Start pm2 server if not running
 export NUM_SCREENS="$NUM_SCREENS"
+export PORT="$port"
+
 if pm2 describe lg-arkanoid > /dev/null 2>&1; then
-  echo "Restarting with $NUM_SCREENS screens..."
-  pm2 restart lg-arkanoid --update-env
+  echo "Restarting lg-arkanoid with NUM_SCREENS=$NUM_SCREENS PORT=$port..."
+  NUM_SCREENS="$NUM_SCREENS" PORT="$port" pm2 restart lg-arkanoid --update-env
 else
-  echo "Starting game server with $NUM_SCREENS screens..."
-  SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-  SERVER_PATH="$SCRIPT_DIR/../server/index.js"
-  pm2 start "$SERVER_PATH" --name lg-arkanoid --env NODE_ENV=production
+  echo "Starting lg-arkanoid with NUM_SCREENS=$NUM_SCREENS PORT=$port..."
+  NUM_SCREENS="$NUM_SCREENS" PORT="$port" pm2 start "$SERVER_PATH" --name lg-arkanoid
 fi
 
 sleep 2
 
-# Open Chromium across rig displays
-# Source LG shell configuration for frame list
 if [ -f "${HOME}/etc/shell.conf" ]; then
+  # shellcheck disable=SC1090
   . "${HOME}/etc/shell.conf"
 fi
 
-# Determine the frame order to use
 if [ -n "$LG_FRAMES" ]; then
-  echo "Using LG_FRAMES from shell.conf: $LG_FRAMES"
+  echo "Using LG_FRAMES: $LG_FRAMES"
+  # shellcheck disable=SC2206
   FRAMES=($LG_FRAMES)
 else
-  echo "LG_FRAMES not found - falling back to sequential lg1..lg$NUM_SCREENS"
+  echo "LG_FRAMES not set — falling back to lg1..lg$NUM_SCREENS"
   FRAMES=()
   for i in $(seq 1 "$NUM_SCREENS"); do FRAMES+=("lg$i"); done
 fi
 
-port=${PORT:-3000}
 screenNumber=0
 for frame in "${FRAMES[@]:0:$NUM_SCREENS}"; do
   screenNumber=$((screenNumber + 1))
   if [ "$frame" = "lg1" ]; then
-    echo "Opening Chromium on master ($frame, screen $screenNumber)..."
-    chromium-browser \
+    echo "Opening Chromium on master ($frame → /$screenNumber)..."
+    pkill -f "chromium-browser.*localhost:${port}" 2>/dev/null || true
+    DISPLAY=:0 chromium-browser \
       --window-position=0,0 \
       --window-size=1920,1080 \
       --kiosk \
@@ -85,22 +92,21 @@ for frame in "${FRAMES[@]:0:$NUM_SCREENS}"; do
       --overscroll-history-navigation=0 \
       "http://localhost:${port}/${screenNumber}" &
   else
-    echo "Opening Chromium on $frame (screen $screenNumber)..."
-    $SSH_CMD \
-      lg@"$frame" \
-      "DISPLAY=:0 chromium-browser \
-        --window-position=0,0 \
-        --window-size=1920,1080 \
-        --kiosk \
-        --no-first-run \
-        --disable-infobars \
-        --incognito \
-        --disable-session-crashed-bubble \
-        --disable-pinch \
-        --overscroll-history-navigation=0 \
-        'http://lg1:${port}/${screenNumber}' &" &
+    echo "Opening Chromium on $frame → /$screenNumber..."
+    REMOTE_CMD="pkill -f 'chromium-browser.*lg1:${port}' 2>/dev/null || true; DISPLAY=:0 chromium-browser \
+      --window-position=0,0 \
+      --window-size=1920,1080 \
+      --kiosk \
+      --no-first-run \
+      --disable-infobars \
+      --incognito \
+      --disable-session-crashed-bubble \
+      --disable-pinch \
+      --overscroll-history-navigation=0 \
+      'http://lg1:${port}/${screenNumber}' &"
+    $SSH_CMD lg@"$frame" "$REMOTE_CMD" &
   fi
 done
 
-
-echo "Launched $NUM_SCREENS screens successfully."
+wait
+echo "Launched $NUM_SCREENS screens on port $port."

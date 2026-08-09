@@ -176,7 +176,6 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
                         const SizedBox(height: 36),
 
                         LgPanel(
-                          tag: 'LOBBY.01',
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
