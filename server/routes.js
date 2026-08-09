@@ -14,48 +14,27 @@ function createRouter(worldState) {
   router.get('/health', (req, res) => {
     res.json({
       status: 'ok',
+      numScreens: worldState.numScreens || 3,
+      gameStatus: worldState.gameStatus,
       gameActive: worldState.gameStatus === 'playing',
       connectedPlayers: worldState.players.filter((p) => p.connected).length,
+      sessionToken: worldState.sessionToken,
+      port: process.env.PORT || 3000,
     });
   });
 
-  // -- Controller page --------------------------------------------------------
-  // On a real LG rig, players use the Flutter mobile app as a controller.
-  // This simple HTML page is shown if someone navigates to /controller in a
-  // desktop browser, directing them to use the mobile app instead.
-
+  // Pacman-style browser controller (optional). Flutter app is preferred on phone.
   router.get('/controller', (req, res) => {
-    res.send(`<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LG Arkanoid Controller</title>
-  <style>
-    body {
-      margin: 0;
-      background: #080b11;
-      color: #e8f4f8;
-      font-family: 'Inter', sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      text-align: center;
+    const candidates = [
+      path.join(webClientPath, 'controller.html'),
+      path.join(__dirname, '..', 'web-client', 'controller.html'),
+    ];
+    for (const file of candidates) {
+      if (fs.existsSync(file)) {
+        return res.sendFile(file);
+      }
     }
-    h1 { font-size: 2rem; margin-bottom: 1rem; color: #4F7CAC; }
-    p { font-size: 1.1rem; color: #9AA4AF; max-width: 400px; line-height: 1.6; }
-  </style>
-</head>
-<body>
-  <h1>LG Arkanoid</h1>
-  <p>Use the mobile app to control this game.</p>
-  <p style="margin-top: 2rem; font-size: 0.8rem; color: #555;">
-    GeminiSoC 2026 - Liquid Galaxy
-  </p>
-</body>
-</html>`);
+    res.status(404).send('Controller page not found. Use the Flutter mobile app.');
   });
 
   // -- Static assets ----------------------------------------------------------
