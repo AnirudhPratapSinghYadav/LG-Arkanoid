@@ -7,14 +7,18 @@ let isPollingGameMaster = false;
 
 const config = require('../config.js');
 
-async function callGemini(prompt){
+async function callGemini(prompt, options = {}){
   const apiKey = config.GEMINI_API_KEY;
   if(!apiKey){
     throw new Error('GEMINI_API_KEY not configured');
   }
 
+  const maxOutputTokens = options.maxOutputTokens || 80;
+  const temperature = options.temperature != null ? options.temperature : 0.9;
+  const timeoutMs = options.timeoutMs || 8000;
+
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 8000); // 8s timeout
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
@@ -23,7 +27,7 @@ async function callGemini(prompt){
       signal: controller.signal,
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { maxOutputTokens: 60, temperature: 0.9 },
+        generationConfig: { maxOutputTokens, temperature },
       }),
     });
 
@@ -133,7 +137,7 @@ Output a JSON 2D array of numbers (8 rows, each row having ${numCols} integers).
 Values: 0 = empty space, 1 = normal brick (1 hit), 2 = hard brick (2 hits), 3 = indestructible brick.
 Make it interesting and symmetric where appropriate. Return ONLY valid JSON 2D array.`;
 
-    const text = await callGemini(prompt);
+    const text = await callGemini(prompt, { maxOutputTokens: 2048, temperature: 0.4, timeoutMs: 15000 });
     const jsonMatch = text.match(/\[[\s\S]*\]/);
     if (jsonMatch) {
       const grid = JSON.parse(jsonMatch[0]);

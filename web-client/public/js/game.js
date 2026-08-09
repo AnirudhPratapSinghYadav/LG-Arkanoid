@@ -206,7 +206,6 @@ class GameScene extends Phaser.Scene {
             this.drawCountdownMode();
             this.drawBricks();
             this.drawPaddles();
-            this.drawRobots();
             this.updateHUD();
             return;
         } else {
@@ -217,7 +216,6 @@ class GameScene extends Phaser.Scene {
             this.currentState.gameStatus === 'time_up' ||
             this.currentState.gameStatus === 'game_over') {
             this.drawWinMode();
-            this.drawRobots();
             return;
         } else {
             this.hideWinMode();
@@ -227,7 +225,6 @@ class GameScene extends Phaser.Scene {
         this.drawPowerUps();
         this.drawBalls();
         this.drawPaddles();
-        this.drawRobots();
         this.updateHUD();
     }
 
@@ -257,12 +254,12 @@ class GameScene extends Phaser.Scene {
                     fontFamily: FONTS.display, fontSize: '84px', fill: HEX.systemAlt, align: 'center', fontWeight: 'bold'
                 }).setOrigin(0.5, 0.5);
                 
-                this.bootSubTitleText = this.add.text(960, 560, 'WHERE AI MEETS ARKANOID', {
-                    fontFamily: FONTS.heading, fontSize: '22px', fill: HEX.system, letterSpacing: 6, fontWeight: 'bold'
+                this.bootSubTitleText = this.add.text(960, 560, 'PHONE CONTROLLER · MULTI-SCREEN PLAY', {
+                    fontFamily: FONTS.heading, fontSize: '22px', fill: HEX.system, letterSpacing: 4, fontWeight: 'bold'
                 }).setOrigin(0.5, 0.5);
 
-                this.bootLoadingText = this.add.text(960, 620, 'Powered by GeminiSoC 2026 · Liquid Galaxy', {
-                    fontFamily: FONTS.body, fontSize: '18px', fill: HEX.textSecondary, letterSpacing: 3
+                this.bootLoadingText = this.add.text(960, 620, 'Waiting for game server…', {
+                    fontFamily: FONTS.body, fontSize: '18px', fill: HEX.textSecondary, letterSpacing: 2
                 }).setOrigin(0.5, 0.5);
             }
             this.bootTitleText.setVisible(true);
@@ -315,7 +312,10 @@ class GameScene extends Phaser.Scene {
             this.ambientRightText.setText(`Waiting for Players\n${connectedCount} / ${this.currentState.maxPlayers || players.length} Connected`);
             this.ambientRightText.setVisible(true);
         } else if (isCenterScreen) {
-            if (this.currentState.sessionToken) {
+            const token = this.sessionToken || this.currentState.sessionToken;
+            if (!token) {
+                this.fetchSessionInfo();
+            } else {
                 const qrDiv = document.getElementById('qrcode');
                 const sessionCodeDiv = document.getElementById('qr-session-code');
                 const sessionCodeInline = document.getElementById('qr-session-code-inline');
@@ -323,8 +323,8 @@ class GameScene extends Phaser.Scene {
                 
                 qrDiv.style.display = 'flex';
                 
-                sessionCodeDiv.innerText = this.currentState.sessionToken;
-                sessionCodeInline.innerText = this.currentState.sessionToken;
+                sessionCodeDiv.innerText = token;
+                sessionCodeInline.innerText = token;
                 
                 if (connectedCount === 0) {
                     waitingText.innerText = "Waiting for first player...";
@@ -352,8 +352,10 @@ class GameScene extends Phaser.Scene {
                     }
                 }
                 
-                if (this.currentState.lanIp && !this.qrCodeObj) {
-                    const qrData = `LGARK|${this.currentState.lanIp}|${this.currentState.port}|${this.currentState.sessionToken}`;
+                const lanIp = this.sessionLanIp || this.currentState.lanIp;
+                const port = this.sessionPort || this.currentState.port;
+                if (lanIp && !this.qrCodeObj) {
+                    const qrData = `LGARK|${lanIp}|${port}|${token}`;
                     this.qrCodeObj = new QRCode(document.getElementById('qrcode-img'), {
                         text: qrData,
                         width: 320,
@@ -366,6 +368,32 @@ class GameScene extends Phaser.Scene {
                 qrDiv.style.top = connectedCount === 0 ? '50%' : '40%';
             }
         }
+    }
+
+    clearLobbyQr() {
+        const img = document.getElementById('qrcode-img');
+        if (img) img.innerHTML = '';
+        this.qrCodeObj = null;
+    }
+
+    fetchSessionInfo() {
+        if (this._fetchingSessionInfo) return;
+        this._fetchingSessionInfo = true;
+        fetch('/health')
+            .then((res) => res.json())
+            .then((data) => {
+                if (data && data.sessionToken) {
+                    this.sessionToken = data.sessionToken;
+                }
+                if (this.currentState) {
+                    this.sessionLanIp = this.currentState.lanIp;
+                    this.sessionPort = this.currentState.port;
+                }
+            })
+            .catch(() => {})
+            .finally(() => {
+                this._fetchingSessionInfo = false;
+            });
     }
 
     hideJoinMode() {
@@ -665,6 +693,14 @@ class GameScene extends Phaser.Scene {
                 this.playBeep(220, 'sawtooth', 0.4, 0.15);
             } else if (this.currentState.gameStatus === 'win') {
                 [660, 880, 1100, 1320].forEach((f, i) => setTimeout(() => this.playBeep(f, 'sine', 0.2, 0.12), i * 120));
+            } else if (this.currentState.gameStatus === 'lobby' || this.currentState.gameStatus === 'waiting') {
+                this.clearLobbyQr();
+                this.fetchSessionInfo();
+                this.winConfettiEmitted = false;
+                if (this.cameras && this.cameras.main) {
+                    this.cameras.main.setZoom(1);
+                    this.cameras.main.setScroll(0, 0);
+                }
             }
             this.previousGameStatus = this.currentState.gameStatus;
         }
@@ -963,15 +999,6 @@ class GameScene extends Phaser.Scene {
             
             this.graphics.fillStyle(color, drawAlpha);
             this.graphics.fillRoundedRect(localX, 1000, paddleWidth, 20, 6);
-        }
-    }
-
-    drawRobots() {
-        if (this.robotGraphics) this.robotGraphics.clear();
-        if (this.robots) {
-            for (const r of this.robots) {
-                if (r.text) r.text.setVisible(false);
-            }
         }
     }
 

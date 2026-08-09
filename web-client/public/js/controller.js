@@ -2,22 +2,36 @@ let socket;
 let isConnected = false;
 let myPlayerId = null;
 let myPlayerNumber = null;
+let mySessionId = null;
+let mySessionToken = null;
+let isHost = false;
+let isSpectator = false;
 let myScore = 0;
 let myLives = 3;
 let myRank = 1;
+let myInventory = [];
 let lastPowerUpTime = 0;
 let gameEndShown = false;
 let playerColor = '#20c5ff';
-const PLAYER_COLORS = ['#20c5ff', '#FF2D78', '#FFB800'];
+let pingTimer = null;
+let touchControlsReady = false;
+const PLAYER_COLORS = ['#20c5ff', '#FF2D78', '#FFB800', '#9B59B6', '#2ECC71'];
 
 function joinGame() {
     const token = document.getElementById('tokenInput').value.trim().toUpperCase();
     const playerName = document.getElementById('nameInput').value.trim() || 'Web Player';
     if (!token || token.length !== 4) return alert('Enter a 4-letter session code');
 
+    mySessionToken = token;
+
     let serverOrigin = window.location.origin;
     if (window.location.port === '5173') {
         serverOrigin = window.location.protocol + '//' + window.location.hostname + ':3000';
+    }
+
+    if (socket) {
+        socket.removeAllListeners();
+        socket.disconnect();
     }
 
     socket = io(serverOrigin, {
@@ -26,23 +40,50 @@ function joinGame() {
     });
 
     socket.on('connect', () => {
-        const nonce = Math.random().toString(36).substring(2, 15);
-        socket.emit('join_game', { sessionToken: token, playerName: playerName, timestamp: Date.now(), nonce });
+        if (myPlayerId && mySessionId && mySessionToken) {
+            socket.emit('resume_request', {
+                playerId: myPlayerId,
+                sessionId: mySessionId,
+                sessionToken: mySessionToken
+            });
+        } else {
+            socket.emit('join_game', {
+                sessionToken: token,
+                playerName: playerName
+            });
+        }
     });
 
     socket.on('join_confirmed', (data) => {
         isConnected = true;
         myPlayerId = data.playerId;
         myPlayerNumber = data.playerNumber;
-        playerColor = PLAYER_COLORS[(myPlayerNumber - 1) % PLAYER_COLORS.length];
+        mySessionId = data.sessionId;
+        isSpectator = !!data.isSpectator;
+        playerColor = PLAYER_COLORS[(Math.max(1, myPlayerNumber) - 1) % PLAYER_COLORS.length];
         gameEndShown = false;
 
         document.getElementById('joinArea').style.display = 'none';
         document.getElementById('gameArea').style.display = 'flex';
-        document.getElementById('hudPlayerLabel').innerText = playerName.toUpperCase() + ' · P' + myPlayerNumber;
+        document.getElementById('gameEndOverlay').classList.remove('active');
+
+        if (isSpectator) {
+            document.getElementById('hudPlayerLabel').innerText = 'SPECTATOR';
+            document.getElementById('hostControls').style.display = 'none';
+            document.getElementById('powerupsRow').style.display = 'none';
+            document.getElementById('touchPadWrap').style.display = 'none';
+            document.getElementById('spectatorNote').style.display = 'block';
+        } else {
+            document.getElementById('hudPlayerLabel').innerText = playerName.toUpperCase() + ' · P' + myPlayerNumber;
+            document.getElementById('spectatorNote').style.display = 'none';
+            document.getElementById('powerupsRow').style.display = 'flex';
+            document.getElementById('touchPadWrap').style.display = 'block';
+            setupTouchControls();
+        }
+
         document.getElementById('hudDot').style.background = playerColor;
         document.getElementById('hudDot').style.color = playerColor;
-        
+
         const statusEl = document.getElementById('hudStatus');
         statusEl.style.color = '#4CAF50';
         statusEl.innerHTML = '<span style="width:6px;height:6px;border-radius:50%;background:#4CAF50;display:inline-block;"></span> ONLINE';
@@ -50,21 +91,17 @@ function joinGame() {
         const puck = document.getElementById('touchPuck');
         puck.style.background = `radial-gradient(circle, ${playerColor}, ${playerColor}88, ${playerColor}33)`;
         puck.style.boxShadow = `0 0 24px ${playerColor}80`;
-
         document.getElementById('touchTrack').style.background = `linear-gradient(to right, ${playerColor}0D, ${playerColor}66, ${playerColor}0D)`;
         document.getElementById('touchPad').style.borderColor = playerColor + '40';
 
-        setupTouchControls();
         startPingLoop();
-
-        if ('speechSynthesis' in window) {
-            window.speechSynthesis.getVoices();
-        }
+        updatePowerUpButtons();
     });
 
     socket.on('join_rejected', (data) => {
-        alert('Join failed: ' + data.message);
-        socket.disconnect();
+        alert('Join failed: ' + (data && data.message ? data.message : 'unknown error'));
+        clearIdentity();
+        if (socket) socket.disconnect();
     });
 
     socket.on('game_state', (state) => {
@@ -79,19 +116,26 @@ function joinGame() {
             }
         }
 
+        isHost = !isSpectator && state.masterPlayerIndex === (myPlayerNumber - 1);
+        const hostControls = document.getElementById('hostControls');
+        if (hostControls) {
+            const canStart = isHost && (state.gameStatus === 'lobby' || state.gameStatus === 'waiting');
+            hostControls.style.display = canStart ? 'block' : 'none';
+        }
+
         if (me) {
             myScore = me.score;
             myLives = me.lives;
             myRank = me.rank || 1;
+            myInventory = Array.isArray(me.inventory) ? me.inventory.slice() : [];
 
             document.getElementById('scoreVal').innerText = String(myScore).padStart(5, '0');
             document.getElementById('scoreVal').style.color = playerColor;
-
             document.getElementById('livesVal').innerText = myLives;
             document.getElementById('livesVal').style.color = myLives <= 1 ? '#D9534F' : '#4CAF50';
-
             document.getElementById('rankVal').innerText = '#' + myRank;
             document.getElementById('rankVal').style.color = myRank === 1 ? '#F4A261' : '#4F7CAC';
+            updatePowerUpButtons();
         }
 
         if (state.gameStartedAt && state.gameStatus === 'playing' && state.gameDurationSeconds > 0) {
@@ -101,6 +145,10 @@ function joinGame() {
             const s = String(remaining % 60).padStart(2, '0');
             document.getElementById('timerVal').innerText = m + ':' + s;
             document.getElementById('timerVal').style.color = remaining <= 30 ? '#D9534F' : '#fff';
+        } else if (state.gameStatus === 'lobby' || state.gameStatus === 'waiting') {
+            document.getElementById('timerVal').innerText = '--:--';
+            gameEndShown = false;
+            document.getElementById('gameEndOverlay').classList.remove('active');
         }
 
         const status = state.gameStatus;
@@ -124,17 +172,15 @@ function joinGame() {
         }
     });
 
+    socket.on('lobby_ready', () => {
+        gameEndShown = false;
+        document.getElementById('gameEndOverlay').classList.remove('active');
+    });
+
     socket.on('commentary', (data) => {
         if (data && data.text) {
             document.getElementById('commentaryText').innerText = data.text;
             document.getElementById('commentaryBar').classList.add('active');
-
-            if ('speechSynthesis' in window) {
-                const utterance = new SpeechSynthesisUtterance(data.text);
-                utterance.rate = 1.1;
-                window.speechSynthesis.speak(utterance);
-            }
-
             setTimeout(() => {
                 document.getElementById('commentaryBar').classList.remove('active');
             }, 6000);
@@ -149,30 +195,51 @@ function joinGame() {
     });
 }
 
+function updatePowerUpButtons() {
+    const counts = { wide_paddle: 0, slow_ball: 0, multi_ball: 0, bomb: 0 };
+    for (const item of myInventory) {
+        if (counts[item] != null) counts[item] += 1;
+    }
+    document.querySelectorAll('.powerup-btn').forEach((btn) => {
+        const type = btn.getAttribute('data-type');
+        const count = counts[type] || 0;
+        const badge = btn.querySelector('.pu-count');
+        if (badge) badge.innerText = String(count);
+        btn.classList.toggle('disabled', count <= 0 || isSpectator);
+    });
+}
+
 function activatePowerUp(type) {
-    if (!socket || !isConnected || !myPlayerId) return;
+    if (!socket || !isConnected || !myPlayerId || isSpectator) return;
+    if (!myInventory.includes(type)) return;
     const now = Date.now();
-    if (now - lastPowerUpTime < 5000) return;
+    if (now - lastPowerUpTime < 1000) return;
 
     lastPowerUpTime = now;
     const nonce = Math.random().toString(36).substring(2, 15);
     socket.emit('power_up_activate', {
-        playerId: myPlayerId,
         powerUpType: type,
         timestamp: now,
         nonce: nonce
     });
 
     if (navigator.vibrate) navigator.vibrate(50);
+}
 
-    document.querySelectorAll('.powerup-btn').forEach(btn => {
-        btn.classList.add('on-cooldown');
-    });
-    setTimeout(() => {
-        document.querySelectorAll('.powerup-btn').forEach(btn => {
-            btn.classList.remove('on-cooldown');
-        });
-    }, 5000);
+function startMatch() {
+    if (!socket || !isConnected || !isHost) return;
+    socket.emit('start_game', { durationSeconds: 180 });
+}
+
+function clearIdentity() {
+    myPlayerId = null;
+    myPlayerNumber = null;
+    mySessionId = null;
+    mySessionToken = null;
+    isHost = false;
+    isSpectator = false;
+    myInventory = [];
+    isConnected = false;
 }
 
 function backToJoin() {
@@ -180,24 +247,36 @@ function backToJoin() {
     document.getElementById('gameArea').style.display = 'none';
     document.getElementById('joinArea').style.display = 'flex';
     gameEndShown = false;
-    if (socket) socket.disconnect();
-    isConnected = false;
-    myPlayerId = null;
+    if (socket) {
+        if (socket.connected && myPlayerId && !isSpectator) {
+            socket.emit('leave_game');
+        }
+        socket.removeAllListeners();
+        socket.disconnect();
+    }
+    if (pingTimer) {
+        clearInterval(pingTimer);
+        pingTimer = null;
+    }
+    clearIdentity();
 }
 
 function startPingLoop() {
-    setInterval(() => {
+    if (pingTimer) clearInterval(pingTimer);
+    pingTimer = setInterval(() => {
         if (socket && socket.connected) {
             const start = Date.now();
             socket.emit('ping_test', {}, () => {
-                const latency = Date.now() - start;
-                document.getElementById('hudPing').innerText = latency + 'ms';
+                document.getElementById('hudPing').innerText = (Date.now() - start) + 'ms';
             });
         }
     }, 3000);
 }
 
 function setupTouchControls() {
+    if (touchControlsReady) return;
+    touchControlsReady = true;
+
     const pad = document.getElementById('touchPad');
     const puck = document.getElementById('touchPuck');
     let activeTouchId = null;
@@ -214,7 +293,7 @@ function setupTouchControls() {
 
     pad.addEventListener('touchmove', (e) => {
         e.preventDefault();
-        if (!isConnected || activeTouchId === null) return;
+        if (!isConnected || isSpectator || activeTouchId === null) return;
 
         let touch = null;
         for (let i = 0; i < e.changedTouches.length; i++) {
@@ -227,7 +306,6 @@ function setupTouchControls() {
 
         const currentX = touch.clientX;
         const dx = currentX - lastX;
-
         const absDx = Math.abs(dx);
         const acceleration = 1.0 + Math.min(3.0, absDx / 20.0);
         const rigDeltaX = dx * acceleration * 12;
@@ -236,20 +314,17 @@ function setupTouchControls() {
         let match = currentTransform.match(/translateX\(([^p]+)px\)/);
         let currentOffset = match ? parseFloat(match[1]) : 0;
         currentOffset += dx;
-
         const maxSlide = pad.clientWidth / 2 - 40;
         currentOffset = Math.max(-maxSlide, Math.min(maxSlide, currentOffset));
         puck.style.transform = `translateX(${currentOffset}px)`;
 
         if (Math.abs(rigDeltaX) > 0) {
-            const nonce = Math.random().toString(36).substring(2, 15);
             socket.emit('paddle_move', {
                 deltaX: Math.round(rigDeltaX),
                 timestamp: Date.now(),
-                nonce
+                nonce: Math.random().toString(36).substring(2, 15)
             });
         }
-
         lastX = currentX;
     }, { passive: false });
 
@@ -276,7 +351,7 @@ function setupTouchControls() {
     });
 
     window.addEventListener('mousemove', (e) => {
-        if (!mouseDown || !isConnected) return;
+        if (!mouseDown || !isConnected || isSpectator) return;
         const dx = e.clientX - mouseLastX;
         const absDx = Math.abs(dx);
         const acceleration = 1.0 + Math.min(3.0, absDx / 20.0);
@@ -291,11 +366,10 @@ function setupTouchControls() {
         puck.style.transform = `translateX(${currentOffset}px)`;
 
         if (Math.abs(rigDeltaX) > 0) {
-            const nonce = Math.random().toString(36).substring(2, 15);
             socket.emit('paddle_move', {
                 deltaX: Math.round(rigDeltaX),
                 timestamp: Date.now(),
-                nonce
+                nonce: Math.random().toString(36).substring(2, 15)
             });
         }
         mouseLastX = e.clientX;

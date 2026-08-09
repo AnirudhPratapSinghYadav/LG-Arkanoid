@@ -109,9 +109,17 @@ body {
 .powerup-btn:active {
     transform: scale(0.95);
 }
-.powerup-btn.on-cooldown {
-    opacity: 0.3;
+.powerup-btn.on-cooldown,
+.powerup-btn.disabled {
+    opacity: 0.35;
     pointer-events: none;
+}
+.powerup-btn .pu-count {
+    display: block;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: #e8f4f8;
 }
 .powerup-btn .pu-icon {
     font-size: 22px; display: block;
