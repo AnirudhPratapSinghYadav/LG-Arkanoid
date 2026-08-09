@@ -180,7 +180,9 @@ class GameScene extends Phaser.Scene {
         this.graphics.clear();
         this.trailGraphics.clear();
         
-        if (!this.currentState || this.currentState.gameStatus === 'idle') {
+        if (!this.currentState ||
+            this.currentState.gameStatus === 'idle' ||
+            this.currentState.gameStatus === 'waiting') {
             this.drawAttractMode();
             return;
         } else {
@@ -1043,33 +1045,14 @@ class GameScene extends Phaser.Scene {
             }
         });
 
-        this.socket.on('commentary_thinking', (data) => {
-            this.robotState = 'thinking';
-            if (this.robotStateTimer) clearTimeout(this.robotStateTimer);
-            this.robotStateTimer = setTimeout(() => {
-                this.robotState = 'idle';
-            }, 3000);
-        });
+        this.socket.on('commentary_thinking', () => {});
 
         this.socket.on('commentary', (data) => {
             if (data.eventType === 'life_lost') {
                 if (!REDUCED_MOTION) this.cameras.main.shake(200, 0.01);
-                this.robotState = 'alert';
-            } else if (data.eventType === 'level_cleared' || data.eventType === 'multi_ball') {
-                this.robotState = 'excited';
-            } else {
-                this.robotState = 'idle';
             }
 
-            if (this.robotStateTimer) clearTimeout(this.robotStateTimer);
-            this.robotStateTimer = setTimeout(() => {
-                this.robotState = 'idle';
-            }, 3000);
-
-            let message = data.text || data.message || '';
-            if (data.source === 'fallback') {
-                message += ' (offline)';
-            }
+            const message = data.text || data.message || '';
 
             if (data.eventType === 'rank_takeover' && data.playerId) {
                 this._rankSwapHighlightPids = this._rankSwapHighlightPids || {};
@@ -1081,33 +1064,14 @@ class GameScene extends Phaser.Scene {
                 }, 1500);
             }
 
-            const robot = this.robots[0];
-            if (!robot || !robot.text) return;
-            
             if (this.currentState) {
                 this.currentState.lastCommentary = message;
             }
-            robot.text.setText(message);
-            robot.text.setVisible(true);
-            robot.text.setAlpha(1.0);
-            
-            if (this.bubbleTimer) clearTimeout(this.bubbleTimer);
-            this.bubbleTimer = setTimeout(() => {
-                if (robot && robot.text) {
-                    this.tweens.add({
-                        targets: robot.text,
-                        alpha: 0,
-                        duration: 500,
-                        onComplete: () => {
-                            robot.text.setVisible(false);
-                        }
-                    });
-                }
-            }, 6000);
         });
 
         this.socket.on('level_source', (data) => {
-            if (data.aiGenerated) {
+            if (data.aiGenerated && this.aiTagText) {
+                this.aiTagText.setText('LEVEL ' + (this.currentState?.currentLevel || ''));
                 this.tweens.killTweensOf(this.aiTagText);
                 this.tweens.add({
                     targets: this.aiTagText,
