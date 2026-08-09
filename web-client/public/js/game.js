@@ -166,7 +166,7 @@ class GameScene extends Phaser.Scene {
             vignetteGraphics.strokeRect(i * 10, i * 10, 1920 - (i * 20), 1080 - (i * 20));
         }
         vignetteGraphics.generateTexture('vignette', 1920, 1080);
-        this.vignetteOverlay = this.add.image(960, 540, 'vignette').setDepth(101);
+        // Keep texture for compatibility; do not show vignette overlay.
 
         this.powerUpTexts = [];
         this.setupSocket();
@@ -965,129 +965,10 @@ class GameScene extends Phaser.Scene {
     }
 
     drawRobots() {
-        const players = this.currentState.players;
-        if (!players) return;
-
-        this.robotGraphics.clear();
-
-        const robotX = 960;
-        const robotY = 1050;
-        const robotSize = 40;
-
-        for(let g = 3; g > 0; g--) {
-            this.robotGraphics.lineStyle(2 + (g * 2), COLORS.accent, 0.15);
-            this.robotGraphics.strokeRoundedRect(robotX - robotSize/2, robotY - robotSize/2, robotSize, robotSize, 10);
-        }
-
-        this.robotGraphics.fillStyle(0x1a1a1a, 1);
-        this.robotGraphics.fillRoundedRect(robotX - robotSize/2, robotY - robotSize/2, robotSize, robotSize, 10);
-        this.robotGraphics.lineStyle(2, COLORS.accent, 1);
-        this.robotGraphics.strokeRoundedRect(robotX - robotSize/2, robotY - robotSize/2, robotSize, robotSize, 10);
-
-        let visorColor = COLORS.system;
-        if (this.robotState === 'excited') visorColor = COLORS.game;
-        else if (this.robotState === 'alert') visorColor = COLORS.error;
-        else if (this.robotState === 'thinking') visorColor = 0xff00ff;
-
-        for(let g = 3; g > 0; g--) {
-            this.robotGraphics.fillStyle(visorColor, 0.15);
-            this.robotGraphics.fillRoundedRect(robotX - 16 - g, robotY - 8 - g, 32 + (g*2), 16 + (g*2), 6);
-        }
-        
-        this.robotGraphics.fillStyle(0x000000, 0.8);
-        this.robotGraphics.fillRoundedRect(robotX - 16, robotY - 8, 32, 16, 4);
-
-        this.robotGraphics.fillStyle(visorColor, 1);
-        
-        if (this.robotState === 'excited') {
-            this.robotGraphics.lineStyle(2, visorColor, 0.9);
-            this.robotGraphics.beginPath();
-            this.robotGraphics.moveTo(robotX - 12, robotY - 2);
-            this.robotGraphics.lineTo(robotX - 8, robotY - 6);
-            this.robotGraphics.lineTo(robotX - 4, robotY - 2);
-            this.robotGraphics.moveTo(robotX + 4, robotY - 2);
-            this.robotGraphics.lineTo(robotX + 8, robotY - 6);
-            this.robotGraphics.lineTo(robotX + 12, robotY - 2);
-            this.robotGraphics.strokePath();
-            
-            this.robotGraphics.lineStyle(2, visorColor, 0.6);
-            this.robotGraphics.beginPath();
-            this.robotGraphics.moveTo(robotX - 8, robotY + 6);
-            this.robotGraphics.quadraticCurveTo(robotX, robotY + 12, robotX + 8, robotY + 6);
-            this.robotGraphics.strokePath();
-        } else if (this.robotState === 'alert') {
-            this.robotGraphics.lineStyle(2, visorColor, 0.9);
-            this.robotGraphics.beginPath();
-            this.robotGraphics.moveTo(robotX - 12, robotY - 6);
-            this.robotGraphics.lineTo(robotX - 4, robotY - 2);
-            this.robotGraphics.moveTo(robotX + 4, robotY - 2);
-            this.robotGraphics.lineTo(robotX + 12, robotY - 6);
-            this.robotGraphics.strokePath();
-            
-            this.robotGraphics.lineStyle(2, visorColor, 0.6);
-            this.robotGraphics.beginPath();
-            this.robotGraphics.moveTo(robotX - 6, robotY + 8);
-            this.robotGraphics.lineTo(robotX - 2, robotY + 6);
-            this.robotGraphics.lineTo(robotX + 2, robotY + 10);
-            this.robotGraphics.lineTo(robotX + 6, robotY + 8);
-            this.robotGraphics.strokePath();
-        } else if (this.robotState === 'thinking') {
-            this.robotGraphics.fillCircle(robotX - 8, robotY - 4, 3);
-            this.robotGraphics.fillCircle(robotX, robotY - 4, 3);
-            this.robotGraphics.fillCircle(robotX + 8, robotY - 4, 3);
-
-            this.robotGraphics.lineStyle(2, visorColor, 0.6);
-            this.robotGraphics.beginPath();
-            this.robotGraphics.moveTo(robotX - 4, robotY + 8);
-            this.robotGraphics.lineTo(robotX + 4, robotY + 8);
-            this.robotGraphics.strokePath();
-        } else {
-            this.robotGraphics.fillCircle(robotX - 8, robotY - 4, 4);
-            this.robotGraphics.fillCircle(robotX + 8, robotY - 4, 4);
-
-            this.robotGraphics.lineStyle(2, visorColor, 0.6);
-            this.robotGraphics.beginPath();
-            this.robotGraphics.moveTo(robotX - 6, robotY + 8);
-            this.robotGraphics.lineTo(robotX + 6, robotY + 8);
-            this.robotGraphics.strokePath();
-        }
-
-        this.robotGraphics.lineStyle(2, COLORS.accent, 0.6);
-        this.robotGraphics.beginPath();
-        this.robotGraphics.moveTo(robotX, robotY - robotSize/2);
-        this.robotGraphics.lineTo(robotX, robotY - robotSize/2 - 10);
-        this.robotGraphics.strokePath();
-        this.robotGraphics.fillStyle(visorColor, 0.8);
-        this.robotGraphics.fillCircle(robotX, robotY - robotSize/2 - 10, 3);
-
-        const robot = this.robots[0];
-        if (robot && robot.text && robot.text.visible && robot.text.alpha > 0) {
-            const bubbleText = robot.text.text;
-            if (bubbleText && bubbleText.length > 0) {
-                const textWidth = Math.min(bubbleText.length * 8 + 30, 400);
-                const bubbleX = robotX;
-                
-                robot.text.setWordWrapWidth(textWidth - 20);
-                robot.text.updateText();
-                
-                const bounds = robot.text.getBounds();
-                const bubbleHeight = Math.max(bounds.height + 16, 30);
-                const bubbleY = robotY - robotSize/2 - 22;
-
-                this.robotGraphics.fillStyle(COLORS.black, 0.95);
-                this.robotGraphics.fillRoundedRect(bubbleX - textWidth/2, bubbleY - bubbleHeight - 6, textWidth, bubbleHeight, 8);
-                this.robotGraphics.lineStyle(1, COLORS.accent, 0.6);
-                this.robotGraphics.strokeRoundedRect(bubbleX - textWidth/2, bubbleY - bubbleHeight - 6, textWidth, bubbleHeight, 8);
-
-                this.robotGraphics.fillStyle(COLORS.black, 0.95);
-                this.robotGraphics.fillTriangle(
-                    bubbleX - 6, bubbleY - 6,
-                    bubbleX + 6, bubbleY - 6,
-                    bubbleX, bubbleY
-                );
-
-                robot.text.setPosition(bubbleX, bubbleY - bubbleHeight/2 - 6);
-                robot.text.setOrigin(0.5, 0.5);
+        if (this.robotGraphics) this.robotGraphics.clear();
+        if (this.robots) {
+            for (const r of this.robots) {
+                if (r.text) r.text.setVisible(false);
             }
         }
     }

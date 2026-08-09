@@ -70,12 +70,11 @@ class _JoinChoiceScreenState extends State<JoinChoiceScreen> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'MULTIPLAYER REMOTE CONTROL',
+                          'Phone controller for Liquid Galaxy',
                           style: GoogleFonts.inter(
-                            fontSize: 10,
+                            fontSize: 12,
                             color: textSecondary,
-                            letterSpacing: 2.0,
-                            fontWeight: FontWeight.w600,
+                            fontWeight: FontWeight.w500,
                           ),
                           textAlign: TextAlign.center,
                         ),
@@ -97,8 +96,8 @@ class _JoinChoiceScreenState extends State<JoinChoiceScreen> {
                     const SizedBox(height: 24),
                     _buildChoiceCard(
                       context: context,
-                      title: 'SCAN LIQUID GALAXY QR',
-                      description: 'Requires being on the exact same Wi-Fi network',
+                      title: 'SCAN QR CODE',
+                      description: 'Same Wi-Fi as the Liquid Galaxy master',
                       icon: Icons.qr_code_scanner_rounded,
                       onTap: () async {
                         final result = await Navigator.pushNamed(context, '/qrscan', arguments: 'session');
@@ -123,8 +122,8 @@ class _JoinChoiceScreenState extends State<JoinChoiceScreen> {
                     const SizedBox(height: 24),
                     _buildChoiceCard(
                       context: context,
-                      title: 'ENTER SESSION CODE',
-                      description: 'Manually configure session token',
+                      title: 'ENTER MANUALLY',
+                      description: 'Type master IP, port, and session code',
                       icon: Icons.keyboard_rounded,
                       onTap: () {
                         Navigator.pushNamed(context, '/manualentry');
