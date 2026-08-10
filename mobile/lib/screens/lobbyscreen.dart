@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/constants.dart';
 import '../services/gameservice.dart';
 import '../widgets/lgpanel.dart';
@@ -26,6 +27,9 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
   int _selectedDuration = 180;
   int _selectedMaxPlayers = 3;
   String _selectedBallSpeed = 'medium';
+  int _selectedScreens = 3;
+  bool _applyingScreens = false;
+  String? _screenApplyMsg;
 
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
@@ -41,6 +45,15 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
       duration: const Duration(milliseconds: 1000),
     )..repeat(reverse: true);
     _pulseAnimation = Tween<double>(begin: 0.5, end: 1.0).animate(_pulseController);
+
+    // Restore last chosen screen count for host lobby.
+    // ignore: discarded_futures
+    SharedPreferences.getInstance().then((prefs) {
+      if (!mounted) return;
+      setState(() {
+        _selectedScreens = prefs.getInt(prefNumScreens) ?? 3;
+      });
+    });
   }
 
   @override
@@ -91,6 +104,53 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
       durationSeconds: _selectedDuration,
     );
     _gameService.startGame(_selectedDuration);
+  }
+
+  Future<void> _applyScreensToRig() async {
+    if (_applyingScreens) return;
+    if (!SSHService().isConnected) {
+      setState(() {
+        _screenApplyMsg = 'Connect LG SSH in Settings first, then apply screens.';
+      });
+      return;
+    }
+    setState(() {
+      _applyingScreens = true;
+      _screenApplyMsg = 'Applying $_selectedScreens screens to the rig…';
+    });
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(prefNumScreens, _selectedScreens);
+    final err = await SSHService().relaunchGame(_selectedScreens);
+    if (!mounted) return;
+    setState(() {
+      _applyingScreens = false;
+      _screenApplyMsg = err == null || err.isEmpty
+          ? 'Rig relaunched with $_selectedScreens screens. Rejoin if needed.'
+          : 'Rig apply failed: $err';
+    });
+  }
+
+  Widget _buildScreenChip(int n) {
+    final selected = _selectedScreens == n;
+    return GestureDetector(
+      onTap: () => setState(() => _selectedScreens = n),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected ? accentSystem.withOpacity(0.2) : cardFill,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: selected ? accentSystem : borderLight),
+        ),
+        child: Text(
+          '$n',
+          style: GoogleFonts.spaceGrotesk(
+            fontSize: 13,
+            fontWeight: FontWeight.bold,
+            color: selected ? textPrimary : textSecondary,
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -263,6 +323,39 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
                                 ),
                             ],
                           ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'SCREENS (RIG)',
+                            style: GoogleFonts.spaceGrotesk(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: textSecondary,
+                              letterSpacing: 1,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            alignment: WrapAlignment.center,
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              for (final n in const [1, 3, 5, 7, 9, 12]) _buildScreenChip(n),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          LgButton(
+                            label: _applyingScreens ? 'APPLYING…' : 'APPLY SCREENS TO RIG',
+                            onPressed: _applyingScreens ? null : _applyScreensToRig,
+                          ),
+                          if (_screenApplyMsg != null) ...[
+                            const SizedBox(height: 8),
+                            Text(
+                              _screenApplyMsg!,
+                              style: GoogleFonts.inter(fontSize: 11, color: textSecondary, height: 1.35),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
                           const SizedBox(height: 16),
 
                           Text(

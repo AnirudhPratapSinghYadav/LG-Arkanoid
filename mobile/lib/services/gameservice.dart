@@ -188,14 +188,12 @@ class GameService extends ChangeNotifier {
           notifyListeners();
         });
 
-        if(newCommentary.isNotEmpty && newCommentary!=lastCommentary){
+          if(newCommentary.isNotEmpty && newCommentary!=lastCommentary){
           lastCommentary = newCommentary;
           lastCommentarySource = map['source'] as String? ?? 'fallback';
-          
-          if(lastCommentarySource=='ai' || lastCommentarySource=='gemini'){
-             HapticFeedback.mediumImpact();
-             TTSService().speak(lastCommentary);
-          }
+          HapticFeedback.mediumImpact();
+          // Speak all commentary (Gemini + arcade fallback) so the phone feels alive offline.
+          TTSService().speak(lastCommentary);
         }
         notifyListeners();
       });

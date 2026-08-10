@@ -63,7 +63,7 @@ app.use(helmet({
         "https://fonts.gstatic.com"
       ],
       connectSrc: ["'self'", "ws:", "wss:"],
-      imgSrc: ["'self'", "data:"]
+      imgSrc: ["'self'", "data:", "blob:"]
     }
   }
 }));
@@ -149,6 +149,7 @@ function getWorldSnapshot(){
     masterPlayerIndex: worldState.masterPlayerIndex,
     maxPlayers: worldState.maxPlayers || 3,
     gameDurationSeconds: worldState.gameDurationSeconds ?? 180,
+    ballSpeed: worldState.ballSpeed || 'medium',
   };
 }
 
@@ -193,6 +194,7 @@ function broadcastGameState(){
     masterPlayerIndex: worldState.masterPlayerIndex,
     maxPlayers: worldState.maxPlayers || 3,
     gameDurationSeconds: worldState.gameDurationSeconds ?? 180,
+    ballSpeed: worldState.ballSpeed || 'medium',
     longestRally: worldState.longestRally || 0,
     powerupsCollected: worldState.powerupsCollected || 0,
     highestCombo: worldState.highestCombo || 0,

@@ -17,14 +17,16 @@
 </head>
 <body>
     <div id="qrcode">
-        <h2 style="font-family: 'VT323', monospace; font-size: 2.8rem; color: #fff; margin: 0 0 20px 0; letter-spacing: 2px;">SCAN TO JOIN</h2>
+        <h2>SCAN TO JOIN</h2>
         <div id="qrcode-img"></div>
-        <div style="font-family: 'VT323', monospace; font-size: 2rem; color: #4ade80; margin-top: 30px; letter-spacing: 2px;">Session Code</div>
-        <div id="qr-session-code" style="font-family: 'VT323', monospace; font-size: 5rem; color: #fff; margin-top: 10px; letter-spacing: 15px;"></div>
-        <div id="qr-instructions" style="font-family: 'VT323', monospace; font-size: 2rem; color: #aaa; margin-top: 40px; line-height: 1.8;">
-            Open the LG Arkanoid app<br/>OR<br/>Enter code <span id="qr-session-code-inline" style="color: #fff;"></span><br/><br/>
-            <span id="qr-waiting-text" style="color: #4ade80;">Waiting for first player...</span>
+        <div style="font-family:'VT323',monospace;font-size:1.6rem;color:#4ade80;margin-top:14px;letter-spacing:2px;">Session Code</div>
+        <div id="qr-session-code"></div>
+        <div id="qr-match-meta">Loading match setup…</div>
+        <div id="qr-instructions" style="font-family:'VT323',monospace;font-size:1.35rem;color:#aaa;margin-top:16px;line-height:1.55;">
+            Open the LG Arkanoid app<br/>or enter code <span id="qr-session-code-inline" style="color:#fff;"></span>
+            <div id="qr-waiting-text" style="color:#4ade80;margin-top:10px;">Waiting for first player…</div>
         </div>
+        <div id="qr-player-list" style="font-family:'Space Grotesk',sans-serif;font-size:0.95rem;margin-top:12px;color:#9aa4af;"></div>
     </div>
 
     <div style="position:fixed; top:0; right:0; z-index:999; padding:6px; background:rgba(0,0,0,0.4); color:#fff; font-family:'Space Grotesk',sans-serif; font-size:10px; line-height:1.4; text-align:right;">

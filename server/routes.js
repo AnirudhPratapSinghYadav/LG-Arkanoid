@@ -3,6 +3,7 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
+const { getLanIp } = require('./config.js');
 
 function createRouter(worldState) {
   const router = express.Router();
@@ -19,6 +20,7 @@ function createRouter(worldState) {
       gameActive: worldState.gameStatus === 'playing',
       connectedPlayers: worldState.players.filter((p) => p.connected).length,
       sessionToken: worldState.sessionToken,
+      lanIp: getLanIp(),
       port: process.env.PORT || 3000,
     });
   });

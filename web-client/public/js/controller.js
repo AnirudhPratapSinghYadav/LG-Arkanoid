@@ -179,8 +179,17 @@ function joinGame() {
 
     socket.on('commentary', (data) => {
         if (data && data.text) {
+            window.__lastCommentaryText = data.text;
             document.getElementById('commentaryText').innerText = data.text;
             document.getElementById('commentaryBar').classList.add('active');
+            if ('speechSynthesis' in window) {
+                try {
+                    window.speechSynthesis.cancel();
+                    const u = new SpeechSynthesisUtterance(data.text);
+                    u.rate = 1.05;
+                    window.speechSynthesis.speak(u);
+                } catch (_) {}
+            }
             setTimeout(() => {
                 document.getElementById('commentaryBar').classList.remove('active');
             }, 6000);

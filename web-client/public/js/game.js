@@ -47,19 +47,18 @@ class GameScene extends Phaser.Scene {
         this.graphics = this.add.graphics();
         this.trailGraphics = this.add.graphics();
 
-        this.robotGraphics = this.add.graphics();
+        this.robotGraphics = this.add.graphics().setDepth(40);
         this.robots = [];
-        for (let i = 0; i < 3; i++) {
-            let robotText = this.add.text(0, 0, '', {
-                fontFamily: FONTS.body,
-                fontSize: '16px',
-                color: HEX.textLight,
-                align: 'center',
-                backgroundColor: HEX.bgPanel,
-                padding: { x: 10, y: 5 }
-            }).setOrigin(0.5, 1).setAlpha(0);
-            this.robots.push({ text: robotText, opacityTarget: 0.7 });
-        }
+        this.robotStates = {}; // playerId -> idle|talking|alert|excited
+        this.ensureRobotSlots(5);
+
+        this.centerCommentaryTitle = this.add.text(960, 120, 'COMMENTARY', {
+            fontFamily: FONTS.heading, fontSize: '18px', color: HEX.system, fontWeight: 'bold', letterSpacing: 3
+        }).setOrigin(0.5, 0).setVisible(false).setDepth(60);
+        this.centerCommentaryText = this.add.text(960, 148, '', {
+            fontFamily: FONTS.body, fontSize: '26px', color: HEX.textLight, align: 'center',
+            wordWrap: { width: 900 }
+        }).setOrigin(0.5, 0).setVisible(false).setDepth(60);
 
         this.screenLabel = this.add.text(20, 20, 'SCREEN ' + screenId, {
             fontFamily: FONTS.mono,
@@ -170,6 +169,9 @@ class GameScene extends Phaser.Scene {
 
         this.powerUpTexts = [];
         this.setupSocket();
+        this.fetchSessionInfo();
+        window.addEventListener('resize', () => this.syncQrToCanvas());
+        this.scale.on('resize', () => this.syncQrToCanvas());
     }
 
     update() {
@@ -206,6 +208,7 @@ class GameScene extends Phaser.Scene {
             this.drawCountdownMode();
             this.drawBricks();
             this.drawPaddles();
+            this.drawRobots();
             this.updateHUD();
             return;
         } else {
@@ -216,6 +219,8 @@ class GameScene extends Phaser.Scene {
             this.currentState.gameStatus === 'time_up' ||
             this.currentState.gameStatus === 'game_over') {
             this.drawWinMode();
+            this.drawRobots();
+            this.updateHUD();
             return;
         } else {
             this.hideWinMode();
@@ -225,7 +230,134 @@ class GameScene extends Phaser.Scene {
         this.drawPowerUps();
         this.drawBalls();
         this.drawPaddles();
+        this.drawRobots();
         this.updateHUD();
+    }
+
+    ensureRobotSlots(count) {
+        while (this.robots.length < count) {
+            const bubble = this.add.text(0, 0, '', {
+                fontFamily: FONTS.body,
+                fontSize: '15px',
+                color: HEX.textLight,
+                align: 'center',
+                backgroundColor: '#0d1117ee',
+                padding: { x: 10, y: 6 },
+                wordWrap: { width: 220 }
+            }).setOrigin(0.5, 1).setAlpha(0).setDepth(45).setVisible(false);
+            this.robots.push({ bubble, state: 'idle' });
+        }
+    }
+
+    setRobotState(playerId, state, ms = 2800) {
+        if (!playerId) return;
+        this.robotStates[playerId] = state;
+        if (this._robotStateTimers && this._robotStateTimers[playerId]) {
+            clearTimeout(this._robotStateTimers[playerId]);
+        }
+        this._robotStateTimers = this._robotStateTimers || {};
+        this._robotStateTimers[playerId] = setTimeout(() => {
+            this.robotStates[playerId] = 'idle';
+        }, ms);
+    }
+
+    speakCommentary(text) {
+        if (!text || typeof window === 'undefined' || !window.speechSynthesis) return;
+        try {
+            window.speechSynthesis.cancel();
+            const u = new SpeechSynthesisUtterance(text);
+            u.rate = 1.05;
+            u.pitch = 0.9;
+            window.speechSynthesis.speak(u);
+        } catch (_) {}
+    }
+
+    syncQrToCanvas() {
+        const qr = document.getElementById('qrcode');
+        const canvas = document.querySelector('canvas');
+        if (!qr || !canvas) return;
+        const rect = canvas.getBoundingClientRect();
+        if (rect.width < 40 || rect.height < 40) return;
+        qr.style.left = `${rect.left + rect.width / 2}px`;
+        qr.style.top = `${rect.top + rect.height * 0.44}px`;
+        qr.style.transform = 'translate(-50%, -50%)';
+        const scale = Math.min(rect.width / 1920, rect.height / 1080);
+        const cardW = Math.max(280, Math.min(420, 420 * scale * 1.15));
+        qr.style.width = `${cardW}px`;
+    }
+
+    drawRobots() {
+        if (!this.robotGraphics) return;
+        this.robotGraphics.clear();
+        const players = (this.currentState && this.currentState.players) || [];
+        this.ensureRobotSlots(Math.max(players.length, 3));
+
+        for (let i = 0; i < this.robots.length; i++) {
+            const slot = this.robots[i];
+            const p = players[i];
+            if (!p || !p.connected || (typeof p.lives === 'number' && p.lives <= 0)) {
+                if (slot.bubble) slot.bubble.setVisible(false);
+                continue;
+            }
+
+            const paddleW = p.paddleWidth || 300;
+            const worldX = p.paddleX + paddleW / 2;
+            const localX = worldX - virtualLeft;
+            if (localX < -80 || localX > 2000) {
+                if (slot.bubble) slot.bubble.setVisible(false);
+                continue;
+            }
+
+            const robotY = 955;
+            const robotSize = 44;
+            const color = PADDLE_COLORS[i % PADDLE_COLORS.length];
+            const state = this.robotStates[p.id] || 'idle';
+            let visorColor = color;
+            if (state === 'excited') visorColor = COLORS.game;
+            else if (state === 'alert') visorColor = COLORS.error;
+            else if (state === 'talking') visorColor = COLORS.systemAlt;
+
+            for (let g = 3; g > 0; g--) {
+                this.robotGraphics.lineStyle(2 + g, color, 0.12);
+                this.robotGraphics.strokeRoundedRect(
+                    localX - robotSize / 2 - g, robotY - robotSize / 2 - g,
+                    robotSize + g * 2, robotSize + g * 2, 10
+                );
+            }
+            this.robotGraphics.fillStyle(0x12161c, 0.95);
+            this.robotGraphics.fillRoundedRect(localX - robotSize / 2, robotY - robotSize / 2, robotSize, robotSize, 10);
+            this.robotGraphics.lineStyle(2, color, 1);
+            this.robotGraphics.strokeRoundedRect(localX - robotSize / 2, robotY - robotSize / 2, robotSize, robotSize, 10);
+
+            this.robotGraphics.fillStyle(0x000000, 0.85);
+            this.robotGraphics.fillRoundedRect(localX - 15, robotY - 8, 30, 14, 4);
+            this.robotGraphics.fillStyle(visorColor, 1);
+            if (state === 'excited') {
+                this.robotGraphics.fillCircle(localX - 7, robotY - 2, 3);
+                this.robotGraphics.fillCircle(localX + 7, robotY - 2, 3);
+            } else if (state === 'alert') {
+                this.robotGraphics.fillTriangle(localX - 10, robotY + 1, localX - 4, robotY - 7, localX + 2, robotY + 1);
+                this.robotGraphics.fillTriangle(localX - 2, robotY + 1, localX + 4, robotY - 7, localX + 10, robotY + 1);
+            } else if (state === 'talking') {
+                this.robotGraphics.fillCircle(localX - 7, robotY - 2, 3.5);
+                this.robotGraphics.fillCircle(localX + 7, robotY - 2, 3.5);
+                this.robotGraphics.fillStyle(visorColor, 0.7);
+                this.robotGraphics.fillCircle(localX, robotY + 6, 2 + (Math.sin(Date.now() / 120) + 1));
+            } else {
+                this.robotGraphics.fillCircle(localX - 7, robotY - 2, 3.5);
+                this.robotGraphics.fillCircle(localX + 7, robotY - 2, 3.5);
+            }
+
+            // Antenna
+            this.robotGraphics.lineStyle(2, color, 0.9);
+            this.robotGraphics.lineBetween(localX, robotY - robotSize / 2, localX, robotY - robotSize / 2 - 10);
+            this.robotGraphics.fillStyle(visorColor, 1);
+            this.robotGraphics.fillCircle(localX, robotY - robotSize / 2 - 12, 3);
+
+            if (slot.bubble && slot.bubble.visible) {
+                slot.bubble.setPosition(localX, robotY - robotSize / 2 - 18);
+            }
+        }
     }
 
     drawAttractMode() {
@@ -258,7 +390,7 @@ class GameScene extends Phaser.Scene {
                     fontFamily: FONTS.heading, fontSize: '22px', fill: HEX.system, letterSpacing: 4, fontWeight: 'bold'
                 }).setOrigin(0.5, 0.5);
 
-                this.bootLoadingText = this.add.text(960, 620, 'Waiting for game server…', {
+                this.bootLoadingText = this.add.text(960, 620, 'Connecting to lobby…', {
                     fontFamily: FONTS.body, fontSize: '18px', fill: HEX.textSecondary, letterSpacing: 2
                 }).setOrigin(0.5, 0.5);
             }
@@ -305,12 +437,20 @@ class GameScene extends Phaser.Scene {
         
         let players = this.currentState.players || [];
         let connectedCount = players.filter(p => p.connected).length;
+        const maxP = this.currentState.maxPlayers || players.length;
+        const duration = this.currentState.gameDurationSeconds;
+        const durationLabel = duration === 0 ? 'ENDLESS' : `${Math.round((duration || 180) / 60)} MIN`;
+        const screensLabel = `${this.currentState.numScreens || numScreens} SCREENS`;
+        const speedLabel = (this.currentState.ballSpeed || 'medium').toUpperCase();
         
         if (screenId === 1) {
+            this.ambientLeftText.setText('LG ARKANOID\nPHONE CONTROLLER');
             this.ambientLeftText.setVisible(true);
+            this.ambientLeftText.setAlpha(0.55);
         } else if (screenId === numScreens) {
-            this.ambientRightText.setText(`Waiting for Players\n${connectedCount} / ${this.currentState.maxPlayers || players.length} Connected`);
+            this.ambientRightText.setText(`Waiting for players\n${connectedCount} / ${maxP}`);
             this.ambientRightText.setVisible(true);
+            this.ambientRightText.setAlpha(0.55);
         } else if (isCenterScreen) {
             const token = this.sessionToken || this.currentState.sessionToken;
             if (!token) {
@@ -320,36 +460,36 @@ class GameScene extends Phaser.Scene {
                 const sessionCodeDiv = document.getElementById('qr-session-code');
                 const sessionCodeInline = document.getElementById('qr-session-code-inline');
                 const waitingText = document.getElementById('qr-waiting-text');
+                const matchMeta = document.getElementById('qr-match-meta');
+                const playerList = document.getElementById('qr-player-list');
                 
                 qrDiv.style.display = 'flex';
+                this.syncQrToCanvas();
                 
                 sessionCodeDiv.innerText = token;
                 sessionCodeInline.innerText = token;
-                
-                if (connectedCount === 0) {
-                    waitingText.innerText = "Waiting for first player...";
-                    this.lobbyPlayerTexts.forEach(p => p.text.setVisible(false));
-                } else {
-                    waitingText.innerText = "";
-                    
-                    const maxP = this.currentState.maxPlayers || players.length;
+                if (matchMeta) {
+                    matchMeta.innerText = `${connectedCount}/${maxP} PLAYERS · ${screensLabel} · ${durationLabel} · ${speedLabel}`;
+                }
+
+                if (playerList) {
+                    let html = '';
                     for (let i = 0; i < maxP; i++) {
-                        if (i >= this.lobbyPlayerTexts.length) break;
-                        let p = players[i];
-                        let txtObj = this.lobbyPlayerTexts[i].text;
-                        
+                        const p = players[i];
                         if (p && p.connected) {
-                            txtObj.setText(`✓ ${p.name || 'Player ' + (i+1)}`);
-                            txtObj.setColor('#4ade80');
+                            html += `<div style="color:#4ade80;margin:4px 0;">✓ ${(p.name || ('Player ' + (i + 1)))}</div>`;
                         } else {
-                            txtObj.setText('Waiting...');
-                            txtObj.setColor('#666666');
+                            html += `<div style="color:#666;margin:4px 0;">○ Slot ${i + 1} waiting…</div>`;
                         }
-                        txtObj.setVisible(true);
                     }
-                    for (let i = maxP; i < this.lobbyPlayerTexts.length; i++) {
-                        this.lobbyPlayerTexts[i].text.setVisible(false);
-                    }
+                    playerList.innerHTML = html;
+                }
+                if (this.lobbyPlayerTexts) this.lobbyPlayerTexts.forEach((p) => p.text.setVisible(false));
+
+                if (connectedCount === 0) {
+                    waitingText.innerText = 'Waiting for first player…';
+                } else {
+                    waitingText.innerText = 'Host starts the match from the phone';
                 }
                 
                 const lanIp = this.sessionLanIp || this.currentState.lanIp;
@@ -358,14 +498,13 @@ class GameScene extends Phaser.Scene {
                     const qrData = `LGARK|${lanIp}|${port}|${token}`;
                     this.qrCodeObj = new QRCode(document.getElementById('qrcode-img'), {
                         text: qrData,
-                        width: 320,
-                        height: 320,
-                        colorDark: "#000000",
-                        colorLight: "#ffffff",
+                        width: 240,
+                        height: 240,
+                        colorDark: '#000000',
+                        colorLight: '#ffffff',
                         correctLevel: QRCode.CorrectLevel.L
                     });
                 }
-                qrDiv.style.top = connectedCount === 0 ? '50%' : '40%';
             }
         }
     }
@@ -385,9 +524,11 @@ class GameScene extends Phaser.Scene {
                 if (data && data.sessionToken) {
                     this.sessionToken = data.sessionToken;
                 }
+                if (data && data.lanIp) this.sessionLanIp = data.lanIp;
+                if (data && data.port) this.sessionPort = data.port;
                 if (this.currentState) {
-                    this.sessionLanIp = this.currentState.lanIp;
-                    this.sessionPort = this.currentState.port;
+                    this.sessionLanIp = this.sessionLanIp || this.currentState.lanIp;
+                    this.sessionPort = this.sessionPort || this.currentState.port;
                 }
             })
             .catch(() => {})
@@ -401,6 +542,18 @@ class GameScene extends Phaser.Scene {
         if (this.ambientLeftText) this.ambientLeftText.setVisible(false);
         if (this.ambientRightText) this.ambientRightText.setVisible(false);
         if (this.lobbyPlayerTexts) this.lobbyPlayerTexts.forEach(p => p.text.setVisible(false));
+        this.hideJoinToast();
+    }
+
+    hideJoinToast() {
+        if (this.joinToastText) {
+            this.tweens.killTweensOf(this.joinToastText);
+            this.joinToastText.setAlpha(0).setY(-80);
+        }
+        if (this.joinToastSubText) {
+            this.tweens.killTweensOf(this.joinToastSubText);
+            this.joinToastSubText.setAlpha(0).setY(-30);
+        }
     }
 
     drawCountdownMode() {
@@ -532,6 +685,8 @@ class GameScene extends Phaser.Scene {
             this.geminiText.setVisible(false);
             this.geminiTitle.setVisible(false);
             this.geminiCardGraphics.clear();
+            if (this.centerCommentaryTitle) this.centerCommentaryTitle.setVisible(false);
+            if (this.centerCommentaryText) this.centerCommentaryText.setVisible(false);
             if (this.rigHealthText) this.rigHealthText.setVisible(false);
             if (this.bottomStatusText) this.bottomStatusText.setVisible(false);
             return;
@@ -542,8 +697,19 @@ class GameScene extends Phaser.Scene {
         if (screenId === numScreens) {
             this.leaderboardTexts.forEach(t => { if (t) t.setVisible(true); });
             this.leaderboardTitle.setVisible(true);
-            this.geminiText.setVisible(true);
-            this.geminiTitle.setVisible(true);
+        }
+        // Commentary lives on the center screen so the room can read it.
+        if (isCenterScreen && this.currentState.lastCommentary) {
+            this.centerCommentaryTitle.setVisible(true);
+            this.centerCommentaryText.setText(this.currentState.lastCommentary);
+            this.centerCommentaryText.setVisible(true);
+        } else if (this.centerCommentaryTitle) {
+            this.centerCommentaryTitle.setVisible(false);
+            this.centerCommentaryText.setVisible(false);
+        }
+        if (screenId === numScreens) {
+            this.geminiText.setVisible(false);
+            this.geminiTitle.setVisible(false);
         }
         if (screenId === 1 && this.bottomStatusText) {
             const fps = this.game.loop.actualFps.toFixed(0);
@@ -673,17 +839,8 @@ class GameScene extends Phaser.Scene {
                 1.0,
                 COLORS.game
             );
-
-            if (this.currentState.lastCommentary) {
-                this.geminiText.setText(this.currentState.lastCommentary);
-                this.geminiTitle.setVisible(true);
-                this.geminiText.setVisible(true);
-                const gBounds = this.geminiText.getBounds();
-                this.drawStandardPanel(this.leaderboardPanelGraphics, 1880 - 350 - 20, 255, 350 + 40, gBounds.height + 55, 1.0, COLORS.system);
-            } else {
-                this.geminiTitle.setVisible(false);
-                this.geminiText.setVisible(false);
-            }
+            this.geminiTitle.setVisible(false);
+            this.geminiText.setVisible(false);
         }
     }
 
@@ -1022,6 +1179,10 @@ class GameScene extends Phaser.Scene {
             if (!state.bricks && this.currentState && this.currentState.bricks) {
                 state.bricks = this.currentState.bricks;
             }
+            // Keep client-only commentary text across authoritative ticks.
+            if (this.currentState && this.currentState.lastCommentary && !state.lastCommentary) {
+                state.lastCommentary = this.currentState.lastCommentary;
+            }
             this.currentState = state;
         });
 
@@ -1094,6 +1255,40 @@ class GameScene extends Phaser.Scene {
             if (this.currentState) {
                 this.currentState.lastCommentary = message;
             }
+
+            // Drive neon robots from commentary events
+            const players = (this.currentState && this.currentState.players) || [];
+            let targetId = data.playerId || null;
+            if (!targetId && data.eventType === 'life_lost') {
+                const hurt = players.find((p) => p.connected && p.lives >= 0);
+                targetId = hurt && hurt.id;
+            }
+            const state =
+                data.eventType === 'life_lost' ? 'alert' :
+                (data.eventType === 'multi_ball' || data.eventType === 'level_cleared') ? 'excited' :
+                'talking';
+            if (targetId) {
+                this.setRobotState(targetId, state);
+                const idx = players.findIndex((p) => p.id === targetId);
+                if (idx >= 0 && this.robots[idx] && this.robots[idx].bubble && message) {
+                    const bubble = this.robots[idx].bubble;
+                    bubble.setText(message);
+                    bubble.setVisible(true);
+                    bubble.setAlpha(1);
+                    this.tweens.killTweensOf(bubble);
+                    this.tweens.add({
+                        targets: bubble,
+                        alpha: 0,
+                        delay: 3200,
+                        duration: 400,
+                        onComplete: () => bubble.setVisible(false),
+                    });
+                }
+            } else {
+                players.filter((p) => p.connected).forEach((p) => this.setRobotState(p.id, state, 2200));
+            }
+
+            if (isCenterScreen) this.speakCommentary(message);
         });
 
         this.socket.on('level_source', (data) => {
@@ -1143,8 +1338,8 @@ class GameScene extends Phaser.Scene {
                 }).setOrigin(0.5, 0.5).setDepth(500);
             }
 
-            this.joinToastText.setText(`🎮  ${playerName} HAS JOINED!`);
-            this.joinToastSubText.setText(`Player ${playerNumber} · ${connectedCount}/${data.maxPlayers || connectedCount} Connected`);
+            this.joinToastText.setText(`${playerName} JOINED`);
+            this.joinToastSubText.setText(`P${playerNumber} · ${connectedCount}/${data.maxPlayers || connectedCount} connected`);
 
             this.tweens.killTweensOf(this.joinToastText);
             this.tweens.killTweensOf(this.joinToastSubText);
@@ -1218,7 +1413,13 @@ const config = {
     height: 1080,
     backgroundColor: HEX.bgDark,
     scene: [GameScene],
-    banner: false
+    banner: false,
+    scale: {
+        mode: Phaser.Scale.FIT,
+        autoCenter: Phaser.Scale.CENTER_BOTH,
+        width: 1920,
+        height: 1080,
+    },
 };
 
 if (document.fonts) {
@@ -1228,11 +1429,11 @@ if (document.fonts) {
         document.fonts.load('16px "Inter"'),
         document.fonts.load('bold 16px "Inter"')
     ]).then(() => {
-        new Phaser.Game(config);
+        window.__lgGame = new Phaser.Game(config);
     }).catch(err => {
         console.error("Font preload failed", err);
-        new Phaser.Game(config);
+        window.__lgGame = new Phaser.Game(config);
     });
 } else {
-    new Phaser.Game(config);
+    window.__lgGame = new Phaser.Game(config);
 }
