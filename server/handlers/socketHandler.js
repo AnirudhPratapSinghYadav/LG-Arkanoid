@@ -1,6 +1,17 @@
 const gameEngine = require('../gameEngine.js');
-const { PLAYER_SLOT_IDS, BALL_RADIUS, SCREEN_WIDTH, normalizeDurationSeconds } = require('../config.js');
+const {
+  PLAYER_SLOT_IDS,
+  BALL_RADIUS,
+  SCREEN_WIDTH,
+  normalizeDurationSeconds,
+  generateResumeToken,
+  ALLOWED_BALL_SPEEDS,
+  getLanIp,
+  PORT,
+  generateToken,
+} = require('../config.js');
 const { triggerCommentary } = require('../services/geminiService.js');
+const crypto = require('crypto');
 
 const socketToPlayerIndex = new Map();
 const disconnectTimers = new Map();
@@ -10,9 +21,8 @@ function timingSafeTokenCompare(provided, stored){
   if(typeof provided !== 'string' || typeof stored !== 'string'){
     return false;
   }
-  const crypto = require('crypto');
-  const a = Buffer.from(provided.padEnd(6, '0'));
-  const b = Buffer.from(stored.padEnd(6, '0'));
+  const a = Buffer.from(provided.padEnd(Math.max(provided.length, stored.length, 1), '\0'));
+  const b = Buffer.from(stored.padEnd(Math.max(provided.length, stored.length, 1), '\0'));
   if(a.length !== b.length){
     return false;
   }
@@ -170,9 +180,37 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
 
     if(!isNaN(screenId) && screenId>=1 && screenId<=(worldState.numScreens || 3)){
       socket.join(`screen-${screenId}`);
+      socket.emit('session_info', {
+        sessionToken: worldState.sessionToken,
+        sessionId: worldState.sessionId,
+        lanIp: getLanIp(),
+        port: PORT,
+        numScreens: worldState.numScreens || 3,
+        maxPlayers: worldState.maxPlayers || 3,
+        gameDurationSeconds: worldState.gameDurationSeconds ?? 180,
+        ballSpeed: worldState.ballSpeed || 'medium',
+      });
     }
 
     broadcastGameState();
+
+    socket.on('request_session_info', ()=>{
+      // Only panoramic screen clients may refresh the join code.
+      if(isNaN(screenId) || screenId < 1 || screenId > (worldState.numScreens || 3)){
+        socket.emit('error', { errorCode: 1007, message: 'Not authorized for session info' });
+        return;
+      }
+      socket.emit('session_info', {
+        sessionToken: worldState.sessionToken,
+        sessionId: worldState.sessionId,
+        lanIp: getLanIp(),
+        port: PORT,
+        numScreens: worldState.numScreens || 3,
+        maxPlayers: worldState.maxPlayers || 3,
+        gameDurationSeconds: worldState.gameDurationSeconds ?? 180,
+        ballSpeed: worldState.ballSpeed || 'medium',
+      });
+    });
 
     const socketRateLimits = new Map();
     
@@ -280,15 +318,24 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
         if(worldState.players.length > newMax){
           worldState.players = worldState.players.slice(0, newMax);
         }
-        if(worldState.masterPlayerIndex >= worldState.players.length){
-          worldState.masterPlayerIndex = 0;
+        if(worldState.masterPlayerIndex >= worldState.players.length || !worldState.players[worldState.masterPlayerIndex]?.connected){
+          const connectedIdx = worldState.players.findIndex((p) => p.connected);
+          worldState.masterPlayerIndex = connectedIdx >= 0 ? connectedIdx : 0;
         }
       }
       if(typeof data?.ballSpeed === 'string'){
+        if(!ALLOWED_BALL_SPEEDS.has(data.ballSpeed)){
+          socket.emit('error', { errorCode: 1005, message: 'Invalid ball speed' });
+          return;
+        }
         worldState.ballSpeed = data.ballSpeed;
       }
       if(data?.durationSeconds !== undefined && data?.durationSeconds !== null){
         worldState.gameDurationSeconds = normalizeDurationSeconds(data.durationSeconds, worldState.gameDurationSeconds || 180);
+      }
+      if(worldState.masterPlayerIndex >= worldState.players.length || !worldState.players[worldState.masterPlayerIndex]?.connected){
+        const connectedIdx = worldState.players.findIndex((p) => p.connected);
+        worldState.masterPlayerIndex = connectedIdx >= 0 ? connectedIdx : 0;
       }
       broadcastGameState();
     });
@@ -364,6 +411,15 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
       
       ipJoinAttempts.delete(ip);
 
+      const status = worldState.gameStatus || 'lobby';
+      if (status === 'playing' || status === 'countdown') {
+        socket.emit('join_rejected', {
+          errorCode: 1010,
+          message: 'Match already in progress. Wait for the next lobby.',
+        });
+        return;
+      }
+
       let slotIndex = worldState.players.findIndex((p) => !p.connected && p.name === playerName);
       if (slotIndex === -1) {
         slotIndex = worldState.players.findIndex((p) => !p.connected && !p.name);
@@ -389,6 +445,7 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
       let cleanName = (typeof playerName === 'string') ? playerName.replace(/[^a-zA-Z0-9 ]/g, '').trim() : '';
       player.name = cleanName.length > 0 ? cleanName.substring(0, 12) : `Player ${slotIndex + 1}`;
       player.socketId = socket.id;
+      player.resumeToken = generateResumeToken();
       player.paddleWidth = player.paddleWidth || 300;
       if (typeof player.paddleX !== 'number') {
         player.paddleX = ((worldState.numScreens || 3) * SCREEN_WIDTH) / 2 - (player.paddleWidth / 2);
@@ -407,6 +464,7 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
         playerNumber: slotIndex+1,
         isSpectator: false,
         sessionId: worldState.sessionId,
+        resumeToken: player.resumeToken,
       });
 
       io.emit('player_joined', {
@@ -495,17 +553,17 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
     });
 
     socket.on('resume_request', (data)=>{
-      const { playerId, sessionId, sessionToken } = data || {};
-      if(typeof playerId !== 'string' || typeof sessionId !== 'string' || typeof sessionToken !== 'string'){
+      const { playerId, sessionId, resumeToken } = data || {};
+      if(typeof playerId !== 'string' || typeof sessionId !== 'string' || typeof resumeToken !== 'string' || resumeToken.length < 16){
         socket.emit('join_rejected', { errorCode: 1005, message: 'Invalid resume payload' });
+        return;
+      }
+      if(playerId.startsWith('spectator_')){
+        socket.emit('join_rejected', { errorCode: 1008, message: 'Spectators cannot resume a player slot' });
         return;
       }
       if(sessionId !== worldState.sessionId){
         socket.emit('join_rejected', { errorCode: 1001, message: 'Session expired' });
-        return;
-      }
-      if(!timingSafeTokenCompare(sessionToken, String(worldState.sessionToken || ''))){
-        socket.emit('join_rejected', { errorCode: 1001, message: 'Invalid session token' });
         return;
       }
 
@@ -516,6 +574,11 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
       }
 
       const player = worldState.players[slotIndex];
+      if(!player.resumeToken || !timingSafeTokenCompare(resumeToken, player.resumeToken)){
+        socket.emit('join_rejected', { errorCode: 1001, message: 'Invalid resume token' });
+        return;
+      }
+
       if(player.connected && player.socketId && player.socketId !== socket.id){
         const oldSocket = io.sockets.sockets.get(player.socketId);
         if(oldSocket) oldSocket.disconnect(true);
@@ -524,6 +587,8 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
       player.connected = true;
       player.socketId = socket.id;
       player.lastNonces = [];
+      // Rotate resume secret after each successful reclaim.
+      player.resumeToken = generateResumeToken();
       socketToPlayerIndex.set(socket.id, slotIndex);
 
       if(disconnectTimers.has(playerId)){
@@ -536,6 +601,7 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
         playerNumber: slotIndex + 1,
         isSpectator: false,
         sessionId: worldState.sessionId,
+        resumeToken: player.resumeToken,
         resumed: true,
       });
       broadcastGameState();

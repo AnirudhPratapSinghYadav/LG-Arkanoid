@@ -392,12 +392,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       final result = await Navigator.pushNamed(context, '/qrscan', arguments: 'rigConnect');
                       if (result != null && result is String && result.startsWith('LGRIG|')) {
                         final parts = result.split('|');
+                        // Never autofill SSH password from QR — treat that field as opaque.
                         if (parts.length >= 6) {
                           setState(() {
                             _usernameController.text = parts[1];
                             _hostController.text = parts[2];
                             _portController.text = parts[3];
-                            _passwordController.text = parts[4];
                             _screensController.text = parts[5];
                           });
                           _saveValues();

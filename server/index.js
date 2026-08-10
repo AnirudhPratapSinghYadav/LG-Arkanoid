@@ -13,8 +13,8 @@ const { PORT, TICK_MS, SCREEN_WIDTH, BALL_RADIUS, getLanIp, createInitialWorldSt
 if (!GEMINI_API_KEY) {
   console.warn('WARNING: GEMINI_API_KEY is missing. AI commentary and level generation will be disabled.');
 }
-if (LG_PASSWORD === undefined || LG_PASSWORD === null || LG_PASSWORD === '') {
-  console.error('FATAL: LG_PASSWORD cannot be strictly empty. Please configure it in .env');
+if (process.env.LG_PASSWORD === undefined) {
+  console.error('FATAL: LG_PASSWORD must be set in the environment (.env). Use empty value for SSH key auth.');
   process.exit(1);
 }
 const { triggerCommentary, pollGameMasterAsync, generateNextLevelAsync } = require('./services/geminiService.js');
@@ -249,6 +249,12 @@ function returnToLobby() {
   worldState.countdownStartedAt = null;
   worldState.level = 1;
   worldState.currentLevel = 1;
+  // Rotate join secrets so leaked lobby codes / resumes die with the match.
+  worldState.sessionId = require('crypto').randomUUID();
+  worldState.sessionToken = require('./config.js').generateToken();
+  for (const p of worldState.players) {
+    p.resumeToken = null;
+  }
   worldState.longestRally = 0;
   worldState.powerupsCollected = 0;
   worldState.highestCombo = 0;
@@ -276,6 +282,19 @@ function returnToLobby() {
   }
 
   io.emit('lobby_ready', { sessionId: worldState.sessionId });
+  // Push fresh join code to panoramic screens only.
+  for (let i = 1; i <= (worldState.numScreens || 3); i++) {
+    io.to(`screen-${i}`).emit('session_info', {
+      sessionToken: worldState.sessionToken,
+      sessionId: worldState.sessionId,
+      lanIp: getLanIp(),
+      port: PORT,
+      numScreens: worldState.numScreens || 3,
+      maxPlayers: worldState.maxPlayers || 3,
+      gameDurationSeconds: worldState.gameDurationSeconds ?? 180,
+      ballSpeed: worldState.ballSpeed || 'medium',
+    });
+  }
   broadcastGameState();
 }
 

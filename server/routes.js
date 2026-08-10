@@ -19,7 +19,7 @@ function createRouter(worldState) {
       gameStatus: worldState.gameStatus,
       gameActive: worldState.gameStatus === 'playing',
       connectedPlayers: worldState.players.filter((p) => p.connected).length,
-      sessionToken: worldState.sessionToken,
+      // sessionToken intentionally omitted — join code is pushed only to screen sockets.
       lanIp: getLanIp(),
       port: process.env.PORT || 3000,
     });

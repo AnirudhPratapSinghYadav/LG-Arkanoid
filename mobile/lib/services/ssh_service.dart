@@ -123,12 +123,23 @@ class SSHService {
   // Bash script on the master machine. The numScreens parameter tells the
   // script how many screens to open Chromium on.
   // --------------------------------------------------------------------------
+  static String? _safeRemotePath(String path) {
+    // Allow only absolute POSIX-ish paths without shell metacharacters.
+    if (!RegExp(r'^/[A-Za-z0-9._/\-]+$').hasMatch(path)) return null;
+    if (path.contains('..')) return null;
+    return path;
+  }
+
   Future<String> launchGame(int numScreens) async {
     final prefs = await SharedPreferences.getInstance();
-    final remotePath = prefs.getString(prefRemotePath) ?? defaultRemotePath;
-    
+    final remotePath = _safeRemotePath(
+          prefs.getString(prefRemotePath) ?? defaultRemotePath,
+        ) ??
+        defaultRemotePath;
+    final screens = numScreens.clamp(1, 9);
+
     return sendCommand(
-      'bash $remotePath/scripts/open-arkanoid.sh $numScreens',
+      'bash ${remotePath}/scripts/open-arkanoid.sh $screens',
     );
   }
 
@@ -141,10 +152,13 @@ class SSHService {
   // --------------------------------------------------------------------------
   Future<String> closeGame() async {
     final prefs = await SharedPreferences.getInstance();
-    final remotePath = prefs.getString(prefRemotePath) ?? defaultRemotePath;
-    
+    final remotePath = _safeRemotePath(
+          prefs.getString(prefRemotePath) ?? defaultRemotePath,
+        ) ??
+        defaultRemotePath;
+
     return sendCommand(
-      'bash $remotePath/scripts/close-arkanoid.sh',
+      'bash ${remotePath}/scripts/close-arkanoid.sh',
     );
   }
 

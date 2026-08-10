@@ -4,6 +4,7 @@ let myPlayerId = null;
 let myPlayerNumber = null;
 let mySessionId = null;
 let mySessionToken = null;
+let myResumeToken = null;
 let isHost = false;
 let isSpectator = false;
 let myScore = 0;
@@ -40,11 +41,11 @@ function joinGame() {
     });
 
     socket.on('connect', () => {
-        if (myPlayerId && mySessionId && mySessionToken) {
+        if (myPlayerId && mySessionId && myResumeToken) {
             socket.emit('resume_request', {
                 playerId: myPlayerId,
                 sessionId: mySessionId,
-                sessionToken: mySessionToken
+                resumeToken: myResumeToken
             });
         } else {
             socket.emit('join_game', {
@@ -59,6 +60,7 @@ function joinGame() {
         myPlayerId = data.playerId;
         myPlayerNumber = data.playerNumber;
         mySessionId = data.sessionId;
+        if (data.resumeToken) myResumeToken = data.resumeToken;
         isSpectator = !!data.isSpectator;
         playerColor = PLAYER_COLORS[(Math.max(1, myPlayerNumber) - 1) % PLAYER_COLORS.length];
         gameEndShown = false;
@@ -86,7 +88,7 @@ function joinGame() {
 
         const statusEl = document.getElementById('hudStatus');
         statusEl.style.color = '#4CAF50';
-        statusEl.innerHTML = '<span style="width:6px;height:6px;border-radius:50%;background:#4CAF50;display:inline-block;"></span> ONLINE';
+        statusEl.innerHTML = '<span class="hud-status-dot"></span> ONLINE';
 
         const puck = document.getElementById('touchPuck');
         puck.style.background = `radial-gradient(circle, ${playerColor}, ${playerColor}88, ${playerColor}33)`;
@@ -245,10 +247,56 @@ function clearIdentity() {
     myPlayerNumber = null;
     mySessionId = null;
     mySessionToken = null;
+    myResumeToken = null;
     isHost = false;
     isSpectator = false;
     myInventory = [];
     isConnected = false;
+}
+
+function bindUi() {
+    const joinBtn = document.getElementById('joinBtn');
+    if (joinBtn) joinBtn.addEventListener('click', () => joinGame());
+
+    const startBtn = document.getElementById('startMatchBtn');
+    if (startBtn) startBtn.addEventListener('click', () => startMatch());
+
+    const backBtn = document.getElementById('backToJoinBtn');
+    if (backBtn) backBtn.addEventListener('click', () => backToJoin());
+
+    const closeAbout = document.getElementById('closeAboutBtn');
+    if (closeAbout) {
+        closeAbout.addEventListener('click', () => {
+            const modal = document.getElementById('aboutModal');
+            if (modal) modal.style.display = 'none';
+        });
+    }
+
+    document.querySelectorAll('.powerup-btn[data-type]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            const type = btn.getAttribute('data-type');
+            if (type) activatePowerUp(type);
+        });
+    });
+
+    const tokenInput = document.getElementById('tokenInput');
+    if (tokenInput) {
+        tokenInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') joinGame();
+        });
+    }
+    const nameInput = document.getElementById('nameInput');
+    if (nameInput) {
+        nameInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') joinGame();
+        });
+    }
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bindUi);
+} else {
+    bindUi();
 }
 
 function backToJoin() {

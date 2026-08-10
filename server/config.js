@@ -9,8 +9,14 @@ const SCREEN_WIDTH = 1920;
 const BALL_RADIUS = 8;
 const TICK_MS = 16;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
-const LG_PASSWORD = process.env.LG_PASSWORD || 'lg';
+// No default password — empty means key-based SSH only (scripts already handle that).
+const LG_PASSWORD = process.env.LG_PASSWORD != null ? process.env.LG_PASSWORD : '';
 const MAX_SCREENS = 12;
+const ALLOWED_BALL_SPEEDS = new Set(['slow', 'medium', 'fast', 'insane']);
+
+function generateResumeToken() {
+  return crypto.randomBytes(24).toString('hex');
+}
 
 function parseScreenCount(value, fallback = 3) {
   const parsed = Number.parseInt(value, 10);
@@ -152,7 +158,9 @@ module.exports = {
   getScreenBoundaries,
   getLanIp,
   generateToken,
+  generateResumeToken,
   createInitialWorldState,
   parseScreenCount,
   normalizeDurationSeconds,
+  ALLOWED_BALL_SPEEDS,
 };

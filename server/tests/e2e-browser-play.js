@@ -14,7 +14,14 @@ const CHROME =
   'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
 
 function getPuppeteer() {
-  return require(path.join(__dirname, '..', 'node_modules', 'puppeteer-core'));
+  const candidates = [
+    path.join(__dirname, '..', 'node_modules', 'puppeteer-core'),
+    path.join(__dirname, '..', '..', 'node_modules', 'puppeteer-core'),
+  ];
+  for (const c of candidates) {
+    try { return require(c); } catch (_) {}
+  }
+  return require('puppeteer-core');
 }
 
 function httpGetJson(urlPath) {
@@ -46,7 +53,39 @@ async function main() {
   const puppeteer = getPuppeteer();
   const health = await httpGetJson('/health');
   record('Server healthy before browser test', health.status === 'ok', JSON.stringify(health));
-  const token = health.sessionToken;
+  record('health does not leak sessionToken', health.sessionToken === undefined, String(health.sessionToken));
+
+  // Join code comes from panoramic screen sockets only.
+  const { io } = (() => {
+    const candidates = [
+      path.join(__dirname, '..', 'node_modules', 'socket.io-client'),
+      path.join(__dirname, '..', '..', 'node_modules', 'socket.io-client'),
+    ];
+    for (const c of candidates) {
+      try { return require(c); } catch (_) {}
+    }
+    return require('socket.io-client');
+  })();
+  const screenSock = io(BASE, {
+    transports: ['websocket', 'polling'],
+    query: { screenId: '2' },
+    forceNew: true,
+    reconnection: false,
+  });
+  const token = await new Promise((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error('session_info timeout')), 8000);
+    screenSock.on('session_info', (info) => {
+      clearTimeout(t);
+      resolve(info.sessionToken);
+    });
+    screenSock.on('connect', () => screenSock.emit('request_session_info'));
+    screenSock.on('connect_error', (err) => {
+      clearTimeout(t);
+      reject(err);
+    });
+  });
+  screenSock.disconnect();
+  record('Got session token from screen socket', String(token).length === 4, String(token));
 
   const browser = await puppeteer.launch({
     executablePath: CHROME,
@@ -140,7 +179,7 @@ async function main() {
       await page.click('#nameInput', { clickCount: 3 });
       await page.type('#nameInput', name, { delay: 20 });
       await Promise.all([
-        page.click('button.join-btn'),
+        page.click('#joinBtn'),
         page.waitForFunction(() => {
           const area = document.getElementById('gameArea');
           const join = document.getElementById('joinArea');

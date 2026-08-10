@@ -71,29 +71,50 @@ class _LgButtonState extends State<LgButton> with SingleTickerProviderStateMixin
             child: Container(
             height: 56,
             decoration: BoxDecoration(
-              color: widget.isPrimary ? accentPrimary : Colors.transparent,
+              gradient: widget.isPrimary
+                  ? const LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Color(0xFF33D0FF),
+                        Color(0xFF20C5FF),
+                        Color(0xFF1296C4),
+                      ],
+                    )
+                  : null,
+              color: widget.isPrimary ? null : Colors.transparent,
               border: Border.all(
-                color: _isFocused ? accentSystem : (widget.isPrimary ? accentPrimary : Colors.white.withOpacity(0.12)),
+                color: _isFocused
+                    ? accentSystem
+                    : (widget.isPrimary ? const Color(0xFF20C5FF) : Colors.white.withOpacity(0.12)),
                 width: _isFocused ? 2.5 : 1.5,
               ),
               borderRadius: BorderRadius.circular(14),
-              boxShadow: _isFocused
+              boxShadow: widget.isPrimary && !isDisabled
                   ? [
                       BoxShadow(
-                        color: accentSystem.withOpacity(0.4),
-                        blurRadius: 12,
+                        color: accentSystem.withOpacity(_isFocused ? 0.45 : 0.28),
+                        blurRadius: _isFocused ? 16 : 12,
+                        offset: const Offset(0, 6),
                       )
                     ]
-                  : [],
+                  : (_isFocused
+                      ? [
+                          BoxShadow(
+                            color: accentSystem.withOpacity(0.4),
+                            blurRadius: 12,
+                          )
+                        ]
+                      : []),
             ),
             child: Center(
               child: Text(
                 widget.label,
                 style: GoogleFonts.spaceGrotesk(
-                  color: widget.isPrimary ? bgDark : textPrimary,
-                  fontSize: 16,
+                  color: widget.isPrimary ? const Color(0xFF041018) : textPrimary,
+                  fontSize: 15,
                   fontWeight: FontWeight.w700,
-                  letterSpacing: 0.5,
+                  letterSpacing: 0.8,
                 ),
               ),
             ),

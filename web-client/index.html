@@ -16,21 +16,25 @@
     <script src="/js/vendor/qrcode.min.js"></script>
 </head>
 <body>
-    <div id="qrcode">
-        <h2>SCAN TO JOIN</h2>
-        <div id="qrcode-img"></div>
-        <div style="font-family:'VT323',monospace;font-size:1.6rem;color:#4ade80;margin-top:14px;letter-spacing:2px;">Session Code</div>
-        <div id="qr-session-code"></div>
-        <div id="qr-match-meta">Loading match setup…</div>
-        <div id="qr-instructions" style="font-family:'VT323',monospace;font-size:1.35rem;color:#aaa;margin-top:16px;line-height:1.55;">
-            Open the LG Arkanoid app<br/>or enter code <span id="qr-session-code-inline" style="color:#fff;"></span>
-            <div id="qr-waiting-text" style="color:#4ade80;margin-top:10px;">Waiting for first player…</div>
-        </div>
-        <div id="qr-player-list" style="font-family:'Space Grotesk',sans-serif;font-size:0.95rem;margin-top:12px;color:#9aa4af;"></div>
+    <div class="stage-vignette" aria-hidden="true"></div>
+    <div class="brand-mark" aria-hidden="true">
+        <span class="brand-mark__eyebrow">Liquid Galaxy</span>
+        <span class="brand-mark__name">LG Arkanoid</span>
     </div>
 
-    <div style="position:fixed; top:0; right:0; z-index:999; padding:6px; background:rgba(0,0,0,0.4); color:#fff; font-family:'Space Grotesk',sans-serif; font-size:10px; line-height:1.4; text-align:right;">
-      Liquid Galaxy<br>LG Arkanoid
+    <div id="qrcode" class="lobby-card" aria-live="polite">
+        <div class="lobby-card__glow" aria-hidden="true"></div>
+        <p class="lobby-card__kicker">Scan to join</p>
+        <div id="qrcode-img" class="lobby-card__qr"></div>
+        <p class="lobby-card__label">Session code</p>
+        <div id="qr-session-code" class="lobby-card__code"></div>
+        <div id="qr-match-meta" class="lobby-card__meta">Loading match setup…</div>
+        <p id="qr-instructions" class="lobby-card__hint">
+            Open the LG Arkanoid app<br>
+            or type code <span id="qr-session-code-inline"></span>
+        </p>
+        <div id="qr-waiting-text" class="lobby-card__wait">Waiting for first player…</div>
+        <div id="qr-player-list" class="lobby-card__players"></div>
     </div>
 
     <script src="js/config.js"></script>

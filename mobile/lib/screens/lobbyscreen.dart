@@ -176,7 +176,7 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
     ];
 
     return Scaffold(
-      backgroundColor: bgDark,
+      backgroundColor: Colors.transparent,
       body: MissionControlBackground(
         child: Stack(
           children: [
@@ -407,7 +407,7 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
                                 child: LgButton(
                                   label: 'QR INVITE',
                                   onPressed: () {
-                                    final token = gameState?['sessionToken'] ?? '';
+                                    final token = _gameService.sessionToken ?? '';
                                     final payload = 'LGARK|${_gameService.serverAddress}|${_gameService.serverPort}|$token';
                                     Navigator.pushNamed(context, '/qrinvite', arguments: payload);
                                   },

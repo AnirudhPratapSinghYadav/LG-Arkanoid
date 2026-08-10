@@ -1,0 +1,9 @@
+{
+  "name": "lg-arkanoid-web-client",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Phaser web screens and controller for LG Arkanoid",
+  "scripts": {
+    "build": "echo \"Static assets served by Express; use root vite for HMR\""
+  }
+}

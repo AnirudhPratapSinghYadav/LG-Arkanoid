@@ -13,31 +13,40 @@
     <link rel="stylesheet" href="css/controller.css">
 </head>
 <body>
+    <div class="ctrl-atmosphere" aria-hidden="true"></div>
 
-    <!-- Join Screen -->
-    <div id="joinArea">
-        <div class="join-title">LG ARKANOID</div>
-        <div class="join-sub">Enter Session Token from Rig</div>
-        <input class="join-input" type="text" id="tokenInput" placeholder="Session Code (4 letters)" maxlength="4" />
-        <input class="join-input" type="text" id="nameInput" placeholder="Your Name" maxlength="12" />
-        <button class="join-btn" onclick="joinGame()">JOIN GAME</button>
+    <div id="joinArea" class="join-shell">
+        <div class="join-brand">
+            <div class="join-brand__pulse" aria-hidden="true"></div>
+            <p class="join-brand__eyebrow">Liquid Galaxy</p>
+            <h1 class="join-title">LG Arkanoid</h1>
+            <p class="join-sub">Enter the 4-letter session code from the rig</p>
+        </div>
+        <div class="join-form">
+            <label class="join-field">
+                <span>Session code</span>
+                <input class="join-input" type="text" id="tokenInput" placeholder="ABCD" maxlength="4" autocomplete="off" autocapitalize="characters" />
+            </label>
+            <label class="join-field">
+                <span>Player name</span>
+                <input class="join-input" type="text" id="nameInput" placeholder="Your name" maxlength="12" autocomplete="nickname" />
+            </label>
+            <button class="join-btn" type="button" id="joinBtn">Join game</button>
+        </div>
     </div>
 
-    <!-- Game Controller -->
     <div id="gameArea">
-        <!-- HUD Bar -->
         <div class="hud-bar">
             <div class="hud-player">
                 <div class="hud-dot" id="hudDot" style="background:#20c5ff; color:#20c5ff;"></div>
                 <div class="hud-label" id="hudPlayerLabel">P1 CONTROLLER</div>
             </div>
             <div class="hud-status" id="hudStatus">
-                <span style="width:6px;height:6px;border-radius:50%;background:#4CAF50;display:inline-block;"></span> ONLINE
+                <span class="hud-status-dot"></span> ONLINE
             </div>
             <div class="hud-ping" id="hudPing">--ms</div>
         </div>
 
-        <!-- Stats Row -->
         <div class="stats-row">
             <div class="stat-card">
                 <div class="stat-value" id="scoreVal" style="color:#20c5ff;">00000</div>
@@ -63,28 +72,28 @@
             </div>
         </div>
 
-        <div id="spectatorNote" style="display:none;text-align:center;color:#9AA4AF;padding:12px;font-family:'Space Grotesk',sans-serif;">
+        <div id="spectatorNote" class="spectator-note">
             Lobby is full. You are spectating this match.
         </div>
 
-        <div id="hostControls" style="display:none;padding:0 16px 12px 16px;">
-            <button class="join-btn" style="max-width:100%;" onclick="startMatch()">START MATCH</button>
+        <div id="hostControls" class="host-controls">
+            <button class="join-btn host-start" type="button" id="startMatchBtn">Start match</button>
         </div>
 
         <div class="powerups-row" id="powerupsRow">
-            <div class="powerup-btn disabled" data-type="wide_paddle" onclick="activatePowerUp('wide_paddle')">
+            <div class="powerup-btn disabled" data-type="wide_paddle">
                 <span class="pu-count">0</span>
                 <div class="pu-label" style="color:#4CAF50;">WIDE</div>
             </div>
-            <div class="powerup-btn disabled" data-type="slow_ball" onclick="activatePowerUp('slow_ball')">
+            <div class="powerup-btn disabled" data-type="slow_ball">
                 <span class="pu-count">0</span>
                 <div class="pu-label" style="color:#20c5ff;">SLOW</div>
             </div>
-            <div class="powerup-btn disabled" data-type="multi_ball" onclick="activatePowerUp('multi_ball')">
+            <div class="powerup-btn disabled" data-type="multi_ball">
                 <span class="pu-count">0</span>
                 <div class="pu-label" style="color:#F4A261;">MULTI</div>
             </div>
-            <div class="powerup-btn disabled" data-type="bomb" onclick="activatePowerUp('bomb')">
+            <div class="powerup-btn disabled" data-type="bomb">
                 <span class="pu-count">0</span>
                 <div class="pu-label" style="color:#E76F51;">BOMB</div>
             </div>
@@ -94,29 +103,26 @@
             <div class="touch-pad" id="touchPad">
                 <div class="touch-track" id="touchTrack"></div>
                 <div class="puck" id="touchPuck"></div>
-                <div class="touch-label">DRAG TO MOVE PADDLE</div>
+                <div class="touch-label">Drag to move paddle</div>
             </div>
         </div>
     </div>
 
-    <!-- Game End Overlay -->
     <div class="game-end-overlay" id="gameEndOverlay">
-        <span class="material-icons-round ge-icon">emoji_events</span>
         <div class="ge-title" id="geTitle">GAME OVER</div>
         <div class="ge-subtitle" id="geSubtitle">Player 1 wins!</div>
         <div class="ge-score" id="geScore" style="color:#20c5ff;"></div>
         <div class="ge-score" id="geRank" style="color:#9AA4AF;"></div>
-        <button class="ge-btn" onclick="backToJoin()">BACK TO LOBBY</button>
+        <button class="ge-btn" type="button" id="backToJoinBtn">Back to lobby</button>
     </div>
 
-    <!-- About Modal -->
     <div id="aboutModal" class="modal">
         <div class="modal-content">
             <img src="assets/lg-logo.png" alt="LG Logo" style="max-height:40px;display:block;margin:0 auto 12px auto;">
             <h3 style="font-family:'Space Grotesk';font-size:20px;color:#20c5ff;margin-bottom:12px;">LG Arkanoid</h3>
             <p style="color:#9AA4AF;font-size:13px;">Anirudh Pratap Singh Yadav</p>
-            <p style="color:#9AA4AF;font-size:11px;margin-top:4px;">Gemini Summer of Code · Liquid Galaxy</p>
-            <button class="join-btn" style="margin-top:20px;max-width:100%;" onclick="document.getElementById('aboutModal').style.display='none'">CLOSE</button>
+            <p style="color:#9AA4AF;font-size:11px;margin-top:4px;">Liquid Galaxy</p>
+            <button class="join-btn" type="button" id="closeAboutBtn" style="margin-top:20px;max-width:100%;">Close</button>
         </div>
     </div>
 

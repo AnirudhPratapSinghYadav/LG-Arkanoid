@@ -8,7 +8,17 @@
 
 const http = require('http');
 const path = require('path');
-const { io } = require(path.join(__dirname, '..', 'node_modules', 'socket.io-client'));
+function requireIoClient() {
+  const candidates = [
+    path.join(__dirname, '..', 'node_modules', 'socket.io-client'),
+    path.join(__dirname, '..', '..', 'node_modules', 'socket.io-client'),
+  ];
+  for (const c of candidates) {
+    try { return require(c); } catch (_) {}
+  }
+  return require('socket.io-client');
+}
+const { io } = requireIoClient();
 
 const PORT = process.env.PORT || 3000;
 const BASE = `http://127.0.0.1:${PORT}`;
@@ -39,6 +49,10 @@ function connectSocket(query, label) {
       reconnection: false,
       timeout: 8000,
     });
+    socket.__lastGameState = null;
+    socket.__lastSessionInfo = null;
+    socket.on('game_state', (st) => { socket.__lastGameState = st; });
+    socket.on('session_info', (info) => { socket.__lastSessionInfo = info; });
     const t = setTimeout(() => reject(new Error(`${label} connect timeout`)), 8000);
     socket.on('connect', () => {
       clearTimeout(t);
@@ -49,6 +63,11 @@ function connectSocket(query, label) {
       reject(err);
     });
   });
+}
+
+async function waitCachedOrOnce(socket, event, cacheKey, ms = 5000) {
+  if (socket[cacheKey]) return socket[cacheKey];
+  return once(socket, event, ms);
 }
 
 function once(socket, event, ms = 5000) {
@@ -87,9 +106,11 @@ async function main() {
   try { healthJson = JSON.parse(health.body); } catch (_) {}
   record('GET /health 200', health.status === 200, JSON.stringify(healthJson));
   record('health.numScreens === 3', healthJson && healthJson.numScreens === 3, String(healthJson && healthJson.numScreens));
-  record('health.sessionToken length 4', healthJson && String(healthJson.sessionToken).length === 4, String(healthJson && healthJson.sessionToken));
-
-  const token = healthJson.sessionToken;
+  record(
+    'health does not leak sessionToken',
+    healthJson && healthJson.sessionToken === undefined,
+    String(healthJson && healthJson.sessionToken)
+  );
 
   for (const n of [1, 2, 3]) {
     const page = await httpGet('/' + n);
@@ -102,6 +123,11 @@ async function main() {
 
   const ctrl = await httpGet('/controller');
   record('GET /controller serves page', ctrl.status === 200 && ctrl.body.length > 100, `status=${ctrl.status} bytes=${ctrl.body.length}`);
+  record(
+    'controller.html has no inline onclick handlers',
+    ctrl.status === 200 && !/\sonclick\s*=/.test(ctrl.body),
+    'onclick present'
+  );
 
   // 2) Three screen sockets
   const screens = [];
@@ -111,18 +137,48 @@ async function main() {
   }
   record('3 screen sockets connected', screens.every((s) => s.connected), screens.map((s) => s.id).join(','));
 
-  const screenStates = await Promise.all(
-    screens.map((s) => once(s, 'game_state', 5000).catch((e) => ({ __err: e.message })))
+  const sessionInfo =
+    screens[1].__lastSessionInfo ||
+    (await (async () => {
+      const p = once(screens[1], 'session_info', 5000);
+      screens[1].emit('request_session_info');
+      return p.catch((e) => ({ __err: e.message }));
+    })());
+  record(
+    'screen receives session_info with 4-letter token',
+    sessionInfo && !sessionInfo.__err && String(sessionInfo.sessionToken).length === 4,
+    JSON.stringify(sessionInfo)
+  );
+  const token = sessionInfo && sessionInfo.sessionToken;
+
+  // Controllers must not get session_info
+  const pProbe = await connectSocket({ controller: 'true' }, 'probe');
+  const probeLeak = once(pProbe, 'session_info', 1500);
+  pProbe.emit('request_session_info');
+  const leaked = await probeLeak.catch(() => null);
+  record('controller cannot fetch session_info', !leaked, JSON.stringify(leaked));
+  pProbe.disconnect();
+
+  // Allow a brief moment for connect-time game_state to land in the cache.
+  await new Promise((r) => setTimeout(r, 300));
+  const resolvedStates = await Promise.all(
+    screens.map(async (s) => {
+      try {
+        return await waitCachedOrOnce(s, 'game_state', '__lastGameState', 5000);
+      } catch (e) {
+        return { __err: e.message };
+      }
+    })
   );
   record(
     'All screens receive game_state',
-    screenStates.every((st) => st && !st.__err && st.gameStatus),
-    screenStates.map((st) => (st && st.gameStatus) || st.__err).join('|')
+    resolvedStates.every((st) => st && !st.__err && st.gameStatus),
+    resolvedStates.map((st) => (st && st.gameStatus) || st.__err).join('|')
   );
   record(
     'game_state does not leak sessionToken',
-    screenStates.every((st) => st && !st.__err && !st.sessionToken),
-    screenStates.map((st) => (st && st.sessionToken) || 'ok').join('|')
+    resolvedStates.every((st) => st && !st.__err && !st.sessionToken),
+    resolvedStates.map((st) => (st && st.sessionToken) || 'ok').join('|')
   );
 
   // 3) Two controller clients join
@@ -247,6 +303,8 @@ async function main() {
   // 8) Reconnect / resume
   const p1Id = join1.playerId;
   const sessionId = join1.sessionId;
+  const resumeToken = join1.resumeToken;
+  record('join_confirmed includes resumeToken', typeof resumeToken === 'string' && resumeToken.length >= 16, String(resumeToken && resumeToken.length));
   p1.disconnect();
   await new Promise((r) => setTimeout(r, 500));
 
@@ -260,12 +318,21 @@ async function main() {
     JSON.stringify(badResumeResult)
   );
 
+  const badJoinCodeResume = once(p1b, 'join_rejected', 3000);
+  p1b.emit('resume_request', { playerId: p1Id, sessionId, resumeToken: token });
+  const badJoinCodeResult = await badJoinCodeResume.catch(() => null);
+  record(
+    'resume_request with join code rejected',
+    !!badJoinCodeResult,
+    JSON.stringify(badJoinCodeResult)
+  );
+
   const resumeConfirm = once(p1b, 'join_confirmed', 5000);
-  p1b.emit('resume_request', { playerId: p1Id, sessionId, sessionToken: token });
+  p1b.emit('resume_request', { playerId: p1Id, sessionId, resumeToken });
   const resumed = await resumeConfirm.catch((e) => ({ __err: e.message }));
   record(
     'resume_request restores player',
-    resumed && !resumed.__err && resumed.playerId === p1Id,
+    resumed && !resumed.__err && resumed.playerId === p1Id && typeof resumed.resumeToken === 'string',
     JSON.stringify(resumed)
   );
 

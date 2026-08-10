@@ -15,6 +15,7 @@ class GameService extends ChangeNotifier {
   int? playerNumber;
   String? sessionId;
   String? sessionToken;
+  String? resumeToken;
   bool isSpectator = false;
   int score = 0;
   int lives = 3;
@@ -75,11 +76,11 @@ class GameService extends ChangeNotifier {
         debugPrint('[GameService] Socket connected');
         connected = true;
         startLatencyPing();
-        if (playerId != null && sessionId != null && sessionToken != null && !isSpectator) {
+        if (playerId != null && sessionId != null && resumeToken != null && !isSpectator) {
           socket!.emit('resume_request', {
             'playerId': playerId,
             'sessionId': sessionId,
-            'sessionToken': sessionToken,
+            'resumeToken': resumeToken,
           });
         }
         notifyListeners();
@@ -103,6 +104,7 @@ class GameService extends ChangeNotifier {
         playerId = map['playerId'] as String?;
         playerNumber = map['playerNumber'] as int?;
         sessionId = map['sessionId'] as String?;
+        resumeToken = map['resumeToken'] as String?;
         isSpectator = map['isSpectator'] as bool? ?? false;
         isJoinConfirmed = true;
         joinError = null;
@@ -281,6 +283,7 @@ class GameService extends ChangeNotifier {
     playerNumber = null;
     sessionId = null;
     sessionToken = null;
+    resumeToken = null;
     isSpectator = false;
     score = 0;
     lives = 3;

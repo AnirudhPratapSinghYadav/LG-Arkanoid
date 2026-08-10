@@ -24,12 +24,20 @@ class GameScene extends Phaser.Scene {
 
     create() {
         const bgGraphics = this.make.graphics({x: 0, y: 0, add: false});
-        bgGraphics.fillStyle(COLORS.white, 0.1);
-        for(let i=0; i<30; i++) {
-            bgGraphics.fillRect(Math.random() * 256, Math.random() * 256, Math.random() * 2 + 1, Math.random() * 2 + 1);
+        bgGraphics.fillStyle(0x061018, 1);
+        bgGraphics.fillRect(0, 0, 256, 256);
+        for (let i = 0; i < 90; i++) {
+            const bright = Math.random();
+            bgGraphics.fillStyle(COLORS.white, bright > 0.85 ? 0.55 : 0.12 + bright * 0.2);
+            bgGraphics.fillCircle(Math.random() * 256, Math.random() * 256, bright > 0.9 ? 1.8 : 1);
         }
+        bgGraphics.fillStyle(COLORS.system, 0.04);
+        bgGraphics.fillCircle(70, 90, 70);
+        bgGraphics.fillStyle(COLORS.game, 0.03);
+        bgGraphics.fillCircle(200, 180, 55);
         bgGraphics.generateTexture('bg_stars', 256, 256);
         this.bg = this.add.tileSprite(960, 540, 1920, 1080, 'bg_stars');
+        this.bg.setTint(0xb8d4e8);
 
         const pGraphics = this.make.graphics({x:0, y:0, add:false});
         pGraphics.fillStyle(COLORS.white, 1);
@@ -282,8 +290,9 @@ class GameScene extends Phaser.Scene {
         qr.style.top = `${rect.top + rect.height * 0.44}px`;
         qr.style.transform = 'translate(-50%, -50%)';
         const scale = Math.min(rect.width / 1920, rect.height / 1080);
-        const cardW = Math.max(280, Math.min(420, 420 * scale * 1.15));
+        const cardW = Math.max(300, Math.min(460, 460 * scale * 1.05));
         qr.style.width = `${cardW}px`;
+        qr.style.maxHeight = `${Math.max(420, Math.min(rect.height * 0.92, 980))}px`;
     }
 
     drawRobots() {
@@ -408,49 +417,120 @@ class GameScene extends Phaser.Scene {
     }
     
     initAmbientTexts() {
+        if (!this.lobbyDecorGfx) {
+            this.lobbyDecorGfx = this.add.graphics().setDepth(5);
+        }
         if (!this.ambientLeftText) {
-            this.ambientLeftText = this.add.text(960, 540, 'LIQUID GALAXY\nMULTIPLAYER ARCADE', {
-                fontFamily: FONTS.display, fontSize: '64px', fill: '#ffffff',
-                align: 'center', alpha: 0.3
-            }).setOrigin(0.5).setVisible(false);
+            this.ambientLeftText = this.add.text(960, 360, '', {
+                fontFamily: FONTS.display, fontSize: '72px', fill: HEX.systemAlt,
+                align: 'center'
+            }).setOrigin(0.5).setVisible(false).setDepth(6);
+        }
+        if (!this.ambientLeftSub) {
+            this.ambientLeftSub = this.add.text(960, 470, '', {
+                fontFamily: FONTS.heading, fontSize: '22px', fill: HEX.textSecondary,
+                align: 'center', lineSpacing: 10
+            }).setOrigin(0.5).setVisible(false).setDepth(6);
         }
         if (!this.ambientRightText) {
-            this.ambientRightText = this.add.text(960, 540, 'Waiting for Players\n0 / 3', {
-                fontFamily: FONTS.display, fontSize: '64px', fill: '#ffffff',
-                align: 'center', alpha: 0.3
-            }).setOrigin(0.5).setVisible(false);
+            this.ambientRightText = this.add.text(960, 340, '', {
+                fontFamily: FONTS.display, fontSize: '64px', fill: HEX.systemAlt,
+                align: 'center'
+            }).setOrigin(0.5).setVisible(false).setDepth(6);
+        }
+        if (!this.ambientRightSub) {
+            this.ambientRightSub = this.add.text(960, 430, '', {
+                fontFamily: FONTS.heading, fontSize: '22px', fill: HEX.textSecondary,
+                align: 'center', lineSpacing: 8
+            }).setOrigin(0.5).setVisible(false).setDepth(6);
         }
         const maxP = (this.currentState && this.currentState.maxPlayers) || 5;
         if (!this.lobbyPlayerTexts) {
             this.lobbyPlayerTexts = [];
         }
         while (this.lobbyPlayerTexts.length < maxP) {
-            let txt = this.add.text(960, 680 + (this.lobbyPlayerTexts.length*60), 'Waiting...', {
-                fontFamily: FONTS.display, fontSize: '40px', fill: '#666666'
-            }).setOrigin(0.5).setVisible(false);
-            this.lobbyPlayerTexts.push({text: txt});
+            const idx = this.lobbyPlayerTexts.length;
+            const txt = this.add.text(960, 520 + (idx * 58), '', {
+                fontFamily: FONTS.heading, fontSize: '28px', fill: HEX.textSecondary
+            }).setOrigin(0.5).setVisible(false).setDepth(6);
+            this.lobbyPlayerTexts.push({ text: txt });
         }
+    }
+
+    drawLobbyFrame(titleY = 280) {
+        if (!this.lobbyDecorGfx) return;
+        this.lobbyDecorGfx.clear();
+        const pulse = 0.35 + Math.sin(this.time.now * 0.0025) * 0.15;
+        this.lobbyDecorGfx.lineStyle(2, COLORS.system, pulse);
+        this.lobbyDecorGfx.strokeRoundedRect(220, titleY - 90, 1480, 720, 24);
+        this.lobbyDecorGfx.lineStyle(1, COLORS.systemAlt, pulse * 0.45);
+        this.lobbyDecorGfx.strokeRoundedRect(240, titleY - 70, 1440, 680, 18);
+        this.lobbyDecorGfx.fillStyle(COLORS.system, 0.05);
+        this.lobbyDecorGfx.fillRoundedRect(240, titleY - 70, 1440, 680, 18);
     }
 
     renderJoin() {
         this.initAmbientTexts();
-        
-        let players = this.currentState.players || [];
-        let connectedCount = players.filter(p => p.connected).length;
+        this.hideAttractMode();
+
+        const players = this.currentState.players || [];
+        const connectedCount = players.filter((p) => p.connected).length;
         const maxP = this.currentState.maxPlayers || players.length;
         const duration = this.currentState.gameDurationSeconds;
         const durationLabel = duration === 0 ? 'ENDLESS' : `${Math.round((duration || 180) / 60)} MIN`;
         const screensLabel = `${this.currentState.numScreens || numScreens} SCREENS`;
         const speedLabel = (this.currentState.ballSpeed || 'medium').toUpperCase();
-        
+        const PLAYER_HEX = [HEX.systemAlt, '#FF2D78', '#FFB800', '#9B59B6', '#2ECC71'];
+
+        if (this.lobbyDecorGfx) this.lobbyDecorGfx.clear();
+        if (this.ambientLeftText) this.ambientLeftText.setVisible(false);
+        if (this.ambientLeftSub) this.ambientLeftSub.setVisible(false);
+        if (this.ambientRightText) this.ambientRightText.setVisible(false);
+        if (this.ambientRightSub) this.ambientRightSub.setVisible(false);
+        if (this.lobbyPlayerTexts) this.lobbyPlayerTexts.forEach((p) => p.text.setVisible(false));
+
         if (screenId === 1) {
-            this.ambientLeftText.setText('LG ARKANOID\nPHONE CONTROLLER');
-            this.ambientLeftText.setVisible(true);
-            this.ambientLeftText.setAlpha(0.55);
+            this.drawLobbyFrame(300);
+            this.ambientLeftText.setText('LG ARKANOID');
+            this.ambientLeftText.setVisible(true).setAlpha(0.95);
+            this.ambientLeftSub.setText(
+                'PHONE IS THE CONTROLLER\nScan the center QR · join with the 4-letter code\nHost starts from the lobby'
+            );
+            this.ambientLeftSub.setVisible(true).setAlpha(0.9);
+            for (let i = 0; i < maxP; i++) {
+                const p = players[i];
+                const slot = this.lobbyPlayerTexts[i];
+                if (!slot) continue;
+                const filled = !!(p && p.connected);
+                slot.text.setText(
+                    filled
+                        ? `●  ${p.name || ('Player ' + (i + 1))}  ·  READY`
+                        : `○  SLOT ${i + 1}  ·  OPEN`
+                );
+                slot.text.setColor(filled ? (PLAYER_HEX[i % PLAYER_HEX.length]) : HEX.textDim);
+                slot.text.setVisible(true).setAlpha(filled ? 1 : 0.55);
+            }
         } else if (screenId === numScreens) {
-            this.ambientRightText.setText(`Waiting for players\n${connectedCount} / ${maxP}`);
-            this.ambientRightText.setVisible(true);
-            this.ambientRightText.setAlpha(0.55);
+            this.drawLobbyFrame(300);
+            this.ambientRightText.setText(`${connectedCount} / ${maxP}`);
+            this.ambientRightText.setVisible(true).setAlpha(0.95);
+            this.ambientRightSub.setText(
+                `PLAYERS CONNECTED\n${screensLabel}  ·  ${durationLabel}  ·  ${speedLabel}\nWaiting for host to launch`
+            );
+            this.ambientRightSub.setVisible(true).setAlpha(0.9);
+            for (let i = 0; i < maxP; i++) {
+                const p = players[i];
+                const slot = this.lobbyPlayerTexts[i];
+                if (!slot) continue;
+                const filled = !!(p && p.connected);
+                slot.text.setText(
+                    filled
+                        ? `▸  ${(p.name || ('Player ' + (i + 1))).toUpperCase()}`
+                        : `·  waiting for player ${i + 1}`
+                );
+                slot.text.setColor(filled ? (PLAYER_HEX[i % PLAYER_HEX.length]) : HEX.textDim);
+                slot.text.setVisible(true).setAlpha(filled ? 1 : 0.5);
+            }
         } else if (isCenterScreen) {
             const token = this.sessionToken || this.currentState.sessionToken;
             if (!token) {
@@ -462,45 +542,51 @@ class GameScene extends Phaser.Scene {
                 const waitingText = document.getElementById('qr-waiting-text');
                 const matchMeta = document.getElementById('qr-match-meta');
                 const playerList = document.getElementById('qr-player-list');
-                
+
                 qrDiv.style.display = 'flex';
                 this.syncQrToCanvas();
-                
+
                 sessionCodeDiv.innerText = token;
                 sessionCodeInline.innerText = token;
                 if (matchMeta) {
-                    matchMeta.innerText = `${connectedCount}/${maxP} PLAYERS · ${screensLabel} · ${durationLabel} · ${speedLabel}`;
+                    matchMeta.innerText = `${connectedCount}/${maxP} players · ${screensLabel} · ${durationLabel} · ${speedLabel}`;
                 }
 
                 if (playerList) {
-                    let html = '';
+                    playerList.textContent = '';
                     for (let i = 0; i < maxP; i++) {
                         const p = players[i];
-                        if (p && p.connected) {
-                            html += `<div style="color:#4ade80;margin:4px 0;">✓ ${(p.name || ('Player ' + (i + 1)))}</div>`;
-                        } else {
-                            html += `<div style="color:#666;margin:4px 0;">○ Slot ${i + 1} waiting…</div>`;
-                        }
+                        const row = document.createElement('div');
+                        row.className = 'slot' + (p && p.connected ? ' is-filled' : ' is-empty');
+                        const name = document.createElement('span');
+                        name.className = 'slot__name';
+                        name.textContent = (p && p.connected)
+                            ? (p.name || ('Player ' + (i + 1)))
+                            : ('Slot ' + (i + 1));
+                        const tag = document.createElement('span');
+                        tag.className = 'slot__tag';
+                        tag.textContent = (p && p.connected) ? 'Ready' : 'Open';
+                        row.appendChild(name);
+                        row.appendChild(tag);
+                        playerList.appendChild(row);
                     }
-                    playerList.innerHTML = html;
                 }
-                if (this.lobbyPlayerTexts) this.lobbyPlayerTexts.forEach((p) => p.text.setVisible(false));
 
                 if (connectedCount === 0) {
                     waitingText.innerText = 'Waiting for first player…';
                 } else {
                     waitingText.innerText = 'Host starts the match from the phone';
                 }
-                
+
                 const lanIp = this.sessionLanIp || this.currentState.lanIp;
                 const port = this.sessionPort || this.currentState.port;
                 if (lanIp && !this.qrCodeObj) {
                     const qrData = `LGARK|${lanIp}|${port}|${token}`;
                     this.qrCodeObj = new QRCode(document.getElementById('qrcode-img'), {
                         text: qrData,
-                        width: 240,
-                        height: 240,
-                        colorDark: '#000000',
+                        width: 220,
+                        height: 220,
+                        colorDark: '#041018',
                         colorLight: '#ffffff',
                         correctLevel: QRCode.CorrectLevel.L
                     });
@@ -516,31 +602,38 @@ class GameScene extends Phaser.Scene {
     }
 
     fetchSessionInfo() {
-        if (this._fetchingSessionInfo) return;
-        this._fetchingSessionInfo = true;
-        fetch('/health')
-            .then((res) => res.json())
-            .then((data) => {
-                if (data && data.sessionToken) {
-                    this.sessionToken = data.sessionToken;
-                }
-                if (data && data.lanIp) this.sessionLanIp = data.lanIp;
-                if (data && data.port) this.sessionPort = data.port;
-                if (this.currentState) {
-                    this.sessionLanIp = this.sessionLanIp || this.currentState.lanIp;
-                    this.sessionPort = this.sessionPort || this.currentState.port;
-                }
-            })
-            .catch(() => {})
-            .finally(() => {
-                this._fetchingSessionInfo = false;
-            });
+        // Join code is pushed only to panoramic screen sockets (not /health).
+        if (!this.socket || !this.socket.connected) return;
+        this.socket.emit('request_session_info');
+    }
+
+    applySessionInfo(data) {
+        if (!data) return;
+        if (data.sessionToken) {
+            const prev = this.sessionToken;
+            this.sessionToken = data.sessionToken;
+            if (prev && prev !== data.sessionToken) {
+                this.clearLobbyQr();
+            }
+        }
+        if (data.sessionId) this.sessionId = data.sessionId;
+        if (data.lanIp) this.sessionLanIp = data.lanIp;
+        if (data.port) this.sessionPort = data.port;
+        if (typeof data.numScreens === 'number') this.sessionNumScreens = data.numScreens;
+        if (typeof data.maxPlayers === 'number') this.sessionMaxPlayers = data.maxPlayers;
+        if (data.ballSpeed) this.sessionBallSpeed = data.ballSpeed;
+        if (typeof data.gameDurationSeconds === 'number') {
+            this.sessionDurationSeconds = data.gameDurationSeconds;
+        }
     }
 
     hideJoinMode() {
         document.getElementById('qrcode').style.display = 'none';
+        if (this.lobbyDecorGfx) this.lobbyDecorGfx.clear();
         if (this.ambientLeftText) this.ambientLeftText.setVisible(false);
+        if (this.ambientLeftSub) this.ambientLeftSub.setVisible(false);
         if (this.ambientRightText) this.ambientRightText.setVisible(false);
+        if (this.ambientRightSub) this.ambientRightSub.setVisible(false);
         if (this.lobbyPlayerTexts) this.lobbyPlayerTexts.forEach(p => p.text.setVisible(false));
         this.hideJoinToast();
     }
@@ -1034,8 +1127,10 @@ class GameScene extends Phaser.Scene {
                 const drawX = localX + hGap / 2 - (breath / 2);
                 const drawY = brick.y + vGap / 2 - (breath * 0.1);
 
+                this.graphics.fillStyle(color, 0.22);
+                this.graphics.fillRoundedRect(drawX - 3, drawY - 3, drawW + 6, drawH + 6, 4);
                 this.graphics.fillStyle(color, 1);
-                this.graphics.fillRect(drawX, drawY, drawW, drawH);
+                this.graphics.fillRoundedRect(drawX, drawY, drawW, drawH, 4);
                 
                 if (brick.type === 'indestructible') {
                     this.graphics.lineStyle(2, COLORS.gridLine, 1);
@@ -1174,6 +1269,20 @@ class GameScene extends Phaser.Scene {
                 });
             }
         }, 3000);
+
+        this.socket.on('session_info', (data) => {
+            this.applySessionInfo(data);
+        });
+
+        this.socket.on('connect', () => {
+            this.fetchSessionInfo();
+        });
+
+        this.socket.on('lobby_ready', () => {
+            this.clearLobbyQr();
+            this.sessionToken = null;
+            this.fetchSessionInfo();
+        });
 
         this.socket.on('game_state', (state) => {
             if (!state.bricks && this.currentState && this.currentState.bricks) {
