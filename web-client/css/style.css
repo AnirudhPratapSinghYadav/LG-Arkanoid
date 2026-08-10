@@ -5,10 +5,11 @@ html, body {
     height: 100%;
     overflow: hidden;
     background:
-        radial-gradient(ellipse 90% 70% at 50% 18%, rgba(0, 229, 255, 0.12), transparent 55%),
-        radial-gradient(ellipse 70% 50% at 80% 90%, rgba(244, 162, 97, 0.08), transparent 50%),
+        radial-gradient(ellipse 90% 70% at 50% 12%, rgba(0, 229, 255, 0.14), transparent 52%),
+        radial-gradient(ellipse 70% 50% at 85% 95%, rgba(244, 162, 97, 0.09), transparent 48%),
         linear-gradient(160deg, #05070c 0%, #0a1018 48%, #070b12 100%);
     color: #e8f4f8;
+    font-family: 'Space Grotesk', sans-serif;
 }
 
 .stage-vignette {
@@ -16,14 +17,13 @@ html, body {
     inset: 0;
     pointer-events: none;
     z-index: 2;
-    background:
-        radial-gradient(ellipse at center, transparent 42%, rgba(0, 0, 0, 0.55) 100%);
+    background: radial-gradient(ellipse at center, transparent 40%, rgba(0, 0, 0, 0.58) 100%);
 }
 
 .brand-mark {
     position: fixed;
-    top: 18px;
-    right: 22px;
+    top: 20px;
+    right: 28px;
     z-index: 20;
     text-align: right;
     pointer-events: none;
@@ -31,41 +31,150 @@ html, body {
 
 .brand-mark__eyebrow {
     display: block;
-    font-family: 'Space Grotesk', sans-serif;
     font-size: 11px;
-    letter-spacing: 0.22em;
+    letter-spacing: 0.24em;
     text-transform: uppercase;
-    color: rgba(0, 229, 255, 0.75);
+    color: rgba(0, 229, 255, 0.8);
 }
 
 .brand-mark__name {
     display: block;
-    margin-top: 2px;
+    margin-top: 4px;
     font-family: 'VT323', monospace;
-    font-size: 28px;
+    font-size: 30px;
     letter-spacing: 0.08em;
     color: #f3f4f6;
     text-shadow: 0 0 18px rgba(0, 229, 255, 0.35);
 }
 
-/* Phaser FIT canvas is centered; QR overlays the canvas rect. */
+/* ── First connection / boot ── */
+.boot-overlay {
+    position: fixed;
+    left: 50%;
+    top: 48%;
+    transform: translate(-50%, -50%);
+    z-index: 900;
+    width: min(520px, 78vw);
+    padding: 40px 36px 36px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    background: linear-gradient(165deg, rgba(10, 18, 28, 0.94), rgba(5, 9, 14, 0.97));
+    border: 1px solid rgba(0, 229, 255, 0.4);
+    border-radius: 24px;
+    box-shadow:
+        0 0 0 1px rgba(255, 255, 255, 0.04) inset,
+        0 28px 70px rgba(0, 0, 0, 0.55),
+        0 0 70px rgba(0, 229, 255, 0.16);
+    pointer-events: none;
+    transition: opacity 0.35s ease, transform 0.35s ease;
+}
+
+.boot-overlay.is-hidden {
+    opacity: 0;
+    transform: translate(-50%, -46%) scale(0.98);
+    visibility: hidden;
+}
+
+.boot-overlay__ring {
+    position: absolute;
+    width: 220px;
+    height: 220px;
+    top: 28px;
+    border-radius: 50%;
+    border: 1px solid rgba(0, 229, 255, 0.2);
+    box-shadow: 0 0 40px rgba(0, 229, 255, 0.12);
+    animation: boot-spin 8s linear infinite;
+}
+
+.boot-overlay__ring::after {
+    content: '';
+    position: absolute;
+    inset: 18px;
+    border-radius: 50%;
+    border: 1px dashed rgba(32, 197, 255, 0.28);
+}
+
+.boot-overlay__logo {
+    position: relative;
+    height: 52px;
+    margin: 8px 0 18px;
+    filter: drop-shadow(0 0 18px rgba(0, 229, 255, 0.35));
+}
+
+.boot-overlay__eyebrow {
+    position: relative;
+    margin: 0;
+    font-size: 12px;
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+    color: #00e5ff;
+}
+
+.boot-overlay__title {
+    position: relative;
+    margin: 10px 0 0;
+    font-family: 'VT323', monospace;
+    font-size: clamp(48px, 6vw, 72px);
+    line-height: 1;
+    letter-spacing: 0.06em;
+    color: #f3f4f6;
+    text-shadow: 0 0 28px rgba(0, 229, 255, 0.35);
+}
+
+.boot-overlay__sub {
+    position: relative;
+    margin: 14px 0 0;
+    font-size: 15px;
+    letter-spacing: 0.06em;
+    color: #9aa4af;
+}
+
+.boot-overlay__status {
+    position: relative;
+    margin-top: 28px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 18px;
+    border-radius: 999px;
+    background: rgba(0, 229, 255, 0.08);
+    border: 1px solid rgba(0, 229, 255, 0.28);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    color: #cfeeff;
+}
+
+.boot-overlay__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #00e5ff;
+    box-shadow: 0 0 10px #00e5ff;
+    animation: lobby-pulse 1.4s ease-in-out infinite;
+}
+
+/* ── Lobby join card ── */
 .lobby-card,
 #qrcode {
     position: fixed;
     left: 50%;
-    top: 48%;
+    top: 50%;
     transform: translate(-50%, -50%);
     display: none;
     flex-direction: column;
     align-items: center;
     text-align: center;
-    width: min(460px, 78vw);
-    max-height: min(92vh, 980px);
-    overflow: hidden;
-    padding: 28px 28px 24px;
-    background:
-        linear-gradient(165deg, rgba(12, 20, 30, 0.96), rgba(6, 10, 16, 0.98));
-    border: 1px solid rgba(0, 229, 255, 0.55);
+    width: min(420px, 72vw);
+    max-height: min(90vh, 920px);
+    overflow: auto;
+    padding: 22px 22px 18px;
+    gap: 0;
+    background: linear-gradient(165deg, rgba(12, 20, 30, 0.97), rgba(6, 10, 16, 0.98));
+    border: 1px solid rgba(0, 229, 255, 0.5);
     border-radius: 22px;
     box-shadow:
         0 0 0 1px rgba(255, 255, 255, 0.04) inset,
@@ -73,25 +182,40 @@ html, body {
         0 0 60px rgba(0, 229, 255, 0.18);
     z-index: 1000;
     pointer-events: none;
+    scrollbar-width: none;
 }
+
+.lobby-card::-webkit-scrollbar { display: none; }
 
 .lobby-card__glow {
     position: absolute;
-    inset: -40% -20% auto;
-    height: 55%;
-    background: radial-gradient(ellipse at center, rgba(0, 229, 255, 0.22), transparent 70%);
+    inset: -35% -15% auto;
+    height: 48%;
+    background: radial-gradient(ellipse at center, rgba(0, 229, 255, 0.2), transparent 70%);
     pointer-events: none;
 }
 
-.lobby-card__kicker {
+.lobby-card__head {
     position: relative;
-    margin: 0 0 14px;
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: 0.78rem;
+    margin-bottom: 14px;
+}
+
+.lobby-card__kicker {
+    margin: 0;
+    font-size: 0.7rem;
     font-weight: 700;
     letter-spacing: 0.28em;
     text-transform: uppercase;
     color: #00e5ff;
+}
+
+.lobby-card__brand {
+    margin: 6px 0 0;
+    font-family: 'VT323', monospace;
+    font-size: 2rem;
+    letter-spacing: 0.08em;
+    color: #f3f4f6;
+    font-weight: 400;
 }
 
 .lobby-card__qr,
@@ -100,22 +224,27 @@ html, body {
     display: flex;
     justify-content: center;
     align-items: center;
+    margin: 0 auto 4px;
 }
 
 #qrcode img,
 #qrcode canvas {
-    border: 8px solid #ffffff;
-    border-radius: 10px;
-    width: 220px !important;
-    height: 220px !important;
-    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+    border: 7px solid #ffffff;
+    border-radius: 12px;
+    width: 188px !important;
+    height: 188px !important;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
+}
+
+.lobby-card__code-block {
+    position: relative;
+    margin-top: 14px;
+    width: 100%;
 }
 
 .lobby-card__label {
-    position: relative;
-    margin: 16px 0 0;
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: 0.72rem;
+    margin: 0;
+    font-size: 0.68rem;
     font-weight: 700;
     letter-spacing: 0.24em;
     text-transform: uppercase;
@@ -124,51 +253,54 @@ html, body {
 
 .lobby-card__code,
 #qr-session-code {
-    position: relative;
     font-family: 'VT323', monospace;
-    font-size: 3.6rem;
+    font-size: 3.2rem;
     line-height: 1;
     color: #fff;
     margin-top: 4px;
-    letter-spacing: 0.28em;
-    text-indent: 0.28em;
+    letter-spacing: 0.32em;
+    text-indent: 0.32em;
     text-shadow: 0 0 24px rgba(0, 229, 255, 0.45);
 }
 
 .lobby-card__meta,
 #qr-match-meta {
     position: relative;
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: 0.78rem;
-    color: #9aa4af;
-    margin-top: 12px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    margin-top: 14px;
+    font-size: 0;
 }
 
-.lobby-card__hint,
-#qr-instructions {
-    position: relative;
-    margin: 14px 0 0;
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: 0.92rem;
-    line-height: 1.45;
-    color: #b7c2cc;
+.lobby-card__meta:empty {
+    display: none;
 }
 
-#qr-session-code-inline {
-    color: #fff;
+.lobby-card__chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.68rem;
     font-weight: 700;
-    letter-spacing: 0.12em;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #9aa4af;
 }
 
 .lobby-card__wait,
 #qr-waiting-text {
     position: relative;
-    margin-top: 12px;
+    margin-top: 14px;
     font-family: 'VT323', monospace;
-    font-size: 1.35rem;
-    letter-spacing: 0.06em;
+    font-size: 1.25rem;
+    letter-spacing: 0.05em;
     color: #4ade80;
     animation: lobby-pulse 1.8s ease-in-out infinite;
 }
@@ -177,11 +309,9 @@ html, body {
 #qr-player-list {
     position: relative;
     width: 100%;
-    margin-top: 16px;
-    padding-top: 14px;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    margin-top: 14px;
     display: grid;
-    gap: 8px;
+    gap: 6px;
 }
 
 .lobby-card__players .slot {
@@ -189,12 +319,11 @@ html, body {
     align-items: center;
     justify-content: space-between;
     gap: 10px;
-    padding: 10px 12px;
-    border-radius: 12px;
+    padding: 9px 12px;
+    border-radius: 11px;
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.06);
-    font-family: 'Space Grotesk', sans-serif;
-    font-size: 0.92rem;
+    font-size: 0.88rem;
 }
 
 .lobby-card__players .slot.is-filled {
@@ -205,6 +334,7 @@ html, body {
 .lobby-card__players .slot__name {
     color: #e8f4f8;
     font-weight: 600;
+    text-align: left;
 }
 
 .lobby-card__players .slot.is-empty .slot__name {
@@ -213,14 +343,30 @@ html, body {
 }
 
 .lobby-card__players .slot__tag {
-    font-size: 0.72rem;
+    font-size: 0.68rem;
     letter-spacing: 0.12em;
     text-transform: uppercase;
     color: #4ade80;
+    flex-shrink: 0;
 }
 
 .lobby-card__players .slot.is-empty .slot__tag {
     color: #66707a;
+}
+
+.lobby-card__hint,
+#qr-instructions {
+    position: relative;
+    margin: 14px 0 0;
+    font-size: 0.78rem;
+    line-height: 1.4;
+    color: #7f8b97;
+}
+
+#qr-session-code-inline {
+    color: #e8f4f8;
+    font-weight: 700;
+    letter-spacing: 0.14em;
 }
 
 @keyframes lobby-pulse {
@@ -228,9 +374,16 @@ html, body {
     50% { opacity: 1; }
 }
 
+@keyframes boot-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
 @media (prefers-reduced-motion: reduce) {
     .lobby-card__wait,
-    #qr-waiting-text {
+    #qr-waiting-text,
+    .boot-overlay__dot,
+    .boot-overlay__ring {
         animation: none;
     }
 }

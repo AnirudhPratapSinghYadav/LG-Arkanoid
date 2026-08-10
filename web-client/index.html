@@ -22,19 +22,35 @@
         <span class="brand-mark__name">LG Arkanoid</span>
     </div>
 
+    <div id="bootOverlay" class="boot-overlay" aria-live="polite">
+        <div class="boot-overlay__ring" aria-hidden="true"></div>
+        <img class="boot-overlay__logo" src="assets/lg-logo.png" alt="">
+        <p class="boot-overlay__eyebrow">Liquid Galaxy</p>
+        <h1 class="boot-overlay__title">LG Arkanoid</h1>
+        <p class="boot-overlay__sub">Multi-screen arcade · phone controller</p>
+        <div class="boot-overlay__status">
+            <span class="boot-overlay__dot"></span>
+            <span id="bootStatusText">Connecting to lobby…</span>
+        </div>
+    </div>
+
     <div id="qrcode" class="lobby-card" aria-live="polite">
         <div class="lobby-card__glow" aria-hidden="true"></div>
-        <p class="lobby-card__kicker">Scan to join</p>
+        <header class="lobby-card__head">
+            <p class="lobby-card__kicker">Join this match</p>
+            <h2 class="lobby-card__brand">LG Arkanoid</h2>
+        </header>
         <div id="qrcode-img" class="lobby-card__qr"></div>
-        <p class="lobby-card__label">Session code</p>
-        <div id="qr-session-code" class="lobby-card__code"></div>
-        <div id="qr-match-meta" class="lobby-card__meta">Loading match setup…</div>
-        <p id="qr-instructions" class="lobby-card__hint">
-            Open the LG Arkanoid app<br>
-            or type code <span id="qr-session-code-inline"></span>
-        </p>
+        <div class="lobby-card__code-block">
+            <p class="lobby-card__label">Session code</p>
+            <div id="qr-session-code" class="lobby-card__code"></div>
+        </div>
+        <div id="qr-match-meta" class="lobby-card__meta"></div>
         <div id="qr-waiting-text" class="lobby-card__wait">Waiting for first player…</div>
         <div id="qr-player-list" class="lobby-card__players"></div>
+        <p id="qr-instructions" class="lobby-card__hint">
+            Scan with the app or enter <span id="qr-session-code-inline"></span>
+        </p>
     </div>
 
     <script src="js/config.js"></script>

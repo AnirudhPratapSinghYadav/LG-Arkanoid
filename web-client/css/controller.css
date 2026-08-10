@@ -42,15 +42,16 @@ body {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 28px;
+    gap: 22px;
     height: 100%;
-    padding: 28px 22px 36px;
+    padding: 36px 22px 40px;
 }
 
 .join-brand {
     position: relative;
     text-align: center;
     width: min(100%, 360px);
+    padding-top: 12px;
 }
 
 .join-brand__pulse {
@@ -97,8 +98,8 @@ body {
     width: min(100%, 360px);
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    padding: 18px;
+    gap: 14px;
+    padding: 20px 18px 18px;
     border-radius: 18px;
     background: rgba(16, 22, 30, 0.82);
     border: 1px solid rgba(0, 229, 255, 0.22);

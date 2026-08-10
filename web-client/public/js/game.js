@@ -178,8 +178,15 @@ class GameScene extends Phaser.Scene {
         this.powerUpTexts = [];
         this.setupSocket();
         this.fetchSessionInfo();
-        window.addEventListener('resize', () => this.syncQrToCanvas());
-        this.scale.on('resize', () => this.syncQrToCanvas());
+        this.showBootOverlay('Connecting to lobby…');
+        window.addEventListener('resize', () => {
+            this.syncQrToCanvas();
+            this.syncBootToCanvas();
+        });
+        this.scale.on('resize', () => {
+            this.syncQrToCanvas();
+            this.syncBootToCanvas();
+        });
     }
 
     update() {
@@ -212,6 +219,7 @@ class GameScene extends Phaser.Scene {
         }
         
         if (this.currentState.gameStatus === 'countdown') {
+            this.hideBootOverlay();
             this.hideWinMode();
             this.drawCountdownMode();
             this.drawBricks();
@@ -226,6 +234,7 @@ class GameScene extends Phaser.Scene {
         if (this.currentState.gameStatus === 'win' ||
             this.currentState.gameStatus === 'time_up' ||
             this.currentState.gameStatus === 'game_over') {
+            this.hideBootOverlay();
             this.drawWinMode();
             this.drawRobots();
             this.updateHUD();
@@ -287,12 +296,12 @@ class GameScene extends Phaser.Scene {
         const rect = canvas.getBoundingClientRect();
         if (rect.width < 40 || rect.height < 40) return;
         qr.style.left = `${rect.left + rect.width / 2}px`;
-        qr.style.top = `${rect.top + rect.height * 0.44}px`;
+        qr.style.top = `${rect.top + rect.height * 0.50}px`;
         qr.style.transform = 'translate(-50%, -50%)';
         const scale = Math.min(rect.width / 1920, rect.height / 1080);
-        const cardW = Math.max(300, Math.min(460, 460 * scale * 1.05));
+        const cardW = Math.max(300, Math.min(420, 420 * scale));
         qr.style.width = `${cardW}px`;
-        qr.style.maxHeight = `${Math.max(420, Math.min(rect.height * 0.92, 980))}px`;
+        qr.style.maxHeight = `${Math.max(400, Math.min(rect.height * 0.88, 900))}px`;
     }
 
     drawRobots() {
@@ -370,42 +379,46 @@ class GameScene extends Phaser.Scene {
     }
 
     drawAttractMode() {
+        this.showBootOverlay('Connecting to lobby…');
         if (!this.attractModeGraphics) {
-            this.attractModeGraphics = this.add.graphics();
+            this.attractModeGraphics = this.add.graphics().setDepth(4);
             this.attractTime = 0;
         }
         this.attractModeGraphics.clear();
         this.attractTime += 0.04;
-        
-        // Panoramic animated starfield / particle mesh
-        for(let i = 0; i < 30; i++) {
-            const angle = this.attractTime * 0.8 + (i * 0.25);
-            const radius = 220 + Math.sin(this.attractTime * 0.6 + i) * 80;
+
+        // Soft orbiting particles behind the HTML boot card
+        for (let i = 0; i < 36; i++) {
+            const angle = this.attractTime * 0.55 + (i * 0.22);
+            const radius = 260 + Math.sin(this.attractTime * 0.5 + i) * 90;
             const px = 960 + Math.cos(angle) * radius;
-            const py = 540 + Math.sin(angle * 0.7) * (radius * 0.6);
-            
-            const hueAlpha = 0.4 + Math.sin(this.attractTime + i) * 0.3;
-            this.attractModeGraphics.fillStyle(i % 2 === 0 ? COLORS.system : COLORS.systemAlt, Math.max(0.1, hueAlpha));
-            this.attractModeGraphics.fillCircle(px, py, 3 + (i % 4));
+            const py = 540 + Math.sin(angle * 0.72) * (radius * 0.55);
+            const hueAlpha = 0.25 + Math.sin(this.attractTime + i) * 0.2;
+            this.attractModeGraphics.fillStyle(
+                i % 2 === 0 ? COLORS.system : COLORS.systemAlt,
+                Math.max(0.08, hueAlpha)
+            );
+            this.attractModeGraphics.fillCircle(px, py, 2 + (i % 3));
         }
 
-        if (isCenterScreen) {
-            if (!this.bootTitleText) {
-                this.bootTitleText = this.add.text(960, 440, 'LIQUID GALAXY\nARKANOID', {
-                    fontFamily: FONTS.display, fontSize: '84px', fill: HEX.systemAlt, align: 'center', fontWeight: 'bold'
-                }).setOrigin(0.5, 0.5);
-                
-                this.bootSubTitleText = this.add.text(960, 560, 'PHONE CONTROLLER · MULTI-SCREEN PLAY', {
-                    fontFamily: FONTS.heading, fontSize: '22px', fill: HEX.system, letterSpacing: 4, fontWeight: 'bold'
-                }).setOrigin(0.5, 0.5);
-
-                this.bootLoadingText = this.add.text(960, 620, 'Connecting to lobby…', {
-                    fontFamily: FONTS.body, fontSize: '18px', fill: HEX.textSecondary, letterSpacing: 2
-                }).setOrigin(0.5, 0.5);
+        // Side screens get a quiet brand line while waiting for socket state
+        if (!isCenterScreen) {
+            if (!this.bootSideText) {
+                this.bootSideText = this.add.text(960, 540, '', {
+                    fontFamily: FONTS.display,
+                    fontSize: '56px',
+                    fill: HEX.systemAlt,
+                    align: 'center'
+                }).setOrigin(0.5).setDepth(6).setAlpha(0.85);
             }
-            this.bootTitleText.setVisible(true);
-            if (this.bootSubTitleText) this.bootSubTitleText.setVisible(true);
-            this.bootLoadingText.setVisible(true);
+            this.bootSideText.setText(
+                screenId === 1
+                    ? 'LG ARKANOID\nPHONE CONTROLLER'
+                    : 'WAITING FOR\nHOST LOBBY'
+            );
+            this.bootSideText.setVisible(true);
+        } else if (this.bootSideText) {
+            this.bootSideText.setVisible(false);
         }
     }
 
@@ -414,6 +427,33 @@ class GameScene extends Phaser.Scene {
         if (this.bootTitleText) this.bootTitleText.setVisible(false);
         if (this.bootSubTitleText) this.bootSubTitleText.setVisible(false);
         if (this.bootLoadingText) this.bootLoadingText.setVisible(false);
+        if (this.bootSideText) this.bootSideText.setVisible(false);
+    }
+
+    showBootOverlay(statusText) {
+        const el = document.getElementById('bootOverlay');
+        if (!el) return;
+        el.classList.remove('is-hidden');
+        const status = document.getElementById('bootStatusText');
+        if (status && statusText) status.textContent = statusText;
+        this.syncBootToCanvas();
+    }
+
+    hideBootOverlay() {
+        const el = document.getElementById('bootOverlay');
+        if (el) el.classList.add('is-hidden');
+    }
+
+    syncBootToCanvas() {
+        const boot = document.getElementById('bootOverlay');
+        const canvas = document.querySelector('canvas');
+        if (!boot || !canvas || boot.classList.contains('is-hidden')) return;
+        const rect = canvas.getBoundingClientRect();
+        if (rect.width < 40 || rect.height < 40) return;
+        boot.style.left = `${rect.left + rect.width / 2}px`;
+        boot.style.top = `${rect.top + rect.height * 0.48}px`;
+        const scale = Math.min(rect.width / 1920, rect.height / 1080);
+        boot.style.width = `${Math.max(320, Math.min(520, 520 * scale))}px`;
     }
     
     initAmbientTexts() {
@@ -421,28 +461,28 @@ class GameScene extends Phaser.Scene {
             this.lobbyDecorGfx = this.add.graphics().setDepth(5);
         }
         if (!this.ambientLeftText) {
-            this.ambientLeftText = this.add.text(960, 360, '', {
-                fontFamily: FONTS.display, fontSize: '72px', fill: HEX.systemAlt,
+            this.ambientLeftText = this.add.text(960, 250, '', {
+                fontFamily: FONTS.display, fontSize: '68px', fill: HEX.systemAlt,
                 align: 'center'
-            }).setOrigin(0.5).setVisible(false).setDepth(6);
+            }).setOrigin(0.5, 0).setVisible(false).setDepth(6);
         }
         if (!this.ambientLeftSub) {
-            this.ambientLeftSub = this.add.text(960, 470, '', {
-                fontFamily: FONTS.heading, fontSize: '22px', fill: HEX.textSecondary,
-                align: 'center', lineSpacing: 10
-            }).setOrigin(0.5).setVisible(false).setDepth(6);
+            this.ambientLeftSub = this.add.text(960, 340, '', {
+                fontFamily: FONTS.heading, fontSize: '20px', fill: HEX.textSecondary,
+                align: 'center', lineSpacing: 12
+            }).setOrigin(0.5, 0).setVisible(false).setDepth(6);
         }
         if (!this.ambientRightText) {
-            this.ambientRightText = this.add.text(960, 340, '', {
-                fontFamily: FONTS.display, fontSize: '64px', fill: HEX.systemAlt,
+            this.ambientRightText = this.add.text(960, 250, '', {
+                fontFamily: FONTS.display, fontSize: '68px', fill: HEX.systemAlt,
                 align: 'center'
-            }).setOrigin(0.5).setVisible(false).setDepth(6);
+            }).setOrigin(0.5, 0).setVisible(false).setDepth(6);
         }
         if (!this.ambientRightSub) {
-            this.ambientRightSub = this.add.text(960, 430, '', {
-                fontFamily: FONTS.heading, fontSize: '22px', fill: HEX.textSecondary,
-                align: 'center', lineSpacing: 8
-            }).setOrigin(0.5).setVisible(false).setDepth(6);
+            this.ambientRightSub = this.add.text(960, 340, '', {
+                fontFamily: FONTS.heading, fontSize: '20px', fill: HEX.textSecondary,
+                align: 'center', lineSpacing: 12
+            }).setOrigin(0.5, 0).setVisible(false).setDepth(6);
         }
         const maxP = (this.currentState && this.currentState.maxPlayers) || 5;
         if (!this.lobbyPlayerTexts) {
@@ -450,23 +490,43 @@ class GameScene extends Phaser.Scene {
         }
         while (this.lobbyPlayerTexts.length < maxP) {
             const idx = this.lobbyPlayerTexts.length;
-            const txt = this.add.text(960, 520 + (idx * 58), '', {
-                fontFamily: FONTS.heading, fontSize: '28px', fill: HEX.textSecondary
+            const txt = this.add.text(960, 470 + (idx * 62), '', {
+                fontFamily: FONTS.heading, fontSize: '26px', fill: HEX.textSecondary
             }).setOrigin(0.5).setVisible(false).setDepth(6);
             this.lobbyPlayerTexts.push({ text: txt });
         }
     }
 
-    drawLobbyFrame(titleY = 280) {
+    drawLobbyFrame() {
         if (!this.lobbyDecorGfx) return;
         this.lobbyDecorGfx.clear();
-        const pulse = 0.35 + Math.sin(this.time.now * 0.0025) * 0.15;
+        const pulse = 0.32 + Math.sin(this.time.now * 0.0025) * 0.12;
+        const panelX = 280;
+        const panelY = 160;
+        const panelW = 1360;
+        const panelH = 760;
+        this.lobbyDecorGfx.fillStyle(0x081018, 0.42);
+        this.lobbyDecorGfx.fillRoundedRect(panelX, panelY, panelW, panelH, 28);
         this.lobbyDecorGfx.lineStyle(2, COLORS.system, pulse);
-        this.lobbyDecorGfx.strokeRoundedRect(220, titleY - 90, 1480, 720, 24);
-        this.lobbyDecorGfx.lineStyle(1, COLORS.systemAlt, pulse * 0.45);
-        this.lobbyDecorGfx.strokeRoundedRect(240, titleY - 70, 1440, 680, 18);
-        this.lobbyDecorGfx.fillStyle(COLORS.system, 0.05);
-        this.lobbyDecorGfx.fillRoundedRect(240, titleY - 70, 1440, 680, 18);
+        this.lobbyDecorGfx.strokeRoundedRect(panelX, panelY, panelW, panelH, 28);
+        this.lobbyDecorGfx.lineStyle(1, COLORS.systemAlt, pulse * 0.4);
+        this.lobbyDecorGfx.strokeRoundedRect(panelX + 16, panelY + 16, panelW - 32, panelH - 32, 20);
+
+        // Top accent rule under title area
+        this.lobbyDecorGfx.lineStyle(2, COLORS.system, 0.35);
+        this.lobbyDecorGfx.lineBetween(panelX + 120, 430, panelX + panelW - 120, 430);
+    }
+
+    layoutSideSlots(maxP) {
+        // Keep player rows inside the panel with even spacing under the divider.
+        const startY = 490;
+        const endY = 860;
+        const span = Math.max(1, maxP - 1);
+        const step = maxP <= 1 ? 0 : Math.min(70, (endY - startY) / span);
+        for (let i = 0; i < this.lobbyPlayerTexts.length; i++) {
+            const y = startY + (i * step);
+            this.lobbyPlayerTexts[i].text.setPosition(960, y);
+        }
     }
 
     renderJoin() {
@@ -477,9 +537,9 @@ class GameScene extends Phaser.Scene {
         const connectedCount = players.filter((p) => p.connected).length;
         const maxP = this.currentState.maxPlayers || players.length;
         const duration = this.currentState.gameDurationSeconds;
-        const durationLabel = duration === 0 ? 'ENDLESS' : `${Math.round((duration || 180) / 60)} MIN`;
-        const screensLabel = `${this.currentState.numScreens || numScreens} SCREENS`;
-        const speedLabel = (this.currentState.ballSpeed || 'medium').toUpperCase();
+        const durationLabel = duration === 0 ? 'Endless' : `${Math.round((duration || 180) / 60)} min`;
+        const screensLabel = `${this.currentState.numScreens || numScreens} screens`;
+        const speedLabel = (this.currentState.ballSpeed || 'medium');
         const PLAYER_HEX = [HEX.systemAlt, '#FF2D78', '#FFB800', '#9B59B6', '#2ECC71'];
 
         if (this.lobbyDecorGfx) this.lobbyDecorGfx.clear();
@@ -490,13 +550,15 @@ class GameScene extends Phaser.Scene {
         if (this.lobbyPlayerTexts) this.lobbyPlayerTexts.forEach((p) => p.text.setVisible(false));
 
         if (screenId === 1) {
-            this.drawLobbyFrame(300);
+            this.hideBootOverlay();
+            this.drawLobbyFrame();
+            this.layoutSideSlots(maxP);
             this.ambientLeftText.setText('LG ARKANOID');
-            this.ambientLeftText.setVisible(true).setAlpha(0.95);
+            this.ambientLeftText.setVisible(true).setAlpha(0.98);
             this.ambientLeftSub.setText(
-                'PHONE IS THE CONTROLLER\nScan the center QR · join with the 4-letter code\nHost starts from the lobby'
+                'Phone is the controller\nScan the center QR · enter the 4-letter code\nHost starts the match from the lobby'
             );
-            this.ambientLeftSub.setVisible(true).setAlpha(0.9);
+            this.ambientLeftSub.setVisible(true).setAlpha(0.92);
             for (let i = 0; i < maxP; i++) {
                 const p = players[i];
                 const slot = this.lobbyPlayerTexts[i];
@@ -504,20 +566,22 @@ class GameScene extends Phaser.Scene {
                 const filled = !!(p && p.connected);
                 slot.text.setText(
                     filled
-                        ? `●  ${p.name || ('Player ' + (i + 1))}  ·  READY`
-                        : `○  SLOT ${i + 1}  ·  OPEN`
+                        ? `●   ${(p.name || ('Player ' + (i + 1))).toUpperCase()}   ·   READY`
+                        : `○   SLOT ${i + 1}   ·   OPEN`
                 );
                 slot.text.setColor(filled ? (PLAYER_HEX[i % PLAYER_HEX.length]) : HEX.textDim);
                 slot.text.setVisible(true).setAlpha(filled ? 1 : 0.55);
             }
         } else if (screenId === numScreens) {
-            this.drawLobbyFrame(300);
+            this.hideBootOverlay();
+            this.drawLobbyFrame();
+            this.layoutSideSlots(maxP);
             this.ambientRightText.setText(`${connectedCount} / ${maxP}`);
-            this.ambientRightText.setVisible(true).setAlpha(0.95);
+            this.ambientRightText.setVisible(true).setAlpha(0.98);
             this.ambientRightSub.setText(
-                `PLAYERS CONNECTED\n${screensLabel}  ·  ${durationLabel}  ·  ${speedLabel}\nWaiting for host to launch`
+                `Players connected\n${screensLabel}  ·  ${durationLabel}  ·  ${speedLabel}\nWaiting for host to launch`
             );
-            this.ambientRightSub.setVisible(true).setAlpha(0.9);
+            this.ambientRightSub.setVisible(true).setAlpha(0.92);
             for (let i = 0; i < maxP; i++) {
                 const p = players[i];
                 const slot = this.lobbyPlayerTexts[i];
@@ -525,8 +589,8 @@ class GameScene extends Phaser.Scene {
                 const filled = !!(p && p.connected);
                 slot.text.setText(
                     filled
-                        ? `▸  ${(p.name || ('Player ' + (i + 1))).toUpperCase()}`
-                        : `·  waiting for player ${i + 1}`
+                        ? `▸   ${(p.name || ('Player ' + (i + 1))).toUpperCase()}`
+                        : `·   waiting for player ${i + 1}`
                 );
                 slot.text.setColor(filled ? (PLAYER_HEX[i % PLAYER_HEX.length]) : HEX.textDim);
                 slot.text.setVisible(true).setAlpha(filled ? 1 : 0.5);
@@ -534,8 +598,10 @@ class GameScene extends Phaser.Scene {
         } else if (isCenterScreen) {
             const token = this.sessionToken || this.currentState.sessionToken;
             if (!token) {
+                this.showBootOverlay('Fetching session code…');
                 this.fetchSessionInfo();
             } else {
+                this.hideBootOverlay();
                 const qrDiv = document.getElementById('qrcode');
                 const sessionCodeDiv = document.getElementById('qr-session-code');
                 const sessionCodeInline = document.getElementById('qr-session-code-inline');
@@ -547,9 +613,21 @@ class GameScene extends Phaser.Scene {
                 this.syncQrToCanvas();
 
                 sessionCodeDiv.innerText = token;
-                sessionCodeInline.innerText = token;
+                if (sessionCodeInline) sessionCodeInline.innerText = token;
+
                 if (matchMeta) {
-                    matchMeta.innerText = `${connectedCount}/${maxP} players · ${screensLabel} · ${durationLabel} · ${speedLabel}`;
+                    matchMeta.textContent = '';
+                    [
+                        `${connectedCount}/${maxP} players`,
+                        screensLabel,
+                        durationLabel,
+                        speedLabel,
+                    ].forEach((label) => {
+                        const chip = document.createElement('span');
+                        chip.className = 'lobby-card__chip';
+                        chip.textContent = label;
+                        matchMeta.appendChild(chip);
+                    });
                 }
 
                 if (playerList) {
@@ -572,10 +650,10 @@ class GameScene extends Phaser.Scene {
                     }
                 }
 
-                if (connectedCount === 0) {
-                    waitingText.innerText = 'Waiting for first player…';
-                } else {
-                    waitingText.innerText = 'Host starts the match from the phone';
+                if (waitingText) {
+                    waitingText.innerText = connectedCount === 0
+                        ? 'Waiting for first player…'
+                        : 'Host starts the match from the phone';
                 }
 
                 const lanIp = this.sessionLanIp || this.currentState.lanIp;
@@ -584,8 +662,8 @@ class GameScene extends Phaser.Scene {
                     const qrData = `LGARK|${lanIp}|${port}|${token}`;
                     this.qrCodeObj = new QRCode(document.getElementById('qrcode-img'), {
                         text: qrData,
-                        width: 220,
-                        height: 220,
+                        width: 188,
+                        height: 188,
                         colorDark: '#041018',
                         colorLight: '#ffffff',
                         correctLevel: QRCode.CorrectLevel.L
@@ -629,6 +707,7 @@ class GameScene extends Phaser.Scene {
 
     hideJoinMode() {
         document.getElementById('qrcode').style.display = 'none';
+        this.hideBootOverlay();
         if (this.lobbyDecorGfx) this.lobbyDecorGfx.clear();
         if (this.ambientLeftText) this.ambientLeftText.setVisible(false);
         if (this.ambientLeftSub) this.ambientLeftSub.setVisible(false);
