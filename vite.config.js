@@ -1,4 +1,8 @@
 import { defineConfig } from 'vite';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // ---------------------------------------------------------------------------
 // Vite development server configuration for LG Arkanoid.
@@ -13,9 +17,16 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
   root: 'web-client',
+  // Keep Vite 4.x for Node 16 / LG Ubuntu 16.04 glibc ceiling (see CI matrix).
   build: {
     outDir: '../dist',
     emptyOutDir: true,
+    rollupOptions: {
+      input: {
+        main: path.resolve(__dirname, 'web-client/index.html'),
+        controller: path.resolve(__dirname, 'web-client/controller.html'),
+      },
+    },
   },
   server: {
     host: '0.0.0.0',

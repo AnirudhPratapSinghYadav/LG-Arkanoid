@@ -124,9 +124,10 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
     if (!mounted) return;
     setState(() {
       _applyingScreens = false;
-      _screenApplyMsg = err == null || err.isEmpty
-          ? 'Rig relaunched with $_selectedScreens screens. Rejoin if needed.'
-          : 'Rig apply failed: $err';
+      final failed = err.startsWith('ERROR');
+      _screenApplyMsg = failed
+          ? 'Rig apply failed: $err'
+          : 'Rig relaunched with $_selectedScreens screens. Rejoin if needed.';
     });
   }
 

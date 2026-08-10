@@ -124,8 +124,8 @@ class SSHService {
   // script how many screens to open Chromium on.
   // --------------------------------------------------------------------------
   static String? _safeRemotePath(String path) {
-    // Allow only absolute POSIX-ish paths without shell metacharacters.
-    if (!RegExp(r'^/[A-Za-z0-9._/\-]+$').hasMatch(path)) return null;
+    // Allow absolute paths or home-relative ~/paths without shell metacharacters.
+    if (!RegExp(r'^(~/|/)[A-Za-z0-9._/\-]+$').hasMatch(path)) return null;
     if (path.contains('..')) return null;
     return path;
   }
@@ -139,7 +139,7 @@ class SSHService {
     final screens = numScreens.clamp(1, 9);
 
     return sendCommand(
-      'bash ${remotePath}/scripts/open-arkanoid.sh $screens',
+      'bash $remotePath/scripts/open-arkanoid.sh $screens',
     );
   }
 
@@ -158,7 +158,7 @@ class SSHService {
         defaultRemotePath;
 
     return sendCommand(
-      'bash ${remotePath}/scripts/close-arkanoid.sh',
+      'bash $remotePath/scripts/close-arkanoid.sh',
     );
   }
 
