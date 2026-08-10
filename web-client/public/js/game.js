@@ -161,6 +161,7 @@ class GameScene extends Phaser.Scene {
         
         this.logo = this.add.image(960, 420, 'lg_logo').setOrigin(0.5, 0.5).setAlpha(0);
         this.logo.setScale(0.5);
+        this.setupLeftmostBrand();
 
         const scanlineGraphics = this.make.graphics({x: 0, y: 0, add: false});
         scanlineGraphics.fillStyle(COLORS.white, 0.15);
@@ -263,6 +264,34 @@ class GameScene extends Phaser.Scene {
                 wordWrap: { width: 220 }
             }).setOrigin(0.5, 1).setAlpha(0).setDepth(45).setVisible(false);
             this.robots.push({ bubble, state: 'idle' });
+        }
+    }
+
+    setupLeftmostBrand() {
+        // Leftmost panoramic browser (/1): Liquid Galaxy logo top-left during connect + lobby.
+        if (screenId !== 1) return;
+        document.body.classList.add('is-leftmost-screen');
+        const corner = document.getElementById('lgCorner');
+        if (corner) {
+            corner.hidden = false;
+            corner.classList.add('is-visible');
+        }
+        // Keep Phaser SCREEN label clear of the HTML logo badge.
+        if (this.screenLabel) {
+            this.screenLabel.setPosition(22, 96);
+            this.screenLabel.setText('SCREEN 1');
+        }
+        if (this.rigStatusText) {
+            this.rigStatusText.setPosition(22, 122);
+        }
+        // Soft in-canvas logo accent under the HTML badge (visible if overlay lags).
+        if (this.logo) {
+            this.logo
+                .setOrigin(0, 0)
+                .setPosition(28, 22)
+                .setScale(0.28)
+                .setAlpha(0)
+                .setDepth(70);
         }
     }
 
@@ -403,14 +432,17 @@ class GameScene extends Phaser.Scene {
 
         // Side screens get a quiet brand line while waiting for socket state
         if (!isCenterScreen) {
+            this.hideBootOverlay();
             if (!this.bootSideText) {
-                this.bootSideText = this.add.text(960, 540, '', {
+                this.bootSideText = this.add.text(960, 560, '', {
                     fontFamily: FONTS.display,
                     fontSize: '56px',
                     fill: HEX.systemAlt,
                     align: 'center'
                 }).setOrigin(0.5).setDepth(6).setAlpha(0.85);
             }
+            // Leave room under the top-left LG logo on screen 1
+            this.bootSideText.setPosition(960, screenId === 1 ? 580 : 540);
             this.bootSideText.setText(
                 screenId === 1
                     ? 'LG ARKANOID\nPHONE CONTROLLER'
@@ -431,6 +463,11 @@ class GameScene extends Phaser.Scene {
     }
 
     showBootOverlay(statusText) {
+        // Connecting card belongs on the center display; side screens keep brand chrome only.
+        if (!isCenterScreen) {
+            this.hideBootOverlay();
+            return;
+        }
         const el = document.getElementById('bootOverlay');
         if (!el) return;
         el.classList.remove('is-hidden');

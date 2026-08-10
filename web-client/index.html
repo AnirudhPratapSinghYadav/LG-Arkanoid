@@ -17,6 +17,13 @@
 </head>
 <body>
     <div class="stage-vignette" aria-hidden="true"></div>
+    <div id="lgCorner" class="lg-corner" hidden>
+        <img class="lg-corner__logo" src="/assets/lg-logo.png" alt="Liquid Galaxy">
+        <div class="lg-corner__text">
+            <span class="lg-corner__eyebrow">Liquid Galaxy</span>
+            <span class="lg-corner__name">LG Arkanoid</span>
+        </div>
+    </div>
     <div class="brand-mark" aria-hidden="true">
         <span class="brand-mark__eyebrow">Liquid Galaxy</span>
         <span class="brand-mark__name">LG Arkanoid</span>
@@ -54,6 +61,18 @@
     </div>
 
     <script src="js/config.js"></script>
+    <script>
+      (function showLeftmostLogo() {
+        var id = (typeof window.SCREEN_ID !== 'undefined') ? Number(window.SCREEN_ID) : NaN;
+        if (id !== 1) return;
+        document.body.classList.add('is-leftmost-screen');
+        var corner = document.getElementById('lgCorner');
+        if (corner) {
+          corner.hidden = false;
+          corner.classList.add('is-visible');
+        }
+      })();
+    </script>
     <script src="js/game.js"></script>
 </body>
 </html>

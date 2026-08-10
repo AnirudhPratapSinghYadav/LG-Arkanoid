@@ -47,6 +47,66 @@ html, body {
     text-shadow: 0 0 18px rgba(0, 229, 255, 0.35);
 }
 
+/* Leftmost screen (browser /1) — Liquid Galaxy logo top-left */
+.lg-corner {
+    position: fixed;
+    top: 18px;
+    left: 22px;
+    z-index: 30;
+    display: none;
+    align-items: center;
+    gap: 14px;
+    pointer-events: none;
+    padding: 10px 16px 10px 12px;
+    border-radius: 16px;
+    background: rgba(6, 12, 18, 0.55);
+    border: 1px solid rgba(0, 229, 255, 0.28);
+    box-shadow:
+        0 10px 28px rgba(0, 0, 0, 0.35),
+        0 0 24px rgba(0, 229, 255, 0.12);
+    backdrop-filter: blur(8px);
+}
+
+.lg-corner.is-visible {
+    display: flex;
+}
+
+.lg-corner__logo {
+    height: 46px;
+    width: auto;
+    display: block;
+    filter: drop-shadow(0 0 14px rgba(0, 229, 255, 0.4));
+}
+
+.lg-corner__text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    text-align: left;
+}
+
+.lg-corner__eyebrow {
+    font-size: 11px;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: rgba(0, 229, 255, 0.9);
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+}
+
+.lg-corner__name {
+    font-family: 'VT323', monospace;
+    font-size: 26px;
+    letter-spacing: 0.06em;
+    color: #f3f4f6;
+    text-shadow: 0 0 16px rgba(0, 229, 255, 0.3);
+}
+
+/* Leftmost screen: keep right brand quieter so left logo leads */
+body.is-leftmost-screen .brand-mark {
+    opacity: 0.55;
+}
+
 /* ── First connection / boot ── */
 .boot-overlay {
     position: fixed;
