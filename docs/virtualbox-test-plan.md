@@ -61,7 +61,9 @@ Screens:
 
 ## Phone join
 
-1. Note lg1 LAN IP and token from `/health` or on-screen QR.
+1. Note lg1 LAN IP from `/health` (`lanIp`) and the **4-letter session code from the center-screen QR** (token is not on `/health`).
+2. On phone: Flutter app **or** browser → `http://<lg1-ip>:3000/controller`
+3. Join with the on-screen code; host starts match.
 2. Flutter app → Enter manually → IP, port **3000**, token → name → lobby.
 3. Start match. Drag paddle; ball should move on the Chromium windows.
 

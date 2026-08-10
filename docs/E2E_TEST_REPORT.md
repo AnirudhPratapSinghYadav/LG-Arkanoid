@@ -24,7 +24,7 @@ Offline vendor assets (`/js/vendor/phaser.min.js`, `/js/vendor/qrcode.min.js`) r
 ## Working
 
 ### Server / screens
-- `/health` returns `numScreens`, `sessionToken`, `gameStatus` (token stays on health for QR only)
+- `/health` returns `numScreens`, `gameStatus`, `lanIp` (join `sessionToken` intentionally omitted — screens get it via `session_info`)
 - `/1` `/2` `/3` inject `SCREEN_ID` + `NUM_SCREENS`
 - `/4` rejected for 3-screen configs
 - `/controller` serves browser paddle page
@@ -59,7 +59,7 @@ Offline vendor assets (`/js/vendor/phaser.min.js`, `/js/vendor/qrcode.min.js`) r
 | Issue | Severity | Notes |
 |-------|----------|--------|
 | No Android emulator on this PC | Test gap | Flutter protocol matches Socket.IO suite; APK not launched here |
-| `/health` still exposes session token | Accepted for LAB QR | Required so center screen can show join code; not broadcast on every tick |
+| `/health` does not expose session token | Security | Join code is pushed only to panoramic screen sockets (`session_info`) |
 | Gemini level gen needs API key + network | Optional | Token budget raised; falls back to built-in levels if Gemini fails |
 
 ---

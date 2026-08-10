@@ -11,7 +11,7 @@ bash scripts/open-arkanoid.sh 3    # or 5,7,9,12
 bash scripts/close-arkanoid.sh
 ```
 
-Phone controller: same Wi‑Fi → IP of master, port **3000**, session token from screens or `/health`.
+Phone controller: same Wi‑Fi → IP of master, port **3000**, session token from the **center screen QR / code** (not `/health`). Or use `http://<master-ip>:3000/controller` in a phone browser.
 
 ## Details
 

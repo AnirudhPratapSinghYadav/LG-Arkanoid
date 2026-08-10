@@ -26,7 +26,7 @@ This follows the same deploy pattern as sister games such as [galaxy-pacman](htt
 | Audience | Use |
 |----------|-----|
 | Liquid Galaxy labs / museums | Install on a master node and launch across the wall |
-| Mentors / LAB testing | APK + `open-arkanoid.sh` for real-rig validation |
+| Mentors / LAB testing | `open-arkanoid.sh` + wall QR; Flutter APK built from `mobile/` (or browser `/controller`) |
 | Contributors / students | Local multi-window Chromium + phone on Wi‑Fi |
 | Open-source community | Reuse the panoramic Socket.IO + phone-controller pattern |
 
@@ -169,7 +169,7 @@ Then open:
 |-----|---------|
 | http://localhost:3000/1 | Screen 1 |
 | http://localhost:3000/2 | Screen 2 |
-| http://localhost:3000/health | Status + session token |
+| http://localhost:3000/health | Status (no join code — code is on the wall QR only) |
 | http://localhost:3000/controller | Browser paddle (optional) |
 
 ```bash
@@ -201,7 +201,9 @@ Stop:
 bash scripts/close-arkanoid.sh
 ```
 
-Phone: same Wi‑Fi → master IP, port **3000**, 4-character token from the wall or `/health`.
+Phone: same Wi‑Fi → master IP, port **3000**, 4-character token from the **center-screen QR / session code** (not `/health` — join codes are screen-only for security).
+
+Or open `http://<master-ip>:3000/controller` on a phone browser if you do not have the Flutter APK yet.
 
 More detail: [docs/lg-setup.md](docs/lg-setup.md) · VirtualBox plan: [docs/virtualbox-test-plan.md](docs/virtualbox-test-plan.md)
 

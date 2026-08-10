@@ -21,6 +21,6 @@ Release APK:
 flutter build apk --release
 ```
 
-Connect with master IP, port **3000**, and the session token shown on the Liquid Galaxy screens (or `/health`).
+Connect with master IP, port **3000**, and the session token shown on the Liquid Galaxy center screen (QR / 4-letter code). `/health` does not include the join code.
 
 See the root [README.md](../README.md) and [docs/mobile-setup.md](../docs/mobile-setup.md).

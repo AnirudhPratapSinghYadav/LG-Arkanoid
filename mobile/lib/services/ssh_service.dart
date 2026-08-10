@@ -136,7 +136,7 @@ class SSHService {
           prefs.getString(prefRemotePath) ?? defaultRemotePath,
         ) ??
         defaultRemotePath;
-    final screens = numScreens.clamp(1, 9);
+    final screens = numScreens.clamp(1, 12);
 
     return sendCommand(
       'bash $remotePath/scripts/open-arkanoid.sh $screens',
