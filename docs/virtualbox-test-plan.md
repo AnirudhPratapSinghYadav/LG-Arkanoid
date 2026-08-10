@@ -52,7 +52,7 @@ bash scripts/open-arkanoid.sh 3
 curl -s http://localhost:3000/health
 ```
 
-Expect JSON with `"numScreens":3` and a `sessionToken`.
+Expect JSON with `"numScreens":3` and `lanIp` (no `sessionToken` — that is only on the wall).
 
 Screens:
 
@@ -63,11 +63,7 @@ Screens:
 
 1. Note lg1 LAN IP from `/health` (`lanIp`) and the **4-letter session code from the center-screen QR** (token is not on `/health`).
 2. On phone: Flutter app **or** browser → `http://<lg1-ip>:3000/controller`
-3. Join with the on-screen code; host starts match.
-2. Flutter app → Enter manually → IP, port **3000**, token → name → lobby.
-3. Start match. Drag paddle; ball should move on the Chromium windows.
-
-Browser fallback: `http://<lg1-ip>:3000/controller`
+3. Join with the on-screen code; host starts match. Drag paddle; ball should move on the Chromium windows.
 
 ## Test cases
 
