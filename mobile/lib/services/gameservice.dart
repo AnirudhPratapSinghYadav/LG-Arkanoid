@@ -105,10 +105,25 @@ class GameService extends ChangeNotifier {
         playerNumber = map['playerNumber'] as int?;
         sessionId = map['sessionId'] as String?;
         resumeToken = map['resumeToken'] as String?;
+        if (map['sessionToken'] is String) {
+          sessionToken = map['sessionToken'] as String;
+        }
         isSpectator = map['isSpectator'] as bool? ?? false;
+        final alreadyConfirmed = isJoinConfirmed;
         isJoinConfirmed = true;
         joinError = null;
-        if (onJoinConfirmed != null) onJoinConfirmed!(isSpectator);
+        if (onJoinConfirmed != null && !alreadyConfirmed) onJoinConfirmed!(isSpectator);
+        notifyListeners();
+      });
+
+      socket!.on('lobby_ready', (data){
+        final map = _asMap(data);
+        if (map['sessionId'] is String) {
+          sessionId = map['sessionId'] as String;
+        }
+        if (map['sessionToken'] is String) {
+          sessionToken = map['sessionToken'] as String;
+        }
         notifyListeners();
       });
 
@@ -229,6 +244,7 @@ class GameService extends ChangeNotifier {
 
   void sendPaddleMove(double deltaX){
     if(socket==null || !connected || playerId==null) return;
+    if(lives <= 0) return;
     socket!.emit('paddle_move', {
       'deltaX': deltaX.round(),
       'timestamp': DateTime.now().millisecondsSinceEpoch,
@@ -238,6 +254,7 @@ class GameService extends ChangeNotifier {
 
   void activatePowerUp(String powerUpType){
     if(socket==null || !connected || playerId==null) return;
+    if(lives <= 0) return;
     socket!.emit('power_up_activate', {
       'playerId': playerId,
       'powerUpType': powerUpType,

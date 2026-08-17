@@ -8,7 +8,6 @@ import '../services/gameservice.dart';
 import '../widgets/mission_background.dart';
 import '../widgets/lgpanel.dart';
 import '../widgets/connectionstatus.dart';
-import '../services/ssh_service.dart';
 import '../widgets/controller_touchpad.dart';
 import '../widgets/controller_dpad.dart';
 import '../widgets/powerup_panel.dart';
@@ -63,6 +62,14 @@ class _ControllerScreenState extends State<ControllerScreen>
 
     final status = gameState['gameStatus'] as String? ?? 'playing';
 
+    if ((status == 'lobby' || status == 'waiting') && _showGameEndOverlay) {
+      setState(() {
+        _showGameEndOverlay = false;
+      });
+      Navigator.pushReplacementNamed(context, '/lobby');
+      return;
+    }
+
     if ((status == 'game_over' || status == 'time_up' || status == 'win') &&
         !_showGameEndOverlay) {
       // Determine winner
@@ -102,25 +109,27 @@ class _ControllerScreenState extends State<ControllerScreen>
     final service = context.watch<GameService>();
     final gameState = service.latestGameState;
 
-    final List<Color> playerColors = [
-      const Color(0xFF20C5FF), // Player 1 - Cyan
-      const Color(0xFFFF2D78), // Player 2 - Pink
-      const Color(0xFFFFB800), // Player 3 - Gold
-    ];
+    final List<Color> playerColors = playerSlotColors;
     final playerColor =
         playerColors[((service.playerNumber ?? 1) - 1) % playerColors.length];
 
     // Calculate remaining time
     int remainingSeconds = 0;
     bool showTimer = false;
+    bool warnLowTime = false;
     if (gameState != null) {
       final gameStartedAt = gameState['gameStartedAt'] as int?;
       final duration = gameState['gameDurationSeconds'] as int? ?? 180;
       final status = gameState['gameStatus'] as String? ?? '';
-      if (gameStartedAt != null && status == 'playing' && duration > 0) {
+      if (gameStartedAt != null && status == 'playing') {
         final elapsed =
             (DateTime.now().millisecondsSinceEpoch - gameStartedAt) ~/ 1000;
-        remainingSeconds = max(0, duration - elapsed);
+        if (duration > 0) {
+          remainingSeconds = max(0, duration - elapsed);
+          warnLowTime = remainingSeconds <= 30;
+        } else {
+          remainingSeconds = elapsed;
+        }
         showTimer = true;
       }
     }
@@ -139,56 +148,46 @@ class _ControllerScreenState extends State<ControllerScreen>
                         const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     child: LgPanel(
                       child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Row(
-                            children: [
-                              Container(
-                                width: 8,
-                                height: 8,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: playerColor,
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                'P${service.playerNumber ?? 1}',
-                                style: GoogleFonts.spaceGrotesk(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold,
-                                  color: textPrimary,
-                                ),
-                              ),
-                            ],
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: playerColor,
+                            ),
                           ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'P${service.playerNumber ?? 1}',
+                            style: GoogleFonts.spaceGrotesk(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: textPrimary,
+                            ),
+                          ),
+                          const Spacer(),
                           ConnectionStatus(
                               isConnected: service.connected, label: 'GAME'),
-                          Row(
-                            children: [
-                              Text(
-                                '${service.latencyMs}ms',
-                                style: GoogleFonts.jetBrainsMono(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                  color: textSecondary,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              ConnectionStatus(
-                                  isConnected: SSHService().isConnected,
-                                  label: 'RIG'),
-                              const SizedBox(width: 4),
-                              IconButton(
-                                icon: const Icon(Icons.settings,
-                                    color: textSecondary, size: 18),
-                                constraints: const BoxConstraints(),
-                                padding: EdgeInsets.zero,
-                                tooltip: 'Settings',
-                                onPressed: () =>
-                                    Navigator.pushNamed(context, '/settings'),
-                              ),
-                            ],
+                          const SizedBox(width: 8),
+                          Text(
+                            '${service.latencyMs}ms',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.jetBrainsMono(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: textSecondary,
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.settings,
+                                color: textSecondary, size: 18),
+                            constraints: const BoxConstraints(),
+                            padding: const EdgeInsets.only(left: 8),
+                            tooltip: 'Settings',
+                            onPressed: () =>
+                                Navigator.pushNamed(context, '/settings'),
                           ),
                         ],
                       ),
@@ -200,6 +199,7 @@ class _ControllerScreenState extends State<ControllerScreen>
                     playerColor: playerColor,
                     remainingSeconds: remainingSeconds,
                     showTimer: showTimer,
+                    warnLowTime: warnLowTime,
                   ),
 
                   const SizedBox(height: 4),
@@ -379,8 +379,12 @@ class _ControllerScreenState extends State<ControllerScreen>
                   setState(() {
                     _showGameEndOverlay = false;
                   });
-                  Navigator.pushNamedAndRemoveUntil(
-                      context, '/joinchoice', (_) => false);
+                  if (service.connected) {
+                    Navigator.pushReplacementNamed(context, '/lobby');
+                  } else {
+                    Navigator.pushNamedAndRemoveUntil(
+                        context, '/joinchoice', (_) => false);
+                  }
                 },
               ),
           ],

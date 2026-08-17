@@ -26,7 +26,9 @@ class GameEndOverlay extends StatelessWidget {
       color: Colors.black.withOpacity(0.9),
       child: SafeArea(
         child: Center(
-          child: Column(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const Icon(
@@ -35,22 +37,35 @@ class GameEndOverlay extends StatelessWidget {
                 size: 80,
               ),
               const SizedBox(height: 24),
-              Text(
-                title,
-                style: GoogleFonts.spaceGrotesk(
-                  fontSize: 48,
-                  fontWeight: FontWeight.bold,
-                  color: accentWarning,
-                  letterSpacing: 4,
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    title,
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    style: GoogleFonts.spaceGrotesk(
+                      fontSize: 36,
+                      fontWeight: FontWeight.bold,
+                      color: accentWarning,
+                      letterSpacing: 2,
+                      height: 1.05,
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
-              Text(
-                subtitle,
-                style: GoogleFonts.inter(
-                  fontSize: 24,
-                  color: textPrimary,
-                  fontWeight: FontWeight.w600,
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Text(
+                  subtitle,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.inter(
+                    fontSize: 20,
+                    color: textPrimary,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
@@ -69,7 +84,16 @@ class GameEndOverlay extends StatelessWidget {
                   color: textSecondary,
                 ),
               ),
-              const SizedBox(height: 48),
+              const SizedBox(height: 12),
+              Text(
+                'The wall returns to the lobby automatically.',
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  color: textSecondary,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 36),
               SizedBox(
                 width: 240,
                 height: 56,
@@ -83,7 +107,7 @@ class GameEndOverlay extends StatelessWidget {
                     ),
                   ),
                   child: Text(
-                    'BACK TO LOBBY',
+                    'NEXT LOBBY',
                     style: GoogleFonts.spaceGrotesk(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -93,6 +117,7 @@ class GameEndOverlay extends StatelessWidget {
                 ),
               ),
             ],
+            ),
           ),
         ),
       ),

@@ -108,13 +108,20 @@ class _LgButtonState extends State<LgButton> with SingleTickerProviderStateMixin
                       : []),
             ),
             child: Center(
-              child: Text(
-                widget.label,
-                style: GoogleFonts.spaceGrotesk(
-                  color: widget.isPrimary ? const Color(0xFF041018) : textPrimary,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.8,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    widget.label,
+                    maxLines: 1,
+                    style: GoogleFonts.spaceGrotesk(
+                      color: widget.isPrimary ? const Color(0xFF041018) : textPrimary,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.8,
+                    ),
+                  ),
                 ),
               ),
             ),

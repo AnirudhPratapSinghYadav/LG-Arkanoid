@@ -1,4 +1,25 @@
 const SCREEN_WIDTH = 1920;
+const PADDLE_HEIGHT = 18;
+const PADDLE_Y = 1000;
+const DEFAULT_PADDLE_WIDTH = 300;
+
+function centerPaddleX(numScreens, paddleWidth = DEFAULT_PADDLE_WIDTH) {
+  const width = paddleWidth || DEFAULT_PADDLE_WIDTH;
+  return Math.round(((numScreens || 3) * SCREEN_WIDTH) / 2 - width / 2);
+}
+
+function getBallSpeedMultiplier(ballSpeed) {
+  if (ballSpeed === 'slow') return 0.75;
+  if (ballSpeed === 'fast') return 1.4;
+  if (ballSpeed === 'insane') return 1.8;
+  return 1;
+}
+
+function getRespawnVelocity(gameState) {
+  const m = getBallSpeedMultiplier(gameState && gameState.ballSpeed);
+  const slow = gameState && gameState.slowBallActive ? 0.5 : 1;
+  return { vx: 3 * m * slow, vy: 4 * m * slow };
+}
 
 class Ball {
   constructor(id, x, y, vx, vy, radius){
@@ -16,13 +37,14 @@ class Ball {
 }
 
 class Player {
-  constructor(id){
+  constructor(id, numScreens = 3){
     this.id = id;
     this.score = 0;
     this.lives = 3;
-    this.paddleX = 2880;
-    this.paddleY = 1000;
-    this.paddleWidth = 300;
+    this.paddleWidth = DEFAULT_PADDLE_WIDTH;
+    this.paddleHeight = PADDLE_HEIGHT;
+    this.paddleX = centerPaddleX(numScreens, this.paddleWidth);
+    this.paddleY = PADDLE_Y;
     this.connected = false;
     this.socketId = null;
     this.inventory = [];
@@ -156,6 +178,16 @@ function loadLevel(levelNumber, aiGeneratedGrid = null, numScreens = 3){
           }else if(col % 2===0){
             brickType = 'hard';
           }
+        }else if(levelNumber===4){
+          if((row + col) % 2 === 0) brickType = 'hard';
+          if(row === 7 && col % 4 === 0) brickType = 'indestructible';
+        }else if(levelNumber>=5){
+          const edge = col === 0 || col === numCols - 1;
+          if(edge && row < 6){
+            brickType = 'indestructible';
+          }else if((row + col) % 2 === 0){
+            brickType = 'hard';
+          }
         }
         
         let xPos = 24+col*144;
@@ -212,7 +244,8 @@ function checkPaddleCollision(ball, players){
         if(!player.connected || player.lives <= 0) continue;
 
         let paddleTop = player.paddleY;
-        let paddleBottom = player.paddleY + 30; // Assuming 30px height
+        let paddleH = player.paddleHeight || PADDLE_HEIGHT;
+        let paddleBottom = player.paddleY + paddleH;
         let paddleLeft = player.paddleX;
         let paddleRight = player.paddleX + player.paddleWidth;
 
@@ -224,7 +257,7 @@ function checkPaddleCollision(ball, players){
         if (dx === 0 && dy === 0) { dx = 0.001; dy = 0.001; }
 
         if ((dx*dx + dy*dy) <= (ball.radius * ball.radius)) {
-          let prevY = ball.y - ball.vy;
+          let prevY = (typeof ball._prevY === 'number') ? ball._prevY : (ball.y - ball.vy);
           
           if (prevY + ball.radius <= paddleTop + 5) {
             // Top collision (bounce logic)
@@ -345,7 +378,7 @@ function updatePowerUps(gameState, applyPowerUpEffectCallback){
       
       for(let j = 0; j < gameState.players.length; j++){
         let player = gameState.players[j];
-        if(!player.connected) continue;
+        if(!player.connected || player.lives <= 0) continue;
         
         let withinVertical = (p.y>=player.paddleY-20) && (p.y<=player.paddleY+20);
         let withinHorizontal = (p.x>=player.paddleX) && (p.x<=player.paddleX+player.paddleWidth);
@@ -392,9 +425,24 @@ function updateGameLoop(gameState, applyPowerUpEffectCallback){
       let ball = gameState.balls[i];
       if(!ball.active) continue;
 
-      moveBall(ball);
-      checkWallCollision(ball, gameState);
-      const hitPaddle = checkPaddleCollision(ball, gameState.players);
+      const speed = Math.hypot(ball.vx, ball.vy);
+      const steps = Math.max(1, Math.min(8, Math.ceil(speed / 12)));
+      const stepScale = 1 / steps;
+      let hitPaddle = false;
+      let hitBrick = false;
+
+      for (let s = 0; s < steps; s++) {
+        ball._prevX = ball.x;
+        ball._prevY = ball.y;
+        ball.x += ball.vx * stepScale;
+        ball.y += ball.vy * stepScale;
+        checkWallCollision(ball, gameState);
+        if (checkPaddleCollision(ball, gameState.players)) hitPaddle = true;
+        if (checkBrickCollision(ball, gameState)) hitBrick = true;
+      }
+      ball._prevX = undefined;
+      ball._prevY = undefined;
+
       if (hitPaddle) {
         gameState.rallyCount++;
         if (gameState.rallyCount > gameState.longestRally) {
@@ -402,7 +450,6 @@ function updateGameLoop(gameState, applyPowerUpEffectCallback){
         }
         gameState.currentCombo = 0;
       }
-      const hitBrick = checkBrickCollision(ball, gameState);
       if (hitBrick) {
         gameState.currentCombo++;
         if (gameState.currentCombo > gameState.highestCombo) {
@@ -445,8 +492,9 @@ function updateGameLoop(gameState, applyPowerUpEffectCallback){
       }
       mainBall.x = ((gameState.numScreens || 3) * SCREEN_WIDTH)/2;
       mainBall.y = 500;
-      mainBall.vx = gameState.slowBallActive ? 1.5 : 3;
-      mainBall.vy = gameState.slowBallActive ? 2.0 : 4;
+      const respawn = getRespawnVelocity(gameState);
+      mainBall.vx = respawn.vx;
+      mainBall.vy = respawn.vy;
       mainBall.active = true;
       mainBall.lastTouchedByPlayerId = null;
       mainBall.rallyCount = 0;
@@ -512,6 +560,12 @@ module.exports = {
   Brick,
   PowerUp,
   GameState,
+  PADDLE_HEIGHT,
+  PADDLE_Y,
+  DEFAULT_PADDLE_WIDTH,
+  centerPaddleX,
+  getBallSpeedMultiplier,
+  getRespawnVelocity,
   loadLevel,
   moveBall,
   checkWallCollision,

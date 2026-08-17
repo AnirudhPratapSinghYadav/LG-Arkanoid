@@ -1,4 +1,6 @@
 const os = require('os');
+const fs = require('fs');
+const path = require('path');
 const crypto = require('crypto');
 const gameEngine = require('./gameEngine.js');
 
@@ -69,25 +71,67 @@ function normalizeDurationSeconds(value, fallback = 180) {
   return Math.max(60, Math.min(600, Math.floor(n)));
 }
 
+function isVirtualLanAddress(name, address) {
+  const n = String(name || '').toLowerCase();
+  const ip = String(address || '');
+  if (/docker|veth|br-|vmnet|vbox|virtualbox|hyper-v|loopback|tailscale|utun|tun|tap/.test(n)) {
+    return true;
+  }
+  // VirtualBox host-only / Docker Toolbox — phones on Wi-Fi cannot reach these.
+  if (ip.startsWith('192.168.56.') || ip.startsWith('192.168.99.')) return true;
+  if (ip.startsWith('172.17.') || ip.startsWith('172.18.') || ip.startsWith('172.19.')) return true;
+  return false;
+}
+
+function isPreferredNic(name) {
+  const n = String(name || '').toLowerCase();
+  return /wl|wifi|wlan|eth|enp|ens|eno|lan/.test(n);
+}
+
 function getLanIp() {
   const nets = os.networkInterfaces();
-  let bestIp = null;
+  let preferred = null;
+  let anyReal = null;
   let fallbackIp = '127.0.0.1';
 
   for (const name of Object.keys(nets)) {
     for (const net of nets[name]) {
-      if (net.family === 'IPv4' && !net.internal) {
-        fallbackIp = net.address;
-        const lowerName = name.toLowerCase();
-        if (lowerName.includes('wl') || lowerName.includes('eth') || lowerName.includes('en')) {
-          if (!lowerName.includes('utun') && !lowerName.includes('tailscale') && !lowerName.includes('docker') && !lowerName.includes('veth') && !lowerName.includes('vmnet')) {
-            bestIp = net.address;
-          }
-        }
-      }
+      const family = net.family === 'IPv4' || net.family === 4;
+      if (!family || net.internal) continue;
+      fallbackIp = net.address;
+      if (isVirtualLanAddress(name, net.address)) continue;
+      if (!anyReal) anyReal = net.address;
+      if (!preferred && isPreferredNic(name)) preferred = net.address;
     }
   }
-  return bestIp || fallbackIp;
+  return preferred || anyReal || fallbackIp;
+}
+
+/** LAN arcade CORS: empty Origin (Flutter) + localhost + lg1 + RFC1918. */
+function isAllowedCorsOrigin(origin) {
+  if (!origin) return true;
+  let parsed;
+  try {
+    parsed = new URL(origin);
+  } catch {
+    return false;
+  }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false;
+  const host = parsed.hostname;
+  if (host === 'localhost' || host === '127.0.0.1' || host === 'lg1') return true;
+  if (/^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(host)) return true;
+  if (/^192\.168\.\d{1,3}\.\d{1,3}$/.test(host)) return true;
+  if (/^172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3}$/.test(host)) return true;
+  return false;
+}
+
+function resolveWebRoot() {
+  const distRoot = path.join(__dirname, '..', 'dist');
+  const webRoot = path.join(__dirname, '..', 'web-client');
+  if (fs.existsSync(path.join(distRoot, 'index.html'))) {
+    return { root: distRoot, publicDir: null };
+  }
+  return { root: webRoot, publicDir: path.join(webRoot, 'public') };
 }
 
 function generateToken(){
@@ -113,7 +157,7 @@ function createInitialWorldState(maxPlayers){
   state.balls[1].active = false;
   
   for(let i = 0; i < state.maxPlayers; i++){
-    let p = new gameEngine.Player(null);
+    let p = new gameEngine.Player(null, state.numScreens);
     p.lastNonces = [];
     p.widePaddleTimer = null;
     p.slowBallTimer = null;
@@ -157,6 +201,8 @@ module.exports = {
   PLAYER_SLOT_IDS,
   getScreenBoundaries,
   getLanIp,
+  isAllowedCorsOrigin,
+  resolveWebRoot,
   generateToken,
   generateResumeToken,
   createInitialWorldState,

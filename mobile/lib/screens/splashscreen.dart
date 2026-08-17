@@ -22,23 +22,23 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 8000),
+      duration: const Duration(milliseconds: 2200),
     );
 
     _dotOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: const Interval(0.0, 0.15, curve: Curves.easeIn)),
+      CurvedAnimation(parent: _controller, curve: const Interval(0.0, 0.2, curve: Curves.easeIn)),
     );
     
-    _dotScale = Tween<double>(begin: 1.0, end: 3.0).animate(
-      CurvedAnimation(parent: _controller, curve: const Interval(0.15, 0.35, curve: Curves.easeOut)),
+    _dotScale = Tween<double>(begin: 1.0, end: 2.2).animate(
+      CurvedAnimation(parent: _controller, curve: const Interval(0.15, 0.4, curve: Curves.easeOut)),
     );
 
     _logoOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: const Interval(0.5, 0.75, curve: Curves.easeIn)),
+      CurvedAnimation(parent: _controller, curve: const Interval(0.25, 0.55, curve: Curves.easeIn)),
     );
 
     _fadeScreen = Tween<double>(begin: 1.0, end: 0.0).animate(
-      CurvedAnimation(parent: _controller, curve: const Interval(0.85, 1.0, curve: Curves.easeOut)),
+      CurvedAnimation(parent: _controller, curve: const Interval(0.82, 1.0, curve: Curves.easeOut)),
     );
 
     _controller.forward().then((_) {
@@ -103,23 +103,30 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                               ],
                             ),
                             const SizedBox(height: 28),
-                            Text(
-                              'LIQUID GALAXY ARCADE CONTROLLER',
-                              style: GoogleFonts.vt323(
-                                fontSize: 24,
-                                color: textPrimary,
-                                letterSpacing: 1.5,
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text(
+                                  'LG ARKANOID',
+                                  style: const TextStyle(
+                                    fontFamily: 'PressStart2P',
+                                    fontSize: 14,
+                                    color: textPrimary,
+                                    letterSpacing: 1.0,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                  maxLines: 1,
+                                ),
                               ),
-                              textAlign: TextAlign.center,
                             ),
-                            const SizedBox(height: 8),
+                            const SizedBox(height: 10),
                             Text(
-                              'Phone controller for panoramic play',
+                              'Phone controller for Liquid Galaxy',
                               style: GoogleFonts.spaceGrotesk(
                                 fontSize: 13,
-                                color: accentSystem,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 1.0,
+                                color: textSecondary,
+                                fontWeight: FontWeight.w600,
                               ),
                               textAlign: TextAlign.center,
                             ),

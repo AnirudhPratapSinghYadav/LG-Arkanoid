@@ -30,11 +30,10 @@
     </div>
 
     <div id="bootOverlay" class="boot-overlay" aria-live="polite">
-        <div class="boot-overlay__ring" aria-hidden="true"></div>
         <img class="boot-overlay__logo" src="assets/lg-logo.png" alt="">
         <p class="boot-overlay__eyebrow">Liquid Galaxy</p>
         <h1 class="boot-overlay__title">LG Arkanoid</h1>
-        <p class="boot-overlay__sub">Multi-screen arcade · phone controller</p>
+        <p class="boot-overlay__sub">Phone controller · panoramic wall</p>
         <div class="boot-overlay__status">
             <span class="boot-overlay__dot"></span>
             <span id="bootStatusText">Connecting to lobby…</span>
@@ -42,7 +41,6 @@
     </div>
 
     <div id="qrcode" class="lobby-card" aria-live="polite">
-        <div class="lobby-card__glow" aria-hidden="true"></div>
         <header class="lobby-card__head">
             <p class="lobby-card__kicker">Join this match</p>
             <h2 class="lobby-card__brand">LG Arkanoid</h2>
@@ -61,18 +59,6 @@
     </div>
 
     <script src="js/config.js"></script>
-    <script>
-      (function showLeftmostLogo() {
-        var id = (typeof window.SCREEN_ID !== 'undefined') ? Number(window.SCREEN_ID) : NaN;
-        if (id !== 1) return;
-        document.body.classList.add('is-leftmost-screen');
-        var corner = document.getElementById('lgCorner');
-        if (corner) {
-          corner.hidden = false;
-          corner.classList.add('is-visible');
-        }
-      })();
-    </script>
     <script src="js/game.js"></script>
 </body>
 </html>

@@ -39,3 +39,15 @@ const String prefServerAddress = 'last_server_address';
 const String prefServerPort = 'last_server_port';
 const String prefSessionToken = 'last_session_token';
 const String prefRemotePath = 'remote_path';
+const String prefPlayerName = 'last_player_name';
+const String prefMatchDuration = 'last_match_duration';
+const String prefMaxPlayers = 'last_max_players';
+const String prefBallSpeed = 'last_ball_speed';
+
+const List<Color> playerSlotColors = [
+  Color(0xFF20C5FF),
+  Color(0xFFFF2D78),
+  Color(0xFFFFB800),
+  Color(0xFF9B59B6),
+  Color(0xFF2ECC71),
+];

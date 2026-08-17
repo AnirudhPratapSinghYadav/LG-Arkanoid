@@ -8,14 +8,13 @@ const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
 
 const gameEngine = require('./gameEngine.js');
-const { PORT, TICK_MS, SCREEN_WIDTH, BALL_RADIUS, getLanIp, createInitialWorldState, GEMINI_API_KEY, LG_PASSWORD } = require('./config.js');
+const { PORT, TICK_MS, SCREEN_WIDTH, BALL_RADIUS, getLanIp, createInitialWorldState, GEMINI_API_KEY, isAllowedCorsOrigin, resolveWebRoot, generateToken, generateResumeToken } = require('./config.js');
 
 if (!GEMINI_API_KEY) {
   console.warn('WARNING: GEMINI_API_KEY is missing. AI commentary and level generation will be disabled.');
 }
-if (process.env.LG_PASSWORD === undefined) {
-  console.error('FATAL: LG_PASSWORD must be set in the environment (.env). Use empty value for SSH key auth.');
-  process.exit(1);
+if (!process.env.LG_PASSWORD) {
+  console.warn('LG_PASSWORD is unset — SSH launch scripts will use key auth. The game server does not SSH.');
 }
 const { triggerCommentary, pollGameMasterAsync, generateNextLevelAsync } = require('./services/geminiService.js');
 const { registerSocketHandlers, applyPowerUpEffect, clearAllPowerUpTimers } = require('./handlers/socketHandler.js');
@@ -72,28 +71,19 @@ app.use(limiter);
 const io = new Server(server, {
   cors: { 
     origin: (origin, callback) => {
-      if (!origin) return callback(null, true);
-      const allowedOrigins = [
-        `http://localhost:${PORT}`,
-        `http://127.0.0.1:${PORT}`,
-        `http://${getLanIp()}:${PORT}`,
-        `http://lg1:${PORT}`,
-        'http://localhost:5173',
-        'http://127.0.0.1:5173',
-      ];
-      if (allowedOrigins.indexOf(origin) === -1) {
-        return callback(new Error('The CORS policy for this site does not allow access from the specified Origin.'), false);
-      }
-      return callback(null, true);
+      if (isAllowedCorsOrigin(origin)) return callback(null, true);
+      return callback(new Error('The CORS policy for this site does not allow access from the specified Origin.'), false);
     },
     methods: ['GET', 'POST'] 
   },
   maxHttpBufferSize: 1024,
 });
 
-const isProd = process.env.NODE_ENV === 'production';
-const staticPath = isProd ? require('path').join(__dirname, '..', 'dist') : require('path').join(__dirname, '..', 'web-client');
-app.use(express.static(staticPath));
+const webRoot = resolveWebRoot();
+app.use(express.static(webRoot.root));
+if (webRoot.publicDir) {
+  app.use(express.static(webRoot.publicDir));
+}
 
 app.use(createRouter(worldState));
 
@@ -221,16 +211,34 @@ function broadcastGameState(){
   io.emit('game_state', payload);
 }
 
-registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameState, getWorldSnapshot);
-
 let previousRanks = {};
 let lobbyReturnTimer = null;
 
-function returnToLobby() {
+function cancelReturnToLobby() {
   if (lobbyReturnTimer) {
     clearTimeout(lobbyReturnTimer);
     lobbyReturnTimer = null;
   }
+}
+
+registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameState, getWorldSnapshot, cancelReturnToLobby);
+worldState.io = io;
+
+function sessionInfoPayload() {
+  return {
+    sessionToken: worldState.sessionToken,
+    sessionId: worldState.sessionId,
+    lanIp: getLanIp(),
+    port: PORT,
+    numScreens: worldState.numScreens || 3,
+    maxPlayers: worldState.maxPlayers || 3,
+    gameDurationSeconds: worldState.gameDurationSeconds ?? 180,
+    ballSpeed: worldState.ballSpeed || 'medium',
+  };
+}
+
+function returnToLobby() {
+  cancelReturnToLobby();
   if (!['time_up', 'game_over', 'win'].includes(worldState.gameStatus)) {
     return;
   }
@@ -251,9 +259,22 @@ function returnToLobby() {
   worldState.currentLevel = 1;
   // Rotate join secrets so leaked lobby codes / resumes die with the match.
   worldState.sessionId = require('crypto').randomUUID();
-  worldState.sessionToken = require('./config.js').generateToken();
+  worldState.sessionToken = generateToken();
   for (const p of worldState.players) {
-    p.resumeToken = null;
+    if (p.connected && p.socketId) {
+      p.resumeToken = generateResumeToken();
+    } else {
+      p.resumeToken = null;
+    }
+    if (p.widePaddleTimer) {
+      clearTimeout(p.widePaddleTimer);
+      p.widePaddleTimer = null;
+    }
+    p.score = 0;
+    p.lives = 3;
+    p.inventory = [];
+    p.paddleWidth = gameEngine.DEFAULT_PADDLE_WIDTH;
+    p.paddleX = gameEngine.centerPaddleX(worldState.numScreens, p.paddleWidth);
   }
   worldState.longestRally = 0;
   worldState.powerupsCollected = 0;
@@ -270,30 +291,24 @@ function returnToLobby() {
   ];
   worldState.balls[1].active = false;
 
-  for (const p of worldState.players) {
-    if (p.widePaddleTimer) {
-      clearTimeout(p.widePaddleTimer);
-      p.widePaddleTimer = null;
-    }
-    p.score = 0;
-    p.lives = 3;
-    p.inventory = [];
-    p.paddleWidth = 300;
-  }
+  const info = sessionInfoPayload();
+  io.emit('lobby_ready', info);
 
-  io.emit('lobby_ready', { sessionId: worldState.sessionId });
-  // Push fresh join code to panoramic screens only.
+  worldState.players.forEach((p, index) => {
+    if (p.connected && p.socketId && p.id) {
+      io.to(p.socketId).emit('join_confirmed', {
+        playerId: p.id,
+        playerNumber: index + 1,
+        isSpectator: false,
+        sessionId: worldState.sessionId,
+        sessionToken: worldState.sessionToken,
+        resumeToken: p.resumeToken,
+      });
+    }
+  });
+
   for (let i = 1; i <= (worldState.numScreens || 3); i++) {
-    io.to(`screen-${i}`).emit('session_info', {
-      sessionToken: worldState.sessionToken,
-      sessionId: worldState.sessionId,
-      lanIp: getLanIp(),
-      port: PORT,
-      numScreens: worldState.numScreens || 3,
-      maxPlayers: worldState.maxPlayers || 3,
-      gameDurationSeconds: worldState.gameDurationSeconds ?? 180,
-      ballSpeed: worldState.ballSpeed || 'medium',
-    });
+    io.to(`screen-${i}`).emit('session_info', info);
   }
   broadcastGameState();
 }

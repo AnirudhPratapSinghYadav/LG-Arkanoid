@@ -20,7 +20,7 @@
             <div class="join-brand__pulse" aria-hidden="true"></div>
             <p class="join-brand__eyebrow">Liquid Galaxy</p>
             <h1 class="join-title">LG Arkanoid</h1>
-            <p class="join-sub">Enter the 4-letter session code from the rig</p>
+            <p class="join-sub">Enter the 4-letter session code shown on the wall</p>
         </div>
         <div class="join-form">
             <label class="join-field">
@@ -77,6 +77,35 @@
         </div>
 
         <div id="hostControls" class="host-controls">
+            <div class="host-block">
+                <div class="host-label">Players</div>
+                <div class="chip-row" id="maxPlayersRow">
+                    <button type="button" class="chip" data-max-players="1">1</button>
+                    <button type="button" class="chip" data-max-players="2">2</button>
+                    <button type="button" class="chip is-on" data-max-players="3">3</button>
+                    <button type="button" class="chip" data-max-players="4">4</button>
+                    <button type="button" class="chip" data-max-players="5">5</button>
+                </div>
+            </div>
+            <div class="host-block">
+                <div class="host-label">Ball speed</div>
+                <div class="chip-row" id="ballSpeedRow">
+                    <button type="button" class="chip" data-ball-speed="slow">Slow</button>
+                    <button type="button" class="chip is-on" data-ball-speed="medium">Normal</button>
+                    <button type="button" class="chip" data-ball-speed="fast">Fast</button>
+                    <button type="button" class="chip" data-ball-speed="insane">Hyper</button>
+                </div>
+            </div>
+            <div class="host-block">
+                <div class="host-label">Match time</div>
+                <div class="chip-row" id="durationRow">
+                    <button type="button" class="chip" data-duration="60">1 min</button>
+                    <button type="button" class="chip is-on" data-duration="180">3 min</button>
+                    <button type="button" class="chip" data-duration="300">5 min</button>
+                    <button type="button" class="chip" data-duration="0">Endless</button>
+                </div>
+            </div>
+            <p class="host-hint">Screen count is launched from the phone app (SSH), same as Pacman.</p>
             <button class="join-btn host-start" type="button" id="startMatchBtn">Start match</button>
         </div>
 
@@ -113,7 +142,7 @@
         <div class="ge-subtitle" id="geSubtitle">Player 1 wins!</div>
         <div class="ge-score" id="geScore" style="color:#20c5ff;"></div>
         <div class="ge-score" id="geRank" style="color:#9AA4AF;"></div>
-        <button class="ge-btn" type="button" id="backToJoinBtn">Back to lobby</button>
+        <button class="ge-btn" type="button" id="backToJoinBtn">Leave</button>
     </div>
 
     <div id="aboutModal" class="modal">

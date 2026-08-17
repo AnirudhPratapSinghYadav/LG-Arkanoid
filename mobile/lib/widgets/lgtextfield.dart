@@ -10,6 +10,10 @@ class LgTextField extends StatefulWidget {
   final int? maxLength;
   final TextInputType keyboardType;
 
+  final bool autocorrect;
+  final bool enableSuggestions;
+  final TextCapitalization textCapitalization;
+
   const LgTextField({
     super.key,
     required this.controller,
@@ -18,6 +22,9 @@ class LgTextField extends StatefulWidget {
     this.obscureText = false,
     this.maxLength,
     this.keyboardType = TextInputType.text,
+    this.autocorrect = true,
+    this.enableSuggestions = true,
+    this.textCapitalization = TextCapitalization.none,
   });
 
   @override
@@ -84,6 +91,9 @@ class _LgTextFieldState extends State<LgTextField> {
             obscureText: widget.obscureText,
             maxLength: widget.maxLength,
             keyboardType: widget.keyboardType,
+            autocorrect: widget.autocorrect,
+            enableSuggestions: widget.enableSuggestions,
+            textCapitalization: widget.textCapitalization,
             style: GoogleFonts.inter(
               color: textPrimary,
               fontSize: 15,

@@ -17,6 +17,12 @@ let playerColor = '#20c5ff';
 let pingTimer = null;
 let touchControlsReady = false;
 const PLAYER_COLORS = ['#20c5ff', '#FF2D78', '#FFB800', '#9B59B6', '#2ECC71'];
+const STORAGE_NAME = 'lgark_player_name';
+const STORAGE_HOST = 'lgark_host_settings';
+
+let hostMaxPlayers = 3;
+let hostBallSpeed = 'medium';
+let hostDuration = 180;
 
 function joinGame() {
     const token = document.getElementById('tokenInput').value.trim().toUpperCase();
@@ -24,6 +30,7 @@ function joinGame() {
     if (!token || token.length !== 4) return alert('Enter a 4-letter session code');
 
     mySessionToken = token;
+    try { localStorage.setItem(STORAGE_NAME, playerName); } catch (_) {}
 
     let serverOrigin = window.location.origin;
     if (window.location.port === '5173') {
@@ -61,6 +68,7 @@ function joinGame() {
         myPlayerNumber = data.playerNumber;
         mySessionId = data.sessionId;
         if (data.resumeToken) myResumeToken = data.resumeToken;
+        if (data.sessionToken) mySessionToken = data.sessionToken;
         isSpectator = !!data.isSpectator;
         playerColor = PLAYER_COLORS[(Math.max(1, myPlayerNumber) - 1) % PLAYER_COLORS.length];
         gameEndShown = false;
@@ -119,10 +127,20 @@ function joinGame() {
         }
 
         isHost = !isSpectator && state.masterPlayerIndex === (myPlayerNumber - 1);
+        const status = state.gameStatus;
+        const inLobby = status === 'lobby' || status === 'waiting';
+        document.body.classList.toggle('is-lobby', inLobby);
+        document.body.classList.toggle('is-playing', status === 'playing' || status === 'countdown');
         const hostControls = document.getElementById('hostControls');
         if (hostControls) {
             const canStart = isHost && (state.gameStatus === 'lobby' || state.gameStatus === 'waiting');
             hostControls.style.display = canStart ? 'block' : 'none';
+        }
+        if (isHost && (state.gameStatus === 'lobby' || state.gameStatus === 'waiting')) {
+            if (typeof state.maxPlayers === 'number') hostMaxPlayers = state.maxPlayers;
+            if (state.ballSpeed) hostBallSpeed = state.ballSpeed;
+            if (typeof state.gameDurationSeconds === 'number') hostDuration = state.gameDurationSeconds;
+            syncHostChips();
         }
 
         if (me) {
@@ -147,13 +165,19 @@ function joinGame() {
             const s = String(remaining % 60).padStart(2, '0');
             document.getElementById('timerVal').innerText = m + ':' + s;
             document.getElementById('timerVal').style.color = remaining <= 30 ? '#D9534F' : '#fff';
+        } else if (state.gameStartedAt && state.gameStatus === 'playing') {
+            const elapsed = Math.floor((Date.now() - state.gameStartedAt) / 1000);
+            const m = String(Math.floor(elapsed / 60)).padStart(2, '0');
+            const s = String(elapsed % 60).padStart(2, '0');
+            document.getElementById('timerVal').innerText = m + ':' + s;
+            document.getElementById('timerVal').style.color = '#FFC300';
         } else if (state.gameStatus === 'lobby' || state.gameStatus === 'waiting') {
-            document.getElementById('timerVal').innerText = '--:--';
+            const duration = state.gameDurationSeconds;
+            document.getElementById('timerVal').innerText = duration === 0 ? '∞' : '--:--';
             gameEndShown = false;
             document.getElementById('gameEndOverlay').classList.remove('active');
         }
 
-        const status = state.gameStatus;
         if ((status === 'game_over' || status === 'time_up' || status === 'win') && !gameEndShown) {
             gameEndShown = true;
             const sorted = [...players].sort((a, b) => b.score - a.score);
@@ -174,9 +198,15 @@ function joinGame() {
         }
     });
 
-    socket.on('lobby_ready', () => {
+    socket.on('lobby_ready', (data) => {
         gameEndShown = false;
         document.getElementById('gameEndOverlay').classList.remove('active');
+        if (data && data.sessionId) mySessionId = data.sessionId;
+        if (data && data.sessionToken) {
+            mySessionToken = data.sessionToken;
+            const tokenInput = document.getElementById('tokenInput');
+            if (tokenInput) tokenInput.value = data.sessionToken;
+        }
     });
 
     socket.on('commentary', (data) => {
@@ -239,7 +269,74 @@ function activatePowerUp(type) {
 
 function startMatch() {
     if (!socket || !isConnected || !isHost) return;
-    socket.emit('start_game', { durationSeconds: 180 });
+    persistHostSettings();
+    socket.emit('set_game_settings', {
+        maxPlayers: hostMaxPlayers,
+        ballSpeed: hostBallSpeed,
+        durationSeconds: hostDuration
+    });
+    socket.emit('start_game', { durationSeconds: hostDuration });
+}
+
+function persistHostSettings() {
+    try {
+        localStorage.setItem(STORAGE_HOST, JSON.stringify({
+            maxPlayers: hostMaxPlayers,
+            ballSpeed: hostBallSpeed,
+            durationSeconds: hostDuration
+        }));
+    } catch (_) {}
+}
+
+function loadHostSettings() {
+    try {
+        const raw = localStorage.getItem(STORAGE_HOST);
+        if (!raw) return;
+        const data = JSON.parse(raw);
+        if (data.maxPlayers >= 1 && data.maxPlayers <= 5) hostMaxPlayers = data.maxPlayers;
+        if (typeof data.ballSpeed === 'string') hostBallSpeed = data.ballSpeed;
+        if (data.durationSeconds === 0 || data.durationSeconds) hostDuration = data.durationSeconds;
+    } catch (_) {}
+}
+
+function syncHostChips() {
+    document.querySelectorAll('[data-max-players]').forEach((el) => {
+        el.classList.toggle('is-on', Number(el.getAttribute('data-max-players')) === hostMaxPlayers);
+    });
+    document.querySelectorAll('[data-ball-speed]').forEach((el) => {
+        el.classList.toggle('is-on', el.getAttribute('data-ball-speed') === hostBallSpeed);
+    });
+    document.querySelectorAll('[data-duration]').forEach((el) => {
+        el.classList.toggle('is-on', Number(el.getAttribute('data-duration')) === hostDuration);
+    });
+}
+
+function emitHostSettings() {
+    if (!socket || !isConnected || !isHost) return;
+    persistHostSettings();
+    socket.emit('set_game_settings', {
+        maxPlayers: hostMaxPlayers,
+        ballSpeed: hostBallSpeed,
+        durationSeconds: hostDuration
+    });
+    syncHostChips();
+}
+
+function prefillJoin() {
+    const params = new URLSearchParams(window.location.search);
+    let code = (params.get('code') || params.get('token') || params.get('session') || '').trim().toUpperCase();
+    if (code.indexOf('|') !== -1) {
+        const parts = code.split('|');
+        code = (parts[parts.length - 1] || '').trim().toUpperCase();
+    }
+    let name = (params.get('name') || '').trim();
+    try {
+        if (!name) name = localStorage.getItem(STORAGE_NAME) || '';
+    } catch (_) {}
+    const tokenInput = document.getElementById('tokenInput');
+    const nameInput = document.getElementById('nameInput');
+    if (tokenInput && code) tokenInput.value = code.slice(0, 4);
+    if (nameInput && name) nameInput.value = name.slice(0, 12);
 }
 
 function clearIdentity() {
@@ -260,6 +357,25 @@ function bindUi() {
 
     const startBtn = document.getElementById('startMatchBtn');
     if (startBtn) startBtn.addEventListener('click', () => startMatch());
+
+    document.querySelectorAll('[data-max-players]').forEach((el) => {
+        el.addEventListener('click', () => {
+            hostMaxPlayers = Number(el.getAttribute('data-max-players'));
+            emitHostSettings();
+        });
+    });
+    document.querySelectorAll('[data-ball-speed]').forEach((el) => {
+        el.addEventListener('click', () => {
+            hostBallSpeed = el.getAttribute('data-ball-speed');
+            emitHostSettings();
+        });
+    });
+    document.querySelectorAll('[data-duration]').forEach((el) => {
+        el.addEventListener('click', () => {
+            hostDuration = Number(el.getAttribute('data-duration'));
+            emitHostSettings();
+        });
+    });
 
     const backBtn = document.getElementById('backToJoinBtn');
     if (backBtn) backBtn.addEventListener('click', () => backToJoin());
@@ -294,8 +410,16 @@ function bindUi() {
 }
 
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', bindUi);
+    document.addEventListener('DOMContentLoaded', () => {
+        loadHostSettings();
+        prefillJoin();
+        syncHostChips();
+        bindUi();
+    });
 } else {
+    loadHostSettings();
+    prefillJoin();
+    syncHostChips();
     bindUi();
 }
 

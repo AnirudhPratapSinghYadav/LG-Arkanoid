@@ -8,10 +8,24 @@ const {
   ALLOWED_BALL_SPEEDS,
   getLanIp,
   PORT,
-  generateToken,
 } = require('../config.js');
 const { triggerCommentary } = require('../services/geminiService.js');
 const crypto = require('crypto');
+
+function resetPaddle(player, numScreens) {
+  player.paddleWidth = gameEngine.DEFAULT_PADDLE_WIDTH;
+  player.paddleHeight = gameEngine.PADDLE_HEIGHT;
+  player.paddleX = gameEngine.centerPaddleX(numScreens, player.paddleWidth);
+  player.paddleY = gameEngine.PADDLE_Y;
+}
+
+function createEmptyPlayer(numScreens) {
+  const p = new gameEngine.Player(null, numScreens);
+  p.lastNonces = [];
+  p.widePaddleTimer = null;
+  p.slowBallTimer = null;
+  return p;
+}
 
 const socketToPlayerIndex = new Map();
 const disconnectTimers = new Map();
@@ -160,7 +174,7 @@ function validateMessage(player, timestamp, nonce){
   return { valid: true };
 }
 
-function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameState, getWorldSnapshot) {
+function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameState, getWorldSnapshot, cancelReturnToLobby) {
   io.on('connection', (socket)=>{
     // Force the next tick to include a full bricks payload for this new connection.
     // Without this, a screen/phone connecting after bricksDirty was already consumed
@@ -232,6 +246,7 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
         socket.emit('error', { errorCode: 1010, message: 'Game is already in progress' });
         return;
       }
+      if (typeof cancelReturnToLobby === 'function') cancelReturnToLobby();
       
       clearAllPowerUpTimers(worldState);
       if (worldState.slowBallTimer) {
@@ -254,7 +269,7 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
       
       const centerX = (worldState.numScreens * SCREEN_WIDTH) / 2;
       const ballCount = Math.max(1, worldState.maxPlayers || 3);
-      const speedMult = worldState.ballSpeed === 'slow' ? 0.75 : (worldState.ballSpeed === 'fast' ? 1.4 : (worldState.ballSpeed === 'insane' ? 1.8 : 1.0));
+      const speedMult = gameEngine.getBallSpeedMultiplier(worldState.ballSpeed);
       worldState.balls = [];
       for (let b = 0; b < ballCount; b++) {
         const vxDir = (b % 2 === 0 ? 1 : -1) * (2.5 + (b * 0.8)) * speedMult;
@@ -268,6 +283,11 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
         p.score = 0;
         p.lives = 3;
         p.inventory = [];
+        if (p.widePaddleTimer) {
+          clearTimeout(p.widePaddleTimer);
+          p.widePaddleTimer = null;
+        }
+        resetPaddle(p, worldState.numScreens);
       }
       
       worldState.gameStatus = 'countdown';
@@ -311,9 +331,7 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
         }
         worldState.maxPlayers = newMax;
         while(worldState.players.length < newMax){
-          let p = new gameEngine.Player(null);
-          p.lastNonces = [];
-          worldState.players.push(p);
+          worldState.players.push(createEmptyPlayer(worldState.numScreens));
         }
         if(worldState.players.length > newMax){
           worldState.players = worldState.players.slice(0, newMax);
@@ -358,9 +376,7 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
         }
         worldState.maxPlayers = newMax;
         while(worldState.players.length < newMax){
-          let p = new gameEngine.Player(null);
-          p.lastNonces = [];
-          worldState.players.push(p);
+          worldState.players.push(createEmptyPlayer(worldState.numScreens));
         }
         if(worldState.players.length > newMax){
           worldState.players = worldState.players.slice(0, newMax);
@@ -446,10 +462,7 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
       player.name = cleanName.length > 0 ? cleanName.substring(0, 12) : `Player ${slotIndex + 1}`;
       player.socketId = socket.id;
       player.resumeToken = generateResumeToken();
-      player.paddleWidth = player.paddleWidth || 300;
-      if (typeof player.paddleX !== 'number') {
-        player.paddleX = ((worldState.numScreens || 3) * SCREEN_WIDTH) / 2 - (player.paddleWidth / 2);
-      }
+      resetPaddle(player, worldState.numScreens);
       if (!Array.isArray(player.inventory)) player.inventory = [];
       player.lastNonces = [];
       socketToPlayerIndex.set(socket.id, slotIndex);
@@ -464,6 +477,7 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
         playerNumber: slotIndex+1,
         isSpectator: false,
         sessionId: worldState.sessionId,
+        sessionToken: worldState.sessionToken,
         resumeToken: player.resumeToken,
       });
 
@@ -486,6 +500,7 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
       if(!found) return;
 
       const { player } = found;
+      if (player.lives <= 0) return;
       let { deltaX, timestamp, nonce } = data || {};
 
       if(typeof deltaX!=='number' || isNaN(deltaX) || !isFinite(deltaX)){
@@ -520,6 +535,7 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
 
       const { player } = found;
       if(worldState.gameStatus !== 'playing') return;
+      if(player.lives <= 0) return;
       const { powerUpType, timestamp, nonce } = data || {};
 
       if(typeof powerUpType!=='string' || powerUpType.length > 20){
@@ -601,6 +617,7 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
         playerNumber: slotIndex + 1,
         isSpectator: false,
         sessionId: worldState.sessionId,
+        sessionToken: worldState.sessionToken,
         resumeToken: player.resumeToken,
         resumed: true,
       });
@@ -625,7 +642,7 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
       player.socketId = null;
       player.lastNonces = [];
       player.name = null;
-      player.paddleWidth = 300;
+      resetPaddle(player, worldState.numScreens);
       player.score = 0;
       player.lives = 3;
       player.inventory = [];
@@ -711,7 +728,7 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
         player.lastNonces = [];
         clearPlayerTimers(player);
         player.name = null;
-        player.paddleWidth = 300;
+        resetPaddle(player, worldState.numScreens);
         player.score = 0;
         player.lives = 3;
         player.inventory = [];

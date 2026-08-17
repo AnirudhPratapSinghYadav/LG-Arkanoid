@@ -20,13 +20,16 @@ class QrInviteScreen extends StatelessWidget {
               AppBar(
                 backgroundColor: Colors.transparent,
                 elevation: 0,
-                title: Text(
-                  'INVITE PLAYERS',
-                  style: GoogleFonts.inter(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: accentPrimary,
-                    letterSpacing: 2,
+                title: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    'INVITE PLAYERS',
+                    style: GoogleFonts.inter(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: accentPrimary,
+                      letterSpacing: 1,
+                    ),
                   ),
                 ),
                 leading: IconButton(

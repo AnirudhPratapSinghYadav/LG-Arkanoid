@@ -172,6 +172,8 @@ class _JoinChoiceScreenState extends State<JoinChoiceScreen> {
                 children: [
                   Text(
                     title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.spaceGrotesk(
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
@@ -181,6 +183,8 @@ class _JoinChoiceScreenState extends State<JoinChoiceScreen> {
                   const SizedBox(height: 4),
                   Text(
                     description,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.inter(
                       fontSize: 12,
                       color: textSecondary,

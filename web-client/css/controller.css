@@ -1,31 +1,21 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-    background:
-        radial-gradient(ellipse 120% 80% at 50% -10%, rgba(0, 229, 255, 0.16), transparent 50%),
-        radial-gradient(ellipse 80% 50% at 100% 100%, rgba(244, 162, 97, 0.1), transparent 45%),
-        linear-gradient(180deg, #060a10 0%, #0b121b 55%, #070b11 100%);
+    background: #070b12;
     color: #e8f4f8;
     font-family: 'Space Grotesk', 'Inter', sans-serif;
     display: flex;
     flex-direction: column;
     height: 100vh;
     height: 100dvh;
-    overflow: hidden;
-    touch-action: none;
+    overflow-x: hidden;
+    overflow-y: auto;
+    touch-action: manipulation;
     -webkit-user-select: none;
     user-select: none;
 }
 
-.ctrl-atmosphere {
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    background:
-        radial-gradient(circle at 20% 80%, rgba(32, 197, 255, 0.06), transparent 35%),
-        linear-gradient(transparent 0%, rgba(0, 0, 0, 0.25) 100%);
-    z-index: 0;
-}
+.ctrl-atmosphere { display: none; }
 
 #joinArea,
 #gameArea,
@@ -54,17 +44,7 @@ body {
     padding-top: 12px;
 }
 
-.join-brand__pulse {
-    position: absolute;
-    left: 50%;
-    top: 18%;
-    width: 180px;
-    height: 180px;
-    transform: translate(-50%, -50%);
-    border-radius: 50%;
-    background: radial-gradient(circle, rgba(0, 229, 255, 0.28), transparent 70%);
-    animation: join-glow 2.4s ease-in-out infinite;
-}
+.join-brand__pulse { display: none; }
 
 .join-brand__eyebrow {
     position: relative;
@@ -182,6 +162,8 @@ body {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 8px;
+    min-width: 0;
     padding: 10px 16px;
     background: rgba(14, 20, 28, 0.92);
     border-bottom: 1px solid rgba(0, 229, 255, 0.16);
@@ -192,6 +174,8 @@ body {
     display: flex;
     align-items: center;
     gap: 8px;
+    min-width: 0;
+    flex: 1;
 }
 
 .hud-dot {
@@ -205,6 +189,10 @@ body {
     font-size: 13px;
     font-weight: 700;
     letter-spacing: 0.04em;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .hud-status {
@@ -215,6 +203,7 @@ body {
     align-items: center;
     gap: 6px;
     color: #4CAF50;
+    flex-shrink: 0;
 }
 
 .hud-status-dot,
@@ -245,14 +234,18 @@ body {
     background: rgba(18, 24, 32, 0.9);
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 12px;
-    padding: 10px 6px;
+    padding: 10px 4px;
     text-align: center;
+    min-width: 0;
 }
 
 .stat-value {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 17px;
+    font-size: clamp(12px, 4.2vw, 17px);
     font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .stat-label {
@@ -282,8 +275,10 @@ body {
     color: #b7c2cc;
     font-style: italic;
     overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    line-height: 1.35;
 }
 
 .spectator-note {
@@ -297,6 +292,55 @@ body {
 .host-controls {
     display: none;
     padding: 0 16px 10px;
+}
+
+.host-block {
+    margin-bottom: 10px;
+}
+
+.host-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #7f8b97;
+    margin-bottom: 6px;
+}
+
+.chip-row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.chip {
+    flex: 1 1 56px;
+    min-width: 0;
+    padding: 8px 4px;
+    background: #121820;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #9AA4AF;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.chip.is-on {
+    border-color: #20c5ff;
+    color: #e8f4f8;
+    background: rgba(32, 197, 255, 0.12);
+}
+
+.host-hint {
+    font-size: 11px;
+    color: #7f8b97;
+    margin: 4px 0 10px;
+    line-height: 1.35;
 }
 
 .host-start {
@@ -367,6 +411,7 @@ body {
     align-items: center;
     justify-content: center;
     overflow: hidden;
+    touch-action: none;
     box-shadow: inset 0 0 40px rgba(0, 229, 255, 0.06);
 }
 
@@ -417,16 +462,21 @@ body {
 
 .ge-title {
     font-family: 'VT323', monospace;
-    font-size: 48px;
+    font-size: clamp(28px, 10vw, 48px);
     color: #F4A261;
-    letter-spacing: 0.12em;
+    letter-spacing: 0.08em;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    line-height: 1.05;
 }
 
 .ge-subtitle {
-    font-size: 20px;
+    font-size: clamp(16px, 5vw, 20px);
     color: #f3f4f6;
     font-weight: 600;
     margin-top: 10px;
+    max-width: 100%;
+    overflow-wrap: anywhere;
 }
 
 .ge-score {
@@ -468,6 +518,16 @@ body {
     width: 85%;
     max-width: 380px;
     text-align: center;
+}
+
+@media (max-width: 420px) {
+    .hud-status { display: none; }
+    .join-title { font-size: clamp(32px, 12vw, 44px); }
+}
+
+body.is-lobby .powerups-row,
+body.is-lobby .touch-pad-wrap {
+    display: none;
 }
 
 @media (prefers-reduced-motion: reduce) {

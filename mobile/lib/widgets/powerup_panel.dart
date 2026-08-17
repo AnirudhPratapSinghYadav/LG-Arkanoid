@@ -119,11 +119,14 @@ class _PowerButton extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               count > 0 ? '${def.label} ×$count' : def.label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
               style: GoogleFonts.spaceGrotesk(
                 fontSize: 9,
                 fontWeight: FontWeight.w700,
                 color: enabled ? def.color : textSecondary.withOpacity(0.35),
-                letterSpacing: 0.8,
+                letterSpacing: 0.4,
               ),
             ),
           ],

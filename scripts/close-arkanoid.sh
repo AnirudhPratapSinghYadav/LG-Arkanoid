@@ -1,16 +1,36 @@
 #!/bin/bash
 # LG Arkanoid Shutdown Script
 # Usage: bash close-arkanoid.sh
+# Only kills Chromium windows that were opened for this game's PORT.
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+
+export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
+if [ -s "$NVM_DIR/nvm.sh" ]; then
+  # shellcheck disable=SC1090
+  . "$NVM_DIR/nvm.sh"
+  nvm use 16 >/dev/null 2>&1 || nvm use default >/dev/null 2>&1 || true
+fi
+if command -v npm >/dev/null 2>&1; then
+  NPM_PREFIX="$(npm config get prefix 2>/dev/null || true)"
+  if [ -n "$NPM_PREFIX" ] && [ -d "$NPM_PREFIX/bin" ]; then
+    export PATH="$NPM_PREFIX/bin:$PATH"
+  fi
+fi
+
 if [ -f "$SCRIPT_DIR/../server/.env" ]; then
   # shellcheck disable=SC1091
+  set -a
+  # shellcheck disable=SC1091
   source "$SCRIPT_DIR/../server/.env"
+  set +a
 fi
+
+port=${PORT:-3000}
 
 if [ -z "$LG_PASSWORD" ]; then
   echo "Warning: LG_PASSWORD not set. Assuming passwordless SSH keys."
-  SSH_CMD="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5"
+  SSH_CMD="ssh -o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5"
 else
   export SSHPASS="$LG_PASSWORD"
   SSH_CMD="sshpass -e ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5"
@@ -34,16 +54,20 @@ for frame in "${FRAMES[@]}"; do
   if [ "$frame" = "lg1" ]; then
     continue
   fi
-  echo "Killing Chromium on $frame..."
-  $SSH_CMD "lg@$frame" "pkill -f chromium-browser" 2>/dev/null &
+  echo "Killing Arkanoid Chromium on $frame (port $port)..."
+  $SSH_CMD "lg@$frame" "pkill -f 'chromium-browser.*lg1:${port}/' 2>/dev/null || true" 2>/dev/null || true
 done
 
-echo "Killing Chromium on master..."
-pkill -f chromium-browser 2>/dev/null
+echo "Killing Arkanoid Chromium on master (port $port)..."
+pkill -f "chromium-browser.*localhost:${port}/" 2>/dev/null || true
+pkill -f "chromium-browser.*lg1:${port}/" 2>/dev/null || true
 
 echo "Stopping game server..."
-pm2 stop lg-arkanoid 2>/dev/null
-pm2 delete lg-arkanoid 2>/dev/null
+if command -v pm2 >/dev/null 2>&1; then
+  pm2 stop lg-arkanoid 2>/dev/null || true
+  pm2 delete lg-arkanoid 2>/dev/null || true
+else
+  echo "Warning: pm2 not in PATH — skip server stop."
+fi
 
-wait
 echo "Stopped all game components successfully."

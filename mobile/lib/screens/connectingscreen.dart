@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/gameservice.dart';
 import '../utils/constants.dart';
 import '../widgets/lgpanel.dart';
@@ -66,6 +67,12 @@ class _ConnectingScreenState extends State<ConnectingScreen> {
       storage.write(key: prefServerAddress, value: args['ip']);
       storage.write(key: prefServerPort, value: args['port']);
       storage.write(key: prefSessionToken, value: args['token']);
+      SharedPreferences.getInstance().then((prefs) {
+        final name = args['name'] as String?;
+        if (name != null && name.isNotEmpty) {
+          prefs.setString(prefPlayerName, name);
+        }
+      });
 
       if (mounted) {
         Navigator.pushReplacementNamed(context, '/lobby');

@@ -3,12 +3,11 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
-const { getLanIp } = require('./config.js');
+const { getLanIp, resolveWebRoot } = require('./config.js');
 
 function createRouter(worldState) {
   const router = express.Router();
-  const isProd = process.env.NODE_ENV === 'production';
-  const webClientPath = isProd ? path.join(__dirname, '..', 'dist') : path.join(__dirname, '..', 'web-client');
+  const web = resolveWebRoot();
 
   // Health check endpoint
 
@@ -28,7 +27,7 @@ function createRouter(worldState) {
   // Pacman-style browser controller (optional). Flutter app is preferred on phone.
   router.get('/controller', (req, res) => {
     const candidates = [
-      path.join(webClientPath, 'controller.html'),
+      path.join(web.root, 'controller.html'),
       path.join(__dirname, '..', 'web-client', 'controller.html'),
     ];
     for (const file of candidates) {
@@ -45,9 +44,9 @@ function createRouter(worldState) {
   // /js/game.js, etc. are handled as static files and not mistaken for screen
   // numbers.
 
-  router.use(express.static(webClientPath));
-  if (!isProd) {
-    router.use(express.static(path.join(webClientPath, 'public')));
+  router.use(express.static(web.root));
+  if (web.publicDir) {
+    router.use(express.static(web.publicDir));
   }
 
   // -- Screen route (LG convention) -------------------------------------------
@@ -64,7 +63,7 @@ function createRouter(worldState) {
       return res.status(400).send(`Screen number must be between 1 and ${configured}.`);
     }
 
-    const htmlPath = path.join(webClientPath, 'index.html');
+    const htmlPath = path.join(web.root, 'index.html');
 
     fs.readFile(htmlPath, 'utf8', (err, html) => {
       if (err) {

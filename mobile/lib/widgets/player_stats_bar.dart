@@ -8,12 +8,14 @@ class PlayerStatsBar extends StatelessWidget {
   final Color playerColor;
   final int remainingSeconds;
   final bool showTimer;
+  final bool warnLowTime;
 
   const PlayerStatsBar({
     super.key,
     required this.playerColor,
     required this.remainingSeconds,
     required this.showTimer,
+    this.warnLowTime = false,
   });
 
   String _formatTime(int totalSeconds) {
@@ -39,11 +41,16 @@ class PlayerStatsBar extends StatelessWidget {
         children: [
           Icon(icon, color: color, size: 16),
           const SizedBox(height: 2),
-          Text(
-            value,
-            style: GoogleFonts.vt323(
-              fontSize: 24,
-              color: color,
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              value,
+              maxLines: 1,
+              style: GoogleFonts.spaceGrotesk(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: color,
+              ),
             ),
           ),
           const SizedBox(height: 2),
@@ -105,7 +112,7 @@ class PlayerStatsBar extends StatelessWidget {
               child: _buildStatCard(
                 label: 'TIME',
                 value: _formatTime(remainingSeconds),
-                color: remainingSeconds <= 30 ? accentError : textPrimary,
+                color: warnLowTime ? accentError : textPrimary,
                 icon: Icons.timer_rounded,
               ),
             ),

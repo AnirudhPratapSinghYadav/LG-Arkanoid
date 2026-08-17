@@ -30,6 +30,7 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
   int _selectedScreens = 3;
   bool _applyingScreens = false;
   String? _screenApplyMsg;
+  bool _syncedFromServer = false;
 
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
@@ -46,12 +47,14 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
     )..repeat(reverse: true);
     _pulseAnimation = Tween<double>(begin: 0.5, end: 1.0).animate(_pulseController);
 
-    // Restore last chosen screen count for host lobby.
-    // ignore: discarded_futures
+    // Restore last host choices, then let the live lobby snapshot win once.
     SharedPreferences.getInstance().then((prefs) {
       if (!mounted) return;
       setState(() {
         _selectedScreens = prefs.getInt(prefNumScreens) ?? 3;
+        _selectedMaxPlayers = prefs.getInt(prefMaxPlayers) ?? 3;
+        _selectedDuration = prefs.getInt(prefMatchDuration) ?? 180;
+        _selectedBallSpeed = prefs.getString(prefBallSpeed) ?? 'medium';
       });
     });
   }
@@ -68,15 +71,39 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
     if (!mounted) return;
     final gameState = _gameService.latestGameState;
     if (gameState == null) return;
-    
+
     final status = gameState['gameStatus'] as String? ?? 'lobby';
-    
+
+    if (!_syncedFromServer && (status == 'lobby' || status == 'waiting')) {
+      _syncedFromServer = true;
+      final maxP = gameState['maxPlayers'] as int?;
+      final duration = gameState['gameDurationSeconds'] as int?;
+      final speed = gameState['ballSpeed'] as String?;
+      setState(() {
+        if (maxP != null && maxP >= 1 && maxP <= 5) _selectedMaxPlayers = maxP;
+        if (duration != null) _selectedDuration = duration;
+        if (speed != null && speed.isNotEmpty) _selectedBallSpeed = speed;
+      });
+    }
+
     if (status == 'countdown' && !_countdownStarted) {
       _startLocalCountdown();
     } else if (status == 'playing') {
       _countdownTimer?.cancel();
       Navigator.pushReplacementNamed(context, '/controller');
     }
+  }
+
+  Future<void> _persistAndPushSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(prefMaxPlayers, _selectedMaxPlayers);
+    await prefs.setInt(prefMatchDuration, _selectedDuration);
+    await prefs.setString(prefBallSpeed, _selectedBallSpeed);
+    _gameService.setGameSettings(
+      maxPlayers: _selectedMaxPlayers,
+      ballSpeed: _selectedBallSpeed,
+      durationSeconds: _selectedDuration,
+    );
   }
 
   void _startLocalCountdown() {
@@ -98,11 +125,7 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
   }
 
   void _onStartMatch() {
-    _gameService.setGameSettings(
-      maxPlayers: _selectedMaxPlayers,
-      ballSpeed: _selectedBallSpeed,
-      durationSeconds: _selectedDuration,
-    );
+    _persistAndPushSettings();
     _gameService.startGame(_selectedDuration);
   }
 
@@ -168,13 +191,7 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
     final masterIndex = gameState?['masterPlayerIndex'] as int? ?? 0;
     final isHost = (service.playerNumber ?? 0) - 1 == masterIndex;
 
-    final List<Color> playerColors = [
-      const Color(0xFF20C5FF), // Player 1 - Cyan
-      const Color(0xFFFF2D78), // Player 2 - Pink
-      const Color(0xFFFFB800), // Player 3 - Gold
-      const Color(0xFFE040FB), // Player 4 - Purple
-      const Color(0xFFFF5252), // Player 5 - Red
-    ];
+    final List<Color> playerColors = playerSlotColors;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -241,7 +258,6 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
                                     'PLAYERS',
@@ -252,13 +268,18 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
                                       letterSpacing: 1,
                                     ),
                                   ),
-                                  Text(
-                                    '$connectedCount/$maxPlayers CONNECTED',
-                                    style: GoogleFonts.vt323(
-                                      fontSize: 24,
-                                      color: accentGame,
-                                      fontWeight: FontWeight.bold,
-                                      letterSpacing: 1.5,
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      '$connectedCount / $maxPlayers',
+                                      textAlign: TextAlign.right,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: GoogleFonts.spaceGrotesk(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w700,
+                                        color: accentGame,
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -294,14 +315,17 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
                             textAlign: TextAlign.center,
                           ),
                           const SizedBox(height: 8),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          Wrap(
+                            alignment: WrapAlignment.center,
+                            spacing: 8,
+                            runSpacing: 8,
                             children: [
                               for (int p = 1; p <= 5; p++)
                                 GestureDetector(
                                   onTap: () {
                                     setState(() => _selectedMaxPlayers = p);
                                     _gameService.setMaxPlayers(p);
+                                    _persistAndPushSettings();
                                   },
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
@@ -370,8 +394,10 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
                             textAlign: TextAlign.center,
                           ),
                           const SizedBox(height: 8),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          Wrap(
+                            alignment: WrapAlignment.center,
+                            spacing: 8,
+                            runSpacing: 8,
                             children: [
                               _buildSpeedOption('slow', 'SLOW'),
                               _buildSpeedOption('medium', 'NORM'),
@@ -392,8 +418,10 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
                             textAlign: TextAlign.center,
                           ),
                           const SizedBox(height: 8),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          Wrap(
+                            alignment: WrapAlignment.center,
+                            spacing: 8,
+                            runSpacing: 8,
                             children: [
                               _buildDurationOption(60, '1 MIN'),
                               _buildDurationOption(180, '3 MIN'),
@@ -431,14 +459,16 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
                               return Opacity(
                                 opacity: _pulseAnimation.value,
                                 child: Text(
-                                  'WAITING FOR HOST TO START...',
+                                  'WAITING FOR HOST TO START',
                                   style: GoogleFonts.spaceGrotesk(
-                                    fontSize: 14,
+                                    fontSize: 13,
                                     color: textSecondary,
                                     fontWeight: FontWeight.bold,
-                                    letterSpacing: 2,
+                                    letterSpacing: 1,
                                   ),
                                   textAlign: TextAlign.center,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               );
                             },
@@ -506,6 +536,8 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
         Expanded(
           child: Text(
             displayName,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: GoogleFonts.inter(
               fontSize: 15,
               color: isSlotConnected ? textPrimary : textSecondary.withOpacity(0.4),
@@ -534,6 +566,7 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
         setState(() {
           _selectedDuration = duration;
         });
+        _persistAndPushSettings();
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
@@ -572,6 +605,7 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
         setState(() {
           _selectedBallSpeed = speed;
         });
+        _persistAndPushSettings();
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),

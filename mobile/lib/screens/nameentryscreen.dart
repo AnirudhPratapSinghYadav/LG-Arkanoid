@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/constants.dart';
 import '../widgets/lgpanel.dart';
 import '../widgets/lgbutton.dart';
@@ -17,12 +18,22 @@ class _NameEntryScreenState extends State<NameEntryScreen> {
   final _nameController = TextEditingController();
 
   @override
+  void initState() {
+    super.initState();
+    SharedPreferences.getInstance().then((prefs) {
+      final saved = prefs.getString(prefPlayerName);
+      if (!mounted || saved == null || saved.isEmpty) return;
+      _nameController.text = saved;
+    });
+  }
+
+  @override
   void dispose() {
     _nameController.dispose();
     super.dispose();
   }
 
-  void _onReady(Map<String, dynamic> args) {
+  Future<void> _onReady(Map<String, dynamic> args) async {
     final name = _nameController.text.trim();
     if (name.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -30,7 +41,10 @@ class _NameEntryScreenState extends State<NameEntryScreen> {
       );
       return;
     }
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(prefPlayerName, name);
 
+    if (!mounted) return;
     Navigator.pushNamed(
       context,
       '/connecting',
@@ -90,6 +104,7 @@ class _NameEntryScreenState extends State<NameEntryScreen> {
                         label: 'DISPLAY NAME',
                         maxLength: 12,
                         keyboardType: TextInputType.name,
+                        textCapitalization: TextCapitalization.words,
                       ),
                     ),
                     const SizedBox(height: 48),

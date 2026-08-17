@@ -31,14 +31,19 @@ fi
 echo "Installing pm2..."
 npm install -g pm2
 
-PROJECT_DIR="$HOME/projects/LG-Arkanoid"
-
-if [ -d "$PROJECT_DIR" ]; then
-  echo "Repository exists at $PROJECT_DIR."
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+if [ -f "$SCRIPT_DIR/server/index.js" ]; then
+  PROJECT_DIR="$SCRIPT_DIR"
+  echo "Using existing checkout at $PROJECT_DIR"
 else
-  echo "Cloning LG-Arkanoid repository..."
-  mkdir -p "$HOME/projects"
-  git clone https://github.com/AnirudhPratapSinghYadav/LG-Arkanoid.git "$PROJECT_DIR"
+  PROJECT_DIR="$HOME/projects/LG-Arkanoid"
+  if [ -d "$PROJECT_DIR" ]; then
+    echo "Repository exists at $PROJECT_DIR."
+  else
+    echo "Cloning LG-Arkanoid repository..."
+    mkdir -p "$HOME/projects"
+    git clone https://github.com/AnirudhPratapSinghYadav/LG-Arkanoid.git "$PROJECT_DIR"
+  fi
 fi
 
 echo "Installing npm workspace packages..."
@@ -83,6 +88,6 @@ pm2 startup systemd -u "$USER" --hp "$HOME" | tail -1 | bash || true
 pm2 save || true
 
 echo "Installation complete."
-echo "Launch with: bash ~/projects/LG-Arkanoid/scripts/open-arkanoid.sh <number_of_screens>"
+echo "Launch with: bash $PROJECT_DIR/scripts/open-arkanoid.sh <number_of_screens>"
 echo "Supported screen counts: 1..12 (typical: 3,5,7,9,12)"
 echo "Phone controller connects to master IP on port 3000 with the on-screen session token."

@@ -40,11 +40,6 @@ class _ManualEntryScreenState extends State<ManualEntryScreen> {
     }
   }
 
-  void _onTitleTap() {
-    // Developer mode logic removed, IP/Port inputs always visible.
-  }
-
-
   void _onContinue() {
     final token = _tokenController.text.trim().toUpperCase();
     final ip = _ipController.text.trim();
@@ -94,18 +89,15 @@ class _ManualEntryScreenState extends State<ManualEntryScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    GestureDetector(
-                      onTap: _onTitleTap,
-                      child: Text(
-                        'ENTER SESSION CODE',
-                        style: GoogleFonts.spaceGrotesk(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: textPrimary,
-                          letterSpacing: 1.5,
-                        ),
-                        textAlign: TextAlign.center,
+                    Text(
+                      'ENTER SESSION CODE',
+                      style: GoogleFonts.spaceGrotesk(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: textPrimary,
+                        letterSpacing: 1.5,
                       ),
+                      textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 8),
                     Text(
@@ -126,6 +118,9 @@ class _ManualEntryScreenState extends State<ManualEntryScreen> {
                             label: 'SESSION CODE',
                             maxLength: 4,
                             keyboardType: TextInputType.text,
+                            autocorrect: false,
+                            enableSuggestions: false,
+                            textCapitalization: TextCapitalization.characters,
                           ),
                           
                           const SizedBox(height: 24),
@@ -154,7 +149,9 @@ class _ManualEntryScreenState extends State<ManualEntryScreen> {
                             controller: _ipController,
                             label: 'RIG HOST IP ADDRESS',
                             hint: 'e.g. 192.168.1.42 or 127.0.0.1',
-                            keyboardType: TextInputType.datetime,
+                            keyboardType: TextInputType.text,
+                            autocorrect: false,
+                            enableSuggestions: false,
                           ),
                           const SizedBox(height: 16),
                           LgTextField(

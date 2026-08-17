@@ -4,21 +4,12 @@ html, body {
     width: 100%;
     height: 100%;
     overflow: hidden;
-    background:
-        radial-gradient(ellipse 90% 70% at 50% 12%, rgba(0, 229, 255, 0.14), transparent 52%),
-        radial-gradient(ellipse 70% 50% at 85% 95%, rgba(244, 162, 97, 0.09), transparent 48%),
-        linear-gradient(160deg, #05070c 0%, #0a1018 48%, #070b12 100%);
+    background: #070b12;
     color: #e8f4f8;
     font-family: 'Space Grotesk', sans-serif;
 }
 
-.stage-vignette {
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    z-index: 2;
-    background: radial-gradient(ellipse at center, transparent 40%, rgba(0, 0, 0, 0.58) 100%);
-}
+.stage-vignette { display: none; }
 
 .brand-mark {
     position: fixed;
@@ -32,22 +23,32 @@ html, body {
 .brand-mark__eyebrow {
     display: block;
     font-size: 11px;
-    letter-spacing: 0.24em;
+    letter-spacing: 0.18em;
     text-transform: uppercase;
-    color: rgba(0, 229, 255, 0.8);
+    color: #7f8b97;
 }
 
 .brand-mark__name {
     display: block;
     margin-top: 4px;
     font-family: 'VT323', monospace;
-    font-size: 30px;
+    font-size: 28px;
     letter-spacing: 0.08em;
     color: #f3f4f6;
-    text-shadow: 0 0 18px rgba(0, 229, 255, 0.35);
 }
 
-/* Leftmost screen (browser /1) — Liquid Galaxy logo top-left */
+body.is-playing .brand-mark,
+body.is-playing .lg-corner,
+body.is-playing .boot-overlay,
+body.is-playing .lobby-card,
+body.is-playing #qrcode {
+    display: none !important;
+}
+
+body.is-leftmost-screen .brand-mark {
+    display: none;
+}
+
 .lg-corner {
     position: fixed;
     top: 18px;
@@ -55,16 +56,11 @@ html, body {
     z-index: 30;
     display: none;
     align-items: center;
-    gap: 14px;
+    gap: 12px;
     pointer-events: none;
-    padding: 10px 16px 10px 12px;
-    border-radius: 16px;
-    background: rgba(6, 12, 18, 0.55);
-    border: 1px solid rgba(0, 229, 255, 0.28);
-    box-shadow:
-        0 10px 28px rgba(0, 0, 0, 0.35),
-        0 0 24px rgba(0, 229, 255, 0.12);
-    backdrop-filter: blur(8px);
+    padding: 8px 12px 8px 8px;
+    background: #0c1219;
+    border: 1px solid #2a3a4a;
 }
 
 .lg-corner.is-visible {
@@ -72,10 +68,9 @@ html, body {
 }
 
 .lg-corner__logo {
-    height: 46px;
+    height: 40px;
     width: auto;
     display: block;
-    filter: drop-shadow(0 0 14px rgba(0, 229, 255, 0.4));
 }
 
 .lg-corner__text {
@@ -87,24 +82,18 @@ html, body {
 
 .lg-corner__eyebrow {
     font-size: 11px;
-    letter-spacing: 0.24em;
+    letter-spacing: 0.18em;
     text-transform: uppercase;
-    color: rgba(0, 229, 255, 0.9);
+    color: #7f8b97;
     font-family: 'Space Grotesk', sans-serif;
     font-weight: 700;
 }
 
 .lg-corner__name {
     font-family: 'VT323', monospace;
-    font-size: 26px;
+    font-size: 24px;
     letter-spacing: 0.06em;
     color: #f3f4f6;
-    text-shadow: 0 0 16px rgba(0, 229, 255, 0.3);
-}
-
-/* Leftmost screen: keep right brand quieter so left logo leads */
-body.is-leftmost-screen .brand-mark {
-    opacity: 0.55;
 }
 
 /* ── First connection / boot ── */
@@ -114,97 +103,63 @@ body.is-leftmost-screen .brand-mark {
     top: 48%;
     transform: translate(-50%, -50%);
     z-index: 900;
-    width: min(520px, 78vw);
-    padding: 40px 36px 36px;
+    width: min(480px, 78vw);
+    padding: 36px 32px 28px;
     text-align: center;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0;
-    background: linear-gradient(165deg, rgba(10, 18, 28, 0.94), rgba(5, 9, 14, 0.97));
-    border: 1px solid rgba(0, 229, 255, 0.4);
-    border-radius: 24px;
-    box-shadow:
-        0 0 0 1px rgba(255, 255, 255, 0.04) inset,
-        0 28px 70px rgba(0, 0, 0, 0.55),
-        0 0 70px rgba(0, 229, 255, 0.16);
+    background: #0c1219;
+    border: 1px solid #2a3a4a;
     pointer-events: none;
-    transition: opacity 0.35s ease, transform 0.35s ease;
 }
 
 .boot-overlay.is-hidden {
     opacity: 0;
-    transform: translate(-50%, -46%) scale(0.98);
     visibility: hidden;
 }
 
-.boot-overlay__ring {
-    position: absolute;
-    width: 220px;
-    height: 220px;
-    top: 28px;
-    border-radius: 50%;
-    border: 1px solid rgba(0, 229, 255, 0.2);
-    box-shadow: 0 0 40px rgba(0, 229, 255, 0.12);
-    animation: boot-spin 8s linear infinite;
-}
-
-.boot-overlay__ring::after {
-    content: '';
-    position: absolute;
-    inset: 18px;
-    border-radius: 50%;
-    border: 1px dashed rgba(32, 197, 255, 0.28);
-}
+.boot-overlay__ring { display: none; }
 
 .boot-overlay__logo {
-    position: relative;
-    height: 52px;
-    margin: 8px 0 18px;
-    filter: drop-shadow(0 0 18px rgba(0, 229, 255, 0.35));
+    height: 48px;
+    margin: 0 0 16px;
 }
 
 .boot-overlay__eyebrow {
-    position: relative;
     margin: 0;
     font-size: 12px;
-    letter-spacing: 0.32em;
+    letter-spacing: 0.24em;
     text-transform: uppercase;
-    color: #00e5ff;
+    color: #7f8b97;
 }
 
 .boot-overlay__title {
-    position: relative;
     margin: 10px 0 0;
     font-family: 'VT323', monospace;
-    font-size: clamp(48px, 6vw, 72px);
+    font-size: clamp(44px, 6vw, 64px);
     line-height: 1;
     letter-spacing: 0.06em;
     color: #f3f4f6;
-    text-shadow: 0 0 28px rgba(0, 229, 255, 0.35);
 }
 
 .boot-overlay__sub {
-    position: relative;
-    margin: 14px 0 0;
+    margin: 12px 0 0;
     font-size: 15px;
-    letter-spacing: 0.06em;
     color: #9aa4af;
 }
 
 .boot-overlay__status {
-    position: relative;
-    margin-top: 28px;
+    margin-top: 24px;
     display: inline-flex;
     align-items: center;
     gap: 10px;
-    padding: 10px 18px;
-    border-radius: 999px;
-    background: rgba(0, 229, 255, 0.08);
-    border: 1px solid rgba(0, 229, 255, 0.28);
+    padding: 8px 14px;
+    background: #121820;
+    border: 1px solid #2a3a4a;
     font-size: 13px;
     font-weight: 600;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.06em;
     color: #cfeeff;
 }
 
@@ -212,9 +167,7 @@ body.is-leftmost-screen .brand-mark {
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: #00e5ff;
-    box-shadow: 0 0 10px #00e5ff;
-    animation: lobby-pulse 1.4s ease-in-out infinite;
+    background: #20c5ff;
 }
 
 /* ── Lobby join card ── */
@@ -228,32 +181,20 @@ body.is-leftmost-screen .brand-mark {
     flex-direction: column;
     align-items: center;
     text-align: center;
-    width: min(420px, 72vw);
-    max-height: min(90vh, 920px);
-    overflow: auto;
-    padding: 22px 22px 18px;
-    gap: 0;
-    background: linear-gradient(165deg, rgba(12, 20, 30, 0.97), rgba(6, 10, 16, 0.98));
-    border: 1px solid rgba(0, 229, 255, 0.5);
-    border-radius: 22px;
-    box-shadow:
-        0 0 0 1px rgba(255, 255, 255, 0.04) inset,
-        0 24px 60px rgba(0, 0, 0, 0.55),
-        0 0 60px rgba(0, 229, 255, 0.18);
+    width: min(380px, 70vw);
+    max-height: min(96vh, 1000px);
+    overflow: hidden;
+    padding: 16px 18px 14px;
+    background: #0c1219;
+    border: 1px solid #2a3a4a;
     z-index: 1000;
     pointer-events: none;
-    scrollbar-width: none;
+    box-sizing: border-box;
 }
 
 .lobby-card::-webkit-scrollbar { display: none; }
 
-.lobby-card__glow {
-    position: absolute;
-    inset: -35% -15% auto;
-    height: 48%;
-    background: radial-gradient(ellipse at center, rgba(0, 229, 255, 0.2), transparent 70%);
-    pointer-events: none;
-}
+.lobby-card__glow { display: none; }
 
 .lobby-card__head {
     position: relative;
@@ -266,7 +207,7 @@ body.is-leftmost-screen .brand-mark {
     font-weight: 700;
     letter-spacing: 0.28em;
     text-transform: uppercase;
-    color: #00e5ff;
+    color: #20c5ff;
 }
 
 .lobby-card__brand {
@@ -314,13 +255,15 @@ body.is-leftmost-screen .brand-mark {
 .lobby-card__code,
 #qr-session-code {
     font-family: 'VT323', monospace;
-    font-size: 3.2rem;
+    font-size: clamp(2.1rem, 4.4vw, 2.8rem);
     line-height: 1;
     color: #fff;
     margin-top: 4px;
-    letter-spacing: 0.32em;
-    text-indent: 0.32em;
-    text-shadow: 0 0 24px rgba(0, 229, 255, 0.45);
+    letter-spacing: 0.18em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
 }
 
 .lobby-card__meta,
@@ -357,11 +300,14 @@ body.is-leftmost-screen .brand-mark {
 .lobby-card__wait,
 #qr-waiting-text {
     position: relative;
-    margin-top: 14px;
-    font-family: 'VT323', monospace;
-    font-size: 1.25rem;
-    letter-spacing: 0.05em;
+    margin-top: 10px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    line-height: 1.3;
     color: #4ade80;
+    max-width: 100%;
     animation: lobby-pulse 1.8s ease-in-out infinite;
 }
 
@@ -379,7 +325,8 @@ body.is-leftmost-screen .brand-mark {
     align-items: center;
     justify-content: space-between;
     gap: 10px;
-    padding: 9px 12px;
+    min-width: 0;
+    padding: 7px 10px;
     border-radius: 11px;
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.06);
@@ -395,6 +342,10 @@ body.is-leftmost-screen .brand-mark {
     color: #e8f4f8;
     font-weight: 600;
     text-align: left;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .lobby-card__players .slot.is-empty .slot__name {
@@ -417,10 +368,27 @@ body.is-leftmost-screen .brand-mark {
 .lobby-card__hint,
 #qr-instructions {
     position: relative;
-    margin: 14px 0 0;
-    font-size: 0.78rem;
-    line-height: 1.4;
+    margin: 10px 0 0;
+    font-size: 0.74rem;
+    line-height: 1.35;
     color: #7f8b97;
+    max-width: 100%;
+}
+
+@media (max-height: 900px) {
+    .lobby-card,
+    #qrcode {
+        padding: 12px 14px 10px;
+        width: min(340px, 68vw);
+    }
+    #qrcode img,
+    #qrcode canvas {
+        width: 148px !important;
+        height: 148px !important;
+        border-width: 5px;
+    }
+    .lobby-card__players .slot { padding: 5px 8px; }
+    .lobby-card__brand { font-size: 1.6rem; }
 }
 
 #qr-session-code-inline {

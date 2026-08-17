@@ -32,6 +32,17 @@ flutter:
     - assets/app_icon.png
     - assets/app_icon_transparent.png
     - assets/lg-logo.png
+  fonts:
+    - family: PressStart2P
+      fonts:
+        - asset: assets/fonts/PressStart2P-Regular.ttf
+    - family: JetBrainsMono
+      fonts:
+        - asset: assets/fonts/JetBrainsMono-Regular.ttf
+        - asset: assets/fonts/JetBrainsMono-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/JetBrainsMono-Italic.ttf
+          style: italic
 
 flutter_launcher_icons:
   android: "launcher_icon"

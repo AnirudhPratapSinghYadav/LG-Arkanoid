@@ -117,6 +117,68 @@ test('all lives lost sets game_over', () => {
   assert.strictEqual(state.gameStatus, 'game_over');
 });
 
+test('paddle spawn X is world-center left edge for N screens', () => {
+  for (const n of [3, 5, 7, 9, 12]) {
+    const p = new gameEngine.Player(null, n);
+    const expected = gameEngine.centerPaddleX(n, 300);
+    assert.strictEqual(p.paddleX, expected, `paddleX for ${n} screens`);
+    const worldCenter = (n * 1920) / 2;
+    assert.ok(Math.abs((p.paddleX + p.paddleWidth / 2) - worldCenter) < 1, `centered on ${n}`);
+    if (n !== 3) {
+      assert.notStrictEqual(p.paddleX, 2880, 'must not hardcode 3-screen X');
+    }
+  }
+});
+
+test('life-loss respawn uses configured ballSpeed', () => {
+  const state = makePlayingState(5);
+  state.ballSpeed = 'insane';
+  state.balls[0].active = false;
+  state.balls[0].y = 2000;
+  state.lastFallenBallToucher = 'player1';
+  gameEngine.updateGameLoop(state, () => {});
+  const ball = state.balls.find((b) => b.active);
+  const expected = gameEngine.getRespawnVelocity(state);
+  assert.ok(ball, 'respawned ball');
+  assert.strictEqual(ball.vx, expected.vx);
+  assert.strictEqual(ball.vy, expected.vy);
+});
+
+test('dead player does not catch falling power-ups', () => {
+  const state = makePlayingState(3);
+  const player = state.players[0];
+  player.lives = 0;
+  state.powerUps.push(new gameEngine.PowerUp('wide_paddle', player.paddleX + 10, player.paddleY));
+  gameEngine.updatePowerUps(state, () => {
+    throw new Error('dead player must not catch');
+  });
+  assert.deepStrictEqual(player.inventory, []);
+  assert.strictEqual(state.powerUps[0].falling, true);
+});
+
+test('levels 4 and 5 have destructible bricks', () => {
+  for (const level of [4, 5]) {
+    const bricks = gameEngine.loadLevel(level, null, 5);
+    let destructible = 0;
+    for (const row of bricks) {
+      for (const brick of row) {
+        if (brick.active && brick.type !== 'indestructible') destructible++;
+      }
+    }
+    assert.ok(destructible > 0, `level ${level} has breakable bricks`);
+  }
+});
+
+test('CORS allows LAN origins and empty Flutter origin', () => {
+  const { isAllowedCorsOrigin } = require('../config.js');
+  assert.strictEqual(isAllowedCorsOrigin(undefined), true);
+  assert.strictEqual(isAllowedCorsOrigin('http://192.168.1.20:3000'), true);
+  assert.strictEqual(isAllowedCorsOrigin('http://10.0.0.4:3000'), true);
+  assert.strictEqual(isAllowedCorsOrigin('http://lg1:3000'), true);
+  assert.strictEqual(isAllowedCorsOrigin('http://localhost:5173'), true);
+  assert.strictEqual(isAllowedCorsOrigin('https://evil.example'), false);
+});
+
 test('normalizeDurationSeconds keeps endless (0)', () => {
   const { normalizeDurationSeconds } = require('../config.js');
   assert.strictEqual(normalizeDurationSeconds(0), 0);

@@ -14,35 +14,22 @@ class GameScene extends Phaser.Scene {
         this.load.image('lg_logo', 'assets/lg-logo.png');
     }
 
-    drawStandardPanel(graphics, x, y, width, height, alpha = 1.0, borderColor = COLORS.white) {
-        graphics.fillStyle(COLORS.panelDark, alpha);
-        graphics.fillRoundedRect(x, y, width, height, 8);
-        
-        graphics.lineStyle(1, borderColor, alpha * 0.1);
-        graphics.strokeRoundedRect(x, y, width, height, 8);
-    }
-
     create() {
-        const bgGraphics = this.make.graphics({x: 0, y: 0, add: false});
-        bgGraphics.fillStyle(0x061018, 1);
-        bgGraphics.fillRect(0, 0, 256, 256);
-        for (let i = 0; i < 90; i++) {
-            const bright = Math.random();
-            bgGraphics.fillStyle(COLORS.white, bright > 0.85 ? 0.55 : 0.12 + bright * 0.2);
-            bgGraphics.fillCircle(Math.random() * 256, Math.random() * 256, bright > 0.9 ? 1.8 : 1);
-        }
-        bgGraphics.fillStyle(COLORS.system, 0.04);
-        bgGraphics.fillCircle(70, 90, 70);
-        bgGraphics.fillStyle(COLORS.game, 0.03);
-        bgGraphics.fillCircle(200, 180, 55);
-        bgGraphics.generateTexture('bg_stars', 256, 256);
-        this.bg = this.add.tileSprite(960, 540, 1920, 1080, 'bg_stars');
-        this.bg.setTint(0xb8d4e8);
+        // Solid court — no random starfield. Bezel ticks mark this frame on the LG wall.
+        const bgGraphics = this.make.graphics({ x: 0, y: 0, add: false });
+        bgGraphics.fillStyle(COLORS.bg, 1);
+        bgGraphics.fillRect(0, 0, 64, 64);
+        bgGraphics.fillStyle(0x0c1420, 1);
+        bgGraphics.fillRect(0, 0, 64, 1);
+        bgGraphics.generateTexture('bg_court', 64, 64);
+        this.bg = this.add.tileSprite(960, 540, 1920, 1080, 'bg_court');
+        this.bg.setTint(0xffffff);
+        this.bg.setAlpha(1);
 
         const pGraphics = this.make.graphics({x:0, y:0, add:false});
         pGraphics.fillStyle(COLORS.white, 1);
-        pGraphics.fillRect(0, 0, 8, 8);
-        pGraphics.generateTexture('particle', 8, 8);
+        pGraphics.fillRect(0, 0, 6, 6);
+        pGraphics.generateTexture('particle', 6, 6);
         
         this.brickEmitter = this.add.particles(0, 0, 'particle', {
             speed: { min: 50, max: 300 },
@@ -91,11 +78,11 @@ class GameScene extends Phaser.Scene {
         this.hudPanelGraphics = this.add.graphics();
         this.hudBorderAlpha = 1.0;
 
-        this.hudText = this.add.text(40, 40, '', {
+        this.hudText = this.add.text(24, 88, '', {
             fontFamily: FONTS.body,
-            fontSize: '24px',
+            fontSize: '20px',
             color: HEX.systemAlt,
-            lineSpacing: 16
+            lineSpacing: 10
         });
         if (screenId !== 1) this.hudText.setVisible(false);
 
@@ -132,19 +119,14 @@ class GameScene extends Phaser.Scene {
             fontSize: '16px',
             color: HEX.textSecondary,
             wordWrap: { width: 400, useAdvancedWrap: true }
-        }).setOrigin(1, 0);
+        }).setOrigin(1, 0).setVisible(false);
 
-        this.geminiTitle = this.add.text(1880, 270, 'COMMENTARY', {
+        this.geminiTitle = this.add.text(1880, 270, '', {
             fontFamily: FONTS.heading,
             fontSize: '18px',
             color: HEX.accent,
             fontWeight: 'bold'
-        }).setOrigin(1, 0);
-
-        if (screenId !== numScreens) {
-            this.geminiText.setVisible(false);
-            this.geminiTitle.setVisible(false);
-        }
+        }).setOrigin(1, 0).setVisible(false);
 
         this.aiTagText = this.add.text(40, 10, '', {
             fontFamily: FONTS.mono,
@@ -163,20 +145,8 @@ class GameScene extends Phaser.Scene {
         this.logo.setScale(0.5);
         this.setupLeftmostBrand();
 
-        const scanlineGraphics = this.make.graphics({x: 0, y: 0, add: false});
-        scanlineGraphics.fillStyle(COLORS.white, 0.15);
-        scanlineGraphics.fillRect(0, 0, 8, 1);
-        scanlineGraphics.generateTexture('scanline', 8, 3);
-
-        const vignetteGraphics = this.make.graphics({x:0, y:0, add:false});
-        for (let i = 0; i < 20; i++) {
-            vignetteGraphics.lineStyle(10, 0x000000, 0.05 + (i * 0.02));
-            vignetteGraphics.strokeRect(i * 10, i * 10, 1920 - (i * 20), 1080 - (i * 20));
-        }
-        vignetteGraphics.generateTexture('vignette', 1920, 1080);
-        // Keep texture for compatibility; do not show vignette overlay.
-
         this.powerUpTexts = [];
+        this.paddleNameTexts = [];
         this.setupSocket();
         this.fetchSessionInfo();
         this.showBootOverlay('Connecting to lobby…');
@@ -190,17 +160,22 @@ class GameScene extends Phaser.Scene {
         });
     }
 
+    setStageMode(mode) {
+        if (typeof document === 'undefined' || !document.body) return;
+        document.body.classList.toggle('is-playing', mode === 'playing');
+        document.body.classList.toggle('is-lobby', mode === 'lobby');
+        document.body.classList.toggle('is-idle', mode === 'idle');
+    }
+
     update() {
-        if (this.bg) {
-            this.bg.tilePositionY -= 1;
-        }
-        
         this.graphics.clear();
         this.trailGraphics.clear();
+        this.drawCourt();
         
         if (!this.currentState ||
             this.currentState.gameStatus === 'idle' ||
             this.currentState.gameStatus === 'waiting') {
+            this.setStageMode('idle');
             this.drawAttractMode();
             return;
         } else {
@@ -210,6 +185,7 @@ class GameScene extends Phaser.Scene {
         this.checkStateChanges();
         
         if (this.currentState.gameStatus === 'waiting' || this.currentState.gameStatus === 'lobby') {
+            this.setStageMode('lobby');
             this.hideCountdownMode();
             this.hideWinMode();
             this.renderJoin();
@@ -220,6 +196,7 @@ class GameScene extends Phaser.Scene {
         }
         
         if (this.currentState.gameStatus === 'countdown') {
+            this.setStageMode('playing');
             this.hideBootOverlay();
             this.hideWinMode();
             this.drawCountdownMode();
@@ -235,6 +212,7 @@ class GameScene extends Phaser.Scene {
         if (this.currentState.gameStatus === 'win' ||
             this.currentState.gameStatus === 'time_up' ||
             this.currentState.gameStatus === 'game_over') {
+            this.setStageMode('playing');
             this.hideBootOverlay();
             this.drawWinMode();
             this.drawRobots();
@@ -244,12 +222,24 @@ class GameScene extends Phaser.Scene {
             this.hideWinMode();
         }
         
+        this.setStageMode('playing');
         this.drawBricks();
         this.drawPowerUps();
         this.drawBalls();
         this.drawPaddles();
         this.drawRobots();
         this.updateHUD();
+    }
+
+    drawCourt() {
+        // Physical bezel hint: this Chromium window is one slice of the panoramic world.
+        this.graphics.lineStyle(2, 0x1a2430, 0.9);
+        this.graphics.lineBetween(0, 0, 0, 1080);
+        this.graphics.lineBetween(1919, 0, 1919, 1080);
+        this.graphics.fillStyle(0x0a1018, 1);
+        this.graphics.fillRect(0, 992, 1920, 88);
+        this.graphics.fillStyle(0x151c26, 1);
+        this.graphics.fillRect(0, 988, 1920, 4);
     }
 
     ensureRobotSlots(count) {
@@ -341,113 +331,62 @@ class GameScene extends Phaser.Scene {
 
         for (let i = 0; i < this.robots.length; i++) {
             const slot = this.robots[i];
+            if (slot.bubble) slot.bubble.setVisible(false);
             const p = players[i];
             if (!p || !p.connected || (typeof p.lives === 'number' && p.lives <= 0)) {
-                if (slot.bubble) slot.bubble.setVisible(false);
                 continue;
             }
 
             const paddleW = p.paddleWidth || 300;
             const worldX = p.paddleX + paddleW / 2;
             const localX = worldX - virtualLeft;
-            if (localX < -80 || localX > 2000) {
-                if (slot.bubble) slot.bubble.setVisible(false);
-                continue;
-            }
+            if (localX < -60 || localX > 1980) continue;
 
-            const robotY = 955;
-            const robotSize = 44;
             const color = PADDLE_COLORS[i % PADDLE_COLORS.length];
             const state = this.robotStates[p.id] || 'idle';
-            let visorColor = color;
-            if (state === 'excited') visorColor = COLORS.game;
-            else if (state === 'alert') visorColor = COLORS.error;
-            else if (state === 'talking') visorColor = COLORS.systemAlt;
+            const bob = state === 'idle' ? Math.sin(this.time.now / 420 + i) * 2 : 0;
+            const bodyY = 948 + bob;
+            const w = 28;
+            const h = 34;
 
-            for (let g = 3; g > 0; g--) {
-                this.robotGraphics.lineStyle(2 + g, color, 0.12);
-                this.robotGraphics.strokeRoundedRect(
-                    localX - robotSize / 2 - g, robotY - robotSize / 2 - g,
-                    robotSize + g * 2, robotSize + g * 2, 10
-                );
-            }
-            this.robotGraphics.fillStyle(0x12161c, 0.95);
-            this.robotGraphics.fillRoundedRect(localX - robotSize / 2, robotY - robotSize / 2, robotSize, robotSize, 10);
+            // Body
+            this.robotGraphics.fillStyle(0x161b22, 1);
+            this.robotGraphics.fillRoundedRect(localX - w / 2, bodyY - h / 2, w, h, 6);
             this.robotGraphics.lineStyle(2, color, 1);
-            this.robotGraphics.strokeRoundedRect(localX - robotSize / 2, robotY - robotSize / 2, robotSize, robotSize, 10);
+            this.robotGraphics.strokeRoundedRect(localX - w / 2, bodyY - h / 2, w, h, 6);
 
-            this.robotGraphics.fillStyle(0x000000, 0.85);
-            this.robotGraphics.fillRoundedRect(localX - 15, robotY - 8, 30, 14, 4);
-            this.robotGraphics.fillStyle(visorColor, 1);
-            if (state === 'excited') {
-                this.robotGraphics.fillCircle(localX - 7, robotY - 2, 3);
-                this.robotGraphics.fillCircle(localX + 7, robotY - 2, 3);
-            } else if (state === 'alert') {
-                this.robotGraphics.fillTriangle(localX - 10, robotY + 1, localX - 4, robotY - 7, localX + 2, robotY + 1);
-                this.robotGraphics.fillTriangle(localX - 2, robotY + 1, localX + 4, robotY - 7, localX + 10, robotY + 1);
-            } else if (state === 'talking') {
-                this.robotGraphics.fillCircle(localX - 7, robotY - 2, 3.5);
-                this.robotGraphics.fillCircle(localX + 7, robotY - 2, 3.5);
-                this.robotGraphics.fillStyle(visorColor, 0.7);
-                this.robotGraphics.fillCircle(localX, robotY + 6, 2 + (Math.sin(Date.now() / 120) + 1));
-            } else {
-                this.robotGraphics.fillCircle(localX - 7, robotY - 2, 3.5);
-                this.robotGraphics.fillCircle(localX + 7, robotY - 2, 3.5);
-            }
+            // Visor
+            let visor = color;
+            if (state === 'alert') visor = COLORS.error;
+            else if (state === 'excited') visor = COLORS.game;
+            this.robotGraphics.fillStyle(0x05070c, 1);
+            this.robotGraphics.fillRect(localX - 10, bodyY - 8, 20, 10);
+            this.robotGraphics.fillStyle(visor, 1);
+            this.robotGraphics.fillCircle(localX - 5, bodyY - 3, 2.4);
+            this.robotGraphics.fillCircle(localX + 5, bodyY - 3, 2.4);
 
             // Antenna
-            this.robotGraphics.lineStyle(2, color, 0.9);
-            this.robotGraphics.lineBetween(localX, robotY - robotSize / 2, localX, robotY - robotSize / 2 - 10);
-            this.robotGraphics.fillStyle(visorColor, 1);
-            this.robotGraphics.fillCircle(localX, robotY - robotSize / 2 - 12, 3);
-
-            if (slot.bubble && slot.bubble.visible) {
-                slot.bubble.setPosition(localX, robotY - robotSize / 2 - 18);
-            }
+            this.robotGraphics.lineStyle(2, color, 1);
+            this.robotGraphics.lineBetween(localX, bodyY - h / 2, localX, bodyY - h / 2 - 8);
+            this.robotGraphics.fillStyle(visor, 1);
+            this.robotGraphics.fillCircle(localX, bodyY - h / 2 - 10, 2.5);
         }
     }
 
     drawAttractMode() {
         this.showBootOverlay('Connecting to lobby…');
-        if (!this.attractModeGraphics) {
-            this.attractModeGraphics = this.add.graphics().setDepth(4);
-            this.attractTime = 0;
-        }
-        this.attractModeGraphics.clear();
-        this.attractTime += 0.04;
-
-        // Soft orbiting particles behind the HTML boot card
-        for (let i = 0; i < 36; i++) {
-            const angle = this.attractTime * 0.55 + (i * 0.22);
-            const radius = 260 + Math.sin(this.attractTime * 0.5 + i) * 90;
-            const px = 960 + Math.cos(angle) * radius;
-            const py = 540 + Math.sin(angle * 0.72) * (radius * 0.55);
-            const hueAlpha = 0.25 + Math.sin(this.attractTime + i) * 0.2;
-            this.attractModeGraphics.fillStyle(
-                i % 2 === 0 ? COLORS.system : COLORS.systemAlt,
-                Math.max(0.08, hueAlpha)
-            );
-            this.attractModeGraphics.fillCircle(px, py, 2 + (i % 3));
-        }
-
-        // Side screens get a quiet brand line while waiting for socket state
         if (!isCenterScreen) {
             this.hideBootOverlay();
             if (!this.bootSideText) {
-                this.bootSideText = this.add.text(960, 560, '', {
+                this.bootSideText = this.add.text(960, 540, '', {
                     fontFamily: FONTS.display,
-                    fontSize: '56px',
-                    fill: HEX.systemAlt,
+                    fontSize: '52px',
+                    fill: HEX.textPrimary,
                     align: 'center'
-                }).setOrigin(0.5).setDepth(6).setAlpha(0.85);
+                }).setOrigin(0.5).setDepth(6);
             }
-            // Leave room under the top-left LG logo on screen 1
-            this.bootSideText.setPosition(960, screenId === 1 ? 580 : 540);
-            this.bootSideText.setText(
-                screenId === 1
-                    ? 'LG ARKANOID\nPHONE CONTROLLER'
-                    : 'WAITING FOR\nHOST LOBBY'
-            );
+            this.bootSideText.setPosition(960, screenId === 1 ? 560 : 540);
+            this.bootSideText.setText(screenId === 1 ? 'LG ARKANOID' : 'WAITING');
             this.bootSideText.setVisible(true);
         } else if (this.bootSideText) {
             this.bootSideText.setVisible(false);
@@ -537,21 +476,12 @@ class GameScene extends Phaser.Scene {
     drawLobbyFrame() {
         if (!this.lobbyDecorGfx) return;
         this.lobbyDecorGfx.clear();
-        const pulse = 0.32 + Math.sin(this.time.now * 0.0025) * 0.12;
-        const panelX = 280;
-        const panelY = 160;
-        const panelW = 1360;
-        const panelH = 760;
-        this.lobbyDecorGfx.fillStyle(0x081018, 0.42);
-        this.lobbyDecorGfx.fillRoundedRect(panelX, panelY, panelW, panelH, 28);
-        this.lobbyDecorGfx.lineStyle(2, COLORS.system, pulse);
-        this.lobbyDecorGfx.strokeRoundedRect(panelX, panelY, panelW, panelH, 28);
-        this.lobbyDecorGfx.lineStyle(1, COLORS.systemAlt, pulse * 0.4);
-        this.lobbyDecorGfx.strokeRoundedRect(panelX + 16, panelY + 16, panelW - 32, panelH - 32, 20);
-
-        // Top accent rule under title area
-        this.lobbyDecorGfx.lineStyle(2, COLORS.system, 0.35);
-        this.lobbyDecorGfx.lineBetween(panelX + 120, 430, panelX + panelW - 120, 430);
+        this.lobbyDecorGfx.fillStyle(0x0a1018, 0.55);
+        this.lobbyDecorGfx.fillRect(360, 180, 1200, 720);
+        this.lobbyDecorGfx.lineStyle(2, 0x2a3a4a, 1);
+        this.lobbyDecorGfx.strokeRect(360, 180, 1200, 720);
+        this.lobbyDecorGfx.lineStyle(1, 0x20c5ff, 0.35);
+        this.lobbyDecorGfx.lineBetween(480, 430, 1440, 430);
     }
 
     layoutSideSlots(maxP) {
@@ -577,7 +507,6 @@ class GameScene extends Phaser.Scene {
         const durationLabel = duration === 0 ? 'Endless' : `${Math.round((duration || 180) / 60)} min`;
         const screensLabel = `${this.currentState.numScreens || numScreens} screens`;
         const speedLabel = (this.currentState.ballSpeed || 'medium');
-        const PLAYER_HEX = [HEX.systemAlt, '#FF2D78', '#FFB800', '#9B59B6', '#2ECC71'];
 
         if (this.lobbyDecorGfx) this.lobbyDecorGfx.clear();
         if (this.ambientLeftText) this.ambientLeftText.setVisible(false);
@@ -751,6 +680,7 @@ class GameScene extends Phaser.Scene {
         if (this.ambientRightText) this.ambientRightText.setVisible(false);
         if (this.ambientRightSub) this.ambientRightSub.setVisible(false);
         if (this.lobbyPlayerTexts) this.lobbyPlayerTexts.forEach(p => p.text.setVisible(false));
+        if (this.paddleNameTexts) this.paddleNameTexts.forEach((t) => t.setVisible(false));
         this.hideJoinToast();
     }
 
@@ -844,16 +774,7 @@ class GameScene extends Phaser.Scene {
             this.winStatsText.setText(statsStr);
             
             if (!this.winConfettiEmitted && winner && winner.connected) {
-                if (!REDUCED_MOTION) this.winConfetti.start();
                 this.winConfettiEmitted = true;
-                
-                if (!REDUCED_MOTION) {
-                    this.cameras.main.pan(960, 450, 2000, 'Sine.easeInOut');
-                    this.cameras.main.zoomTo(1.1, 2000, 'Sine.easeInOut');
-                } else {
-                    this.cameras.main.setScroll(0, -90);
-                    this.cameras.main.setZoom(1.1);
-                }
             }
         }
     }
@@ -865,12 +786,9 @@ class GameScene extends Phaser.Scene {
             if (this.winStatsText) this.winStatsText.setVisible(false);
             if (this.winConfetti) this.winConfetti.stop();
             this.winConfettiEmitted = false;
-            if (!REDUCED_MOTION) {
-                this.cameras.main.pan(960, 540, 1000, 'Linear');
-                this.cameras.main.zoomTo(1, 1000, 'Linear');
-            } else {
-                this.cameras.main.setScroll(0, 0);
+            if (this.cameras && this.cameras.main) {
                 this.cameras.main.setZoom(1);
+                this.cameras.main.setScroll(0, 0);
             }
         }
     }
@@ -879,17 +797,14 @@ class GameScene extends Phaser.Scene {
         this.hudPanelGraphics.clear();
         this.timerPanelGraphics.clear();
         this.leaderboardPanelGraphics.clear();
-        
-        const isGameActive = this.currentState && 
-                             (this.currentState.gameStatus === 'playing' || 
-                              this.currentState.gameStatus === 'game_over' ||
-                              this.currentState.gameStatus === 'win' ||
-                              this.currentState.gameStatus === 'time_up');
+
+        const status = this.currentState && this.currentState.gameStatus;
+        const isGameActive = status === 'playing' || status === 'game_over' || status === 'win' || status === 'time_up' || status === 'countdown';
 
         if (!isGameActive) {
             this.hudText.setVisible(false);
             this.timerText.setVisible(false);
-            this.leaderboardTexts.forEach(t => { if(t) t.setVisible(false); });
+            this.leaderboardTexts.forEach((t) => { if (t) t.setVisible(false); });
             this.leaderboardTitle.setVisible(false);
             this.geminiText.setVisible(false);
             this.geminiTitle.setVisible(false);
@@ -901,33 +816,29 @@ class GameScene extends Phaser.Scene {
             return;
         }
 
+        if (this.bottomStatusText) this.bottomStatusText.setVisible(false);
+        if (this.rigHealthText) this.rigHealthText.setVisible(false);
+        this.geminiText.setVisible(false);
+        this.geminiTitle.setVisible(false);
+
+        if (this.screenLabel) this.screenLabel.setVisible(!isGameActive);
+        if (this.rigStatusText) this.rigStatusText.setVisible(false);
+
         if (screenId === 1) this.hudText.setVisible(true);
         if (isCenterScreen) this.timerText.setVisible(true);
         if (screenId === numScreens) {
-            this.leaderboardTexts.forEach(t => { if (t) t.setVisible(true); });
+            this.leaderboardTexts.forEach((t) => { if (t) t.setVisible(true); });
             this.leaderboardTitle.setVisible(true);
         }
-        // Commentary lives on the center screen so the room can read it.
+
         if (isCenterScreen && this.currentState.lastCommentary) {
-            this.centerCommentaryTitle.setVisible(true);
+            this.centerCommentaryTitle.setVisible(false);
             this.centerCommentaryText.setText(this.currentState.lastCommentary);
             this.centerCommentaryText.setVisible(true);
+            this.centerCommentaryText.setPosition(960, 96);
         } else if (this.centerCommentaryTitle) {
             this.centerCommentaryTitle.setVisible(false);
             this.centerCommentaryText.setVisible(false);
-        }
-        if (screenId === numScreens) {
-            this.geminiText.setVisible(false);
-            this.geminiTitle.setVisible(false);
-        }
-        if (screenId === 1 && this.bottomStatusText) {
-            const fps = this.game.loop.actualFps.toFixed(0);
-            const latency = this.currentLatency !== undefined ? `${this.currentLatency} ms` : '-- ms';
-            this.bottomStatusText.setText(`FPS: ${fps}   |   LATENCY: ${latency}   |   CONNECTION: ONLINE`);
-            this.bottomStatusText.setVisible(true);
-        }
-        if (isCenterScreen && this.rigHealthText) {
-            this.rigHealthText.setVisible(true);
         }
 
         if (!this.currentState || !this.currentState.players) {
@@ -935,103 +846,51 @@ class GameScene extends Phaser.Scene {
             return;
         }
 
-        let hudStr = `LEVEL: ${this.currentState.currentLevel || 1}\n\n`;
-        
-        const playerCount = this.currentState.players.length;
-        for (let i = 0; i < playerCount; i++) {
-            const p = this.currentState.players[i];
-            if (p && p.connected) {
-                const name = p.name ? p.name.padEnd(12, ' ') : `P${i+1}`.padEnd(12, ' ');
-                hudStr += `${name} SCORE: ${p.score.toString().padStart(5, '0')}          \n`;
-            }
+        const players = this.currentState.players;
+        let hudStr = 'LV ' + (this.currentState.currentLevel || 1) + '\n';
+        for (let i = 0; i < players.length; i++) {
+            const p = players[i];
+            if (!p || !p.connected) continue;
+            const name = (p.name || ('P' + (i + 1))).substring(0, 10);
+            const lives = '●'.repeat(Math.max(0, Math.min(p.lives, 5)));
+            hudStr += name + '  ' + String(p.score).padStart(5, '0') + '  ' + lives + '\n';
         }
-        
         this.hudText.setText(hudStr);
-        
-        const bounds = this.hudText.getBounds();
-        if (screenId === 1) {
-            const padX = 20;
-            const padY = 20;
-            const panelX = bounds.x - padX;
-            const panelY = bounds.y - padY;
-            const panelW = bounds.width + padX * 2;
-            const panelH = bounds.height + padY * 2;
-            this.drawStandardPanel(this.hudPanelGraphics, panelX, panelY, panelW, panelH, 1.0, COLORS.system);
-        }
+        this.hudText.setColor(HEX.textPrimary);
 
-        let lineIdx = 0;
-        for (let i = 0; i < playerCount; i++) {
-            const p = this.currentState.players[i];
-            if (p && p.connected) {
-                const startY = bounds.y + 40 + (lineIdx * 40) + 12; 
-                const startX = bounds.x + bounds.width - 60; 
-                if (screenId === 1) {
-                    this.hudPanelGraphics.fillStyle(COLORS.successBright, 1);
-                    for(let l = 0; l < Math.min(p.lives, 5); l++) {
-                        this.hudPanelGraphics.fillCircle(startX + (l * 14), startY, 5);
-                    }
-                }
-                lineIdx++;
-            }
-        }
-        
-        if (screenId === 1) {
-            this.aiTagText.setPosition(bounds.x - 20, bounds.y + bounds.height + 30);
-        }
-
-        if (this.currentState.gameStartedAt && this.currentState.gameStatus === 'playing') {
+        if (this.currentState.gameStartedAt && status === 'playing') {
             const elapsed = Math.floor((Date.now() - this.currentState.gameStartedAt) / 1000);
             const duration = this.currentState.gameDurationSeconds ?? 180;
-            const remaining = Math.max(0, duration - elapsed);
-            const m = String(Math.floor(remaining / 60)).padStart(2, '0');
-            const s = String(remaining % 60).padStart(2, '0');
-            this.timerText.setText(`${m}:${s}`);
-            if (remaining <= 30) this.timerText.setColor(HEX.error);
-            else this.timerText.setColor(HEX.white);
-        } else {
-            this.timerText.setText('00:00');
-        }
-        
-        if (isCenterScreen && this.currentState.gameStartedAt && this.currentState.gameStatus === 'playing') {
-            const tBounds = this.timerText.getBounds();
-            this.drawStandardPanel(this.timerPanelGraphics, tBounds.x - 30, tBounds.y - 15, tBounds.width + 60, tBounds.height + 30, 1.0, COLORS.game);
-        }
-
-        if (isCenterScreen) {
-            if (!this.rigHealthText) {
-                this.rigHealthGraphics = this.add.graphics();
-                this.rigHealthText = this.add.text(960, 1040, '', {
-                    fontFamily: FONTS.body, fontSize: '14px', color: HEX.textDim, align: 'center'
-                }).setOrigin(0.5, 1);
+            if (duration > 0) {
+                const remaining = Math.max(0, duration - elapsed);
+                const m = String(Math.floor(remaining / 60)).padStart(2, '0');
+                const s = String(remaining % 60).padStart(2, '0');
+                this.timerText.setText(m + ':' + s);
+                this.timerText.setColor(remaining <= 30 ? HEX.error : HEX.white);
+            } else {
+                const m = String(Math.floor(elapsed / 60)).padStart(2, '0');
+                const s = String(elapsed % 60).padStart(2, '0');
+                this.timerText.setText(m + ':' + s);
+                this.timerText.setColor(HEX.game);
             }
-            
-            let playersCount = this.currentState.players.filter(p => p.connected).length;
-            let maxPlayers = this.currentState.maxPlayers || this.currentState.players.length;
-            this.rigHealthText.setText(`DISPLAYS: ${numScreens}/${numScreens}  |  PLAYERS: ${playersCount}/${maxPlayers}  |  SERVER: HEALTHY`);
-            this.rigHealthText.setVisible(true);
+        } else if (status === 'countdown') {
+            this.timerText.setText('READY');
+            this.timerText.setColor(HEX.white);
         }
 
-        let activePlayers = this.currentState.players.filter(p => p.connected).sort((a, b) => a.rank - b.rank);
+        const activePlayers = players.filter((p) => p.connected).sort((a, b) => (a.rank || 99) - (b.rank || 99));
         let lbW = 0;
         let lbLines = 0;
-        
-        const PLAYER_COLORS_HEX = [HEX.accent, HEX.game, HEX.success, '#e040fb', '#ff5252'];
-        
         for (let i = 0; i < this.leaderboardTexts.length; i++) {
             if (i < activePlayers.length) {
                 const p = activePlayers[i];
-                let colorHex = PLAYER_COLORS_HEX[(p.playerNumber - 1) % PLAYER_COLORS_HEX.length];
-
-                const name = p.name || `P${p.playerNumber}`;
+                const colorHex = PLAYER_HEX[(Math.max(1, p.playerNumber) - 1) % PLAYER_HEX.length];
+                const name = p.name || ('P' + p.playerNumber);
                 const rank = p.rank || (i + 1);
-                this.leaderboardTexts[i].setText(`#${rank} ${name} ${p.score.toString().padStart(5, '0')}`);
+                this.leaderboardTexts[i].setText('#' + rank + '  ' + name + '  ' + String(p.score).padStart(5, '0'));
                 this.leaderboardTexts[i].setColor(colorHex);
                 lbW = Math.max(lbW, this.leaderboardTexts[i].width);
                 lbLines++;
-
-                if (screenId === numScreens && this._rankSwapHighlightPids && this._rankSwapHighlightPids[p.id]) {
-                    this.drawStandardPanel(this.leaderboardPanelGraphics, 1880 - lbW - 20, 80 + (i * 36), lbW + 40, 36, 1.0, COLORS.white);
-                }
             } else {
                 this.leaderboardTexts[i].setText('');
             }
@@ -1039,17 +898,7 @@ class GameScene extends Phaser.Scene {
 
         if (screenId === numScreens && lbLines > 0) {
             this.leaderboardTitle.setVisible(true).setDepth(2);
-            this.drawStandardPanel(
-                this.leaderboardPanelGraphics,
-                1880 - Math.max(lbW, 180) - 20,
-                25,
-                Math.max(lbW, 180) + 40,
-                (lbLines * 36) + 60,
-                1.0,
-                COLORS.game
-            );
-            this.geminiTitle.setVisible(false);
-            this.geminiText.setVisible(false);
+            this.leaderboardTitle.setText('SCORES');
         }
     }
 
@@ -1086,7 +935,7 @@ class GameScene extends Phaser.Scene {
                         const localX = brick.x - virtualLeft;
                         if (localX > -600 && localX < 2520) {
                             this.brickEmitter.setParticleTint(ROW_COLORS[r % ROW_COLORS.length]);
-                            this.brickEmitter.emitParticleAt(localX + 300, brick.y + 15, 15);
+                            this.brickEmitter.emitParticleAt(localX + (brick.width || 140) / 2, brick.y + (brick.height || 30) / 2, 10);
                             this.playBeep(600 + (6 - (r % 6)) * 100, 'square', 0.1, 0.05);
                             if (brick.type === 'hard' || brick.type === 'indestructible') {
                                 if (!REDUCED_MOTION) this.cameras.main.shake(150, 0.005);
@@ -1156,46 +1005,39 @@ class GameScene extends Phaser.Scene {
     drawPowerUps() {
         const powerUps = this.currentState.powerUps;
         if (!powerUps) return;
-        
-        const time = this.time.now;
-        this.powerUpTexts.forEach(t => t.setAlpha(0));
+
+        this.powerUpTexts.forEach((t) => t.setAlpha(0));
         let tIdx = 0;
 
         for (const p of powerUps) {
-            if (!p.active) continue;
+            if (!p.falling) continue;
             const localX = p.x - virtualLeft;
             if (localX < -50 || localX > 1970) continue;
-            
+
             let pColor = COLORS.powerRed;
             let pLetter = 'B';
             if (p.type === 'wide_paddle') { pColor = COLORS.powerGreen; pLetter = 'W'; }
             else if (p.type === 'slow_ball') { pColor = COLORS.powerBlue; pLetter = 'S'; }
             else if (p.type === 'multi_ball') { pColor = COLORS.powerYellow; pLetter = 'M'; }
-            
-            const pulse = 1 + Math.sin(time * 0.005) * 0.3;
-            const auraRadius = 16 + (4 * pulse);
-            
-            this.graphics.fillStyle(pColor, 0.4);
-            this.graphics.fillCircle(localX, p.y, auraRadius);
-            
-            this.graphics.lineStyle(2, pColor, 1);
-            this.graphics.strokeCircle(localX, p.y, 14);
-            
-            this.graphics.fillStyle(COLORS.black, 1);
-            this.graphics.fillCircle(localX, p.y, 12);
-            
+
+            this.graphics.fillStyle(pColor, 1);
+            this.graphics.fillRoundedRect(localX - 22, p.y - 10, 44, 20, 10);
+            this.graphics.fillStyle(COLORS.white, 0.35);
+            this.graphics.fillRect(localX - 18, p.y - 8, 36, 3);
+
             if (tIdx >= this.powerUpTexts.length) {
                 const txt = this.add.text(0, 0, '', {
                     fontFamily: FONTS.heading,
                     fontSize: '14px',
-                    color: '#ffffff',
+                    color: '#041018',
+                    fontStyle: 'bold',
                 }).setOrigin(0.5, 0.5);
                 this.powerUpTexts.push(txt);
             }
-            
+
             const txt = this.powerUpTexts[tIdx++];
             txt.setText(pLetter);
-            txt.setColor(pColor === COLORS.powerGreen ? '#00ff00' : pColor === COLORS.powerBlue ? '#0088ff' : pColor === COLORS.powerYellow ? '#ffb800' : '#ff0000');
+            txt.setColor('#041018');
             txt.setPosition(localX, p.y);
             txt.setAlpha(1);
         }
@@ -1214,75 +1056,35 @@ class GameScene extends Phaser.Scene {
                 if (!brick || !brick.active) continue;
 
                 const localX = brick.x - virtualLeft;
-                if (localX < -600 || localX > 2520) continue;
+                if (localX < -160 || localX > 2080) continue;
 
-                const hGap = 6;
-                const vGap = 8;
-                
-                const time = this.time.now;
-                let breath = 0;
-                if (brick.type === 'indestructible') {
-                    breath = Math.sin(time * 0.003 + (r * c)) * 2;
-                } else if (brick.type === 'hard') {
-                    breath = Math.sin(time * 0.005 + (r + c)) * 1.5;
-                }
-                
-                const drawW = (brick.width || 140) - hGap + breath;
-                const drawH = (brick.height || 30) - vGap + (breath * 0.2);
+                const gap = 4;
+                const drawW = (brick.width || 140) - gap;
+                const drawH = (brick.height || 30) - gap;
+                const drawX = localX + gap / 2;
+                const drawY = brick.y + gap / 2;
 
-                let color;
-                if (brick.type === 'indestructible') {
-                    color = COLORS.brickGrey;
-                } else if (brick.type === 'hard') {
-                    color = COLORS.white;
-                } else {
-                    const normalColors = [COLORS.brickCyan, COLORS.brickPink, COLORS.brickGold];
-                    color = normalColors[brick.row % 3];
-                }
-                
-                const drawX = localX + hGap / 2 - (breath / 2);
-                const drawY = brick.y + vGap / 2 - (breath * 0.1);
+                let color = ROW_COLORS[(brick.row != null ? brick.row : r) % ROW_COLORS.length];
+                if (brick.type === 'indestructible') color = COLORS.brickSteel;
+                else if (brick.type === 'hard') color = COLORS.brickHard;
 
-                this.graphics.fillStyle(color, 0.22);
-                this.graphics.fillRoundedRect(drawX - 3, drawY - 3, drawW + 6, drawH + 6, 4);
                 this.graphics.fillStyle(color, 1);
-                this.graphics.fillRoundedRect(drawX, drawY, drawW, drawH, 4);
-                
-                if (brick.type === 'indestructible') {
-                    this.graphics.lineStyle(2, COLORS.gridLine, 1);
-                    for (let i = -drawH; i < drawW; i += 10) {
-                        let x1 = i;
-                        let y1 = 0;
-                        let x2 = i + drawH;
-                        let y2 = drawH;
-                        
-                        if (x1 < 0) { y1 -= x1; x1 = 0; }
-                        if (x2 > drawW) { y2 -= (x2 - drawW); x2 = drawW; }
-                        
-                        if (x1 < drawW && x2 > 0) {
-                            this.graphics.beginPath();
-                            this.graphics.moveTo(drawX + x1, drawY + y1);
-                            this.graphics.lineTo(drawX + x2, drawY + y2);
-                            this.graphics.strokePath();
-                        }
-                    }
-                }
-                
-                const lightColor = Phaser.Display.Color.Interpolate.ColorWithColor(
-                    Phaser.Display.Color.IntegerToColor(color),
-                    Phaser.Display.Color.IntegerToColor(COLORS.white),
-                    100, 40
-                );
-                this.graphics.fillStyle(Phaser.Display.Color.GetColor(lightColor.r, lightColor.g, lightColor.b), 1);
+                this.graphics.fillRect(drawX, drawY, drawW, drawH);
+                this.graphics.fillStyle(0xffffff, 0.28);
                 this.graphics.fillRect(drawX, drawY, drawW, 3);
-                
-                const darkColor = Phaser.Display.Color.Interpolate.ColorWithColor(
-                    Phaser.Display.Color.IntegerToColor(color),
-                    Phaser.Display.Color.IntegerToColor(COLORS.black),
-                    100, 40
-                );
-                this.graphics.fillStyle(Phaser.Display.Color.GetColor(darkColor.r, darkColor.g, darkColor.b), 1);
+                this.graphics.fillRect(drawX, drawY, 3, drawH);
+                this.graphics.fillStyle(0x000000, 0.28);
                 this.graphics.fillRect(drawX, drawY + drawH - 3, drawW, 3);
+                this.graphics.fillRect(drawX + drawW - 3, drawY, 3, drawH);
+
+                if (brick.type === 'indestructible') {
+                    this.graphics.lineStyle(1, 0x2a3038, 0.8);
+                    this.graphics.lineBetween(drawX + 6, drawY + 4, drawX + drawW - 6, drawY + drawH - 4);
+                    this.graphics.lineBetween(drawX + drawW - 6, drawY + 4, drawX + 6, drawY + drawH - 4);
+                } else if (brick.type === 'hard') {
+                    this.graphics.lineStyle(1, 0xffffff, 0.35);
+                    this.graphics.strokeRect(drawX + 4, drawY + 4, drawW - 8, drawH - 8);
+                }
             }
         }
     }
@@ -1300,26 +1102,25 @@ class GameScene extends Phaser.Scene {
 
             const override = this.boundaryBallOverrides[ball.id];
             const localX = (override !== undefined) ? override : (ball.x - virtualLeft);
-            
+            const radius = ball.radius || 8;
+
             if (!this.ballTrails[i]) this.ballTrails[i] = [];
             this.ballTrails[i].push({ x: localX, y: ball.y });
-            if (this.ballTrails[i].length > 10) this.ballTrails[i].shift();
-            
-            if (localX < -50 || localX > 1970) continue;
+            if (this.ballTrails[i].length > 8) this.ballTrails[i].shift();
+
+            if (localX < -40 || localX > 1960) continue;
 
             for (let t = 0; t < this.ballTrails[i].length; t++) {
                 const pos = this.ballTrails[i][t];
-                const alpha = t / 10;
-                this.trailGraphics.fillStyle(COLORS.accent, alpha * 0.4);
-                this.trailGraphics.fillCircle(pos.x, pos.y, (8 + Math.random() * 4) * alpha);
+                const alpha = (t + 1) / this.ballTrails[i].length;
+                this.trailGraphics.fillStyle(COLORS.white, alpha * 0.28);
+                this.trailGraphics.fillCircle(pos.x, pos.y, radius * alpha);
             }
 
-            for (let g = 3; g > 0; g--) {
-                this.graphics.fillStyle(COLORS.accent, 0.2 * (4 - g));
-                this.graphics.fillCircle(localX, ball.y, 8 + (g * 3));
-            }
             this.graphics.fillStyle(COLORS.white, 1);
-            this.graphics.fillCircle(localX, ball.y, 8);
+            this.graphics.fillCircle(localX, ball.y, radius);
+            this.graphics.fillStyle(0xd0e8ff, 1);
+            this.graphics.fillCircle(localX - 2, ball.y - 2, Math.max(2, radius * 0.35));
         }
     }
 
@@ -1328,45 +1129,59 @@ class GameScene extends Phaser.Scene {
         if (!players) return;
 
         const entries = Array.isArray(players) ? players : Object.values(players);
+        while (this.paddleNameTexts.length < entries.length) {
+            const txt = this.add.text(0, 0, '', {
+                fontFamily: FONTS.heading,
+                fontSize: '14px',
+                color: HEX.white,
+                fontStyle: 'bold',
+            }).setOrigin(0.5, 1).setDepth(50);
+            this.paddleNameTexts.push(txt);
+        }
 
         for (let i = 0; i < entries.length; i++) {
             const player = entries[i];
-            if (!player || !player.connected) continue;
+            const nameText = this.paddleNameTexts[i];
+            if (!player || !player.connected) {
+                if (nameText) nameText.setVisible(false);
+                continue;
+            }
 
             const paddleX = player.paddleX !== undefined ? player.paddleX : player.x;
             const paddleWidth = player.paddleWidth !== undefined ? player.paddleWidth : player.width || 200;
             const playerNumber = player.playerNumber !== undefined ? player.playerNumber : (i + 1);
-
-            if (paddleX === undefined) continue;
+            if (paddleX === undefined) {
+                if (nameText) nameText.setVisible(false);
+                continue;
+            }
 
             const localX = paddleX - virtualLeft;
             const color = PADDLE_COLORS[(playerNumber - 1) % PADDLE_COLORS.length];
-
-            if (localX + paddleWidth < 0 || localX > 1920) continue;
-
-            if (player.name) {
-                const nameX = localX + paddleWidth / 2;
-                this.graphics.fillStyle(0xffffff, 0.8);
-                this.graphics.fillRoundedRect(nameX - 40, 1000 - 35, 80, 20, 4);
-                if (!this[`paddleNameText_${i}`]) {
-                    this[`paddleNameText_${i}`] = this.add.text(0, 0, '', { fontFamily: FONTS.body, fontSize: '12px', color: HEX.black, fontWeight: 'bold' }).setOrigin(0.5, 0.5).setDepth(200);
-                }
-                this[`paddleNameText_${i}`].setText(player.name.substring(0, 8));
-                this[`paddleNameText_${i}`].setPosition(nameX, 1000 - 25);
-                this[`paddleNameText_${i}`].setVisible(true);
+            if (localX + paddleWidth < 0 || localX > 1920) {
+                if (nameText) nameText.setVisible(false);
+                continue;
             }
 
             let drawAlpha = 1;
             if (this.lostConnectionPids && this.lostConnectionPids[player.id]) {
                 const elapsed = Date.now() - this.lostConnectionPids[player.id];
-                drawAlpha = 0.3 + (Math.sin(elapsed / 150) * 0.2);
+                drawAlpha = 0.4 + (Math.sin(elapsed / 150) * 0.2);
             }
 
-            this.graphics.fillStyle(color, 0.3 * drawAlpha);
-            this.graphics.fillRoundedRect(localX - 10, 1000 - 10, paddleWidth + 20, 40, 10);
-            
+            const py = 1000;
+            const ph = 18;
             this.graphics.fillStyle(color, drawAlpha);
-            this.graphics.fillRoundedRect(localX, 1000, paddleWidth, 20, 6);
+            this.graphics.fillRoundedRect(localX, py, paddleWidth, ph, 8);
+            this.graphics.fillStyle(0xffffff, 0.35 * drawAlpha);
+            this.graphics.fillRect(localX + 8, py + 2, paddleWidth - 16, 3);
+
+            if (nameText) {
+                nameText.setText((player.name || ('P' + playerNumber)).substring(0, 10));
+                nameText.setColor(PLAYER_HEX[(playerNumber - 1) % PLAYER_HEX.length]);
+                nameText.setPosition(localX + paddleWidth / 2, py - 8);
+                nameText.setVisible(true);
+                nameText.setAlpha(drawAlpha);
+            }
         }
     }
 
@@ -1394,10 +1209,14 @@ class GameScene extends Phaser.Scene {
             this.fetchSessionInfo();
         });
 
-        this.socket.on('lobby_ready', () => {
-            this.clearLobbyQr();
-            this.sessionToken = null;
-            this.fetchSessionInfo();
+        this.socket.on('lobby_ready', (data) => {
+            if (data && data.sessionToken) {
+                this.applySessionInfo(data);
+            } else {
+                this.clearLobbyQr();
+                this.sessionToken = null;
+                this.fetchSessionInfo();
+            }
         });
 
         this.socket.on('game_state', (state) => {
@@ -1494,21 +1313,6 @@ class GameScene extends Phaser.Scene {
                 'talking';
             if (targetId) {
                 this.setRobotState(targetId, state);
-                const idx = players.findIndex((p) => p.id === targetId);
-                if (idx >= 0 && this.robots[idx] && this.robots[idx].bubble && message) {
-                    const bubble = this.robots[idx].bubble;
-                    bubble.setText(message);
-                    bubble.setVisible(true);
-                    bubble.setAlpha(1);
-                    this.tweens.killTweensOf(bubble);
-                    this.tweens.add({
-                        targets: bubble,
-                        alpha: 0,
-                        delay: 3200,
-                        duration: 400,
-                        onComplete: () => bubble.setVisible(false),
-                    });
-                }
             } else {
                 players.filter((p) => p.connected).forEach((p) => this.setRobotState(p.id, state, 2200));
             }
@@ -1583,7 +1387,7 @@ class GameScene extends Phaser.Scene {
                         y: -80,
                         alpha: 0,
                         duration: 400,
-                        delay: 3500,
+                        delay: 1400,
                         ease: 'Power2'
                     });
                 }
@@ -1600,7 +1404,7 @@ class GameScene extends Phaser.Scene {
                         y: -30,
                         alpha: 0,
                         duration: 400,
-                        delay: 3500,
+                        delay: 1400,
                         ease: 'Power2'
                     });
                 }
@@ -1649,7 +1453,7 @@ const config = {
 
 if (document.fonts) {
     Promise.all([
-        document.fonts.load('16px "Space Grotesk"'),
+        document.fonts.load('16px "VT323"'),
         document.fonts.load('16px "Space Grotesk"'),
         document.fonts.load('16px "Inter"'),
         document.fonts.load('bold 16px "Inter"')

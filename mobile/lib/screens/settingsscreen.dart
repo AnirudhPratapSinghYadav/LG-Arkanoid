@@ -247,16 +247,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
         elevation: 0,
         title: Row(
           children: [
-            Text(
-              'SETTINGS',
-              style: GoogleFonts.jetBrainsMono(
-                fontSize: 20,
-                color: accentSystem,
-                letterSpacing: 2,
-                fontWeight: FontWeight.bold,
+            Expanded(
+              child: Text(
+                'SETTINGS',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.jetBrainsMono(
+                  fontSize: 16,
+                  color: accentSystem,
+                  letterSpacing: 1,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
-            const Spacer(),
             ConnectionStatus(isConnected: _isConnected, label: 'LG LINK'),
           ],
         ),
