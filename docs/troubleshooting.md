@@ -4,7 +4,7 @@
 - On the LG rig, use Node.js **16** (via nvm). On a modern laptop, Node 16+ is fine.
 - Ensure `.env` is created and `LG_PASSWORD` is configured.
 - Run `npm run server` and check for syntax errors.
-- Phone controller must use port **3000** (not Pacman's 8128).
+- Phone controller must use port **8130** (Pacman is 8128, Asteroids 8129).
 
 ## Screens Won't Open on Slaves
 - Ensure the master node has passwordless SSH access to the slave nodes (or the correct password in the scripts).
@@ -12,7 +12,10 @@
 
 ## Network Connection Fails
 - Ensure the phone and Liquid Galaxy rig are on the same Wi-Fi subnet.
-- Run `sudo ufw status` on the master node to verify port 3000 is open.
+- Verify port **8130** is open. On a real rig check `/etc/iptables.conf`, not just
+  `ufw`: frames re-apply that file on every `ifup`, so a rule added only through
+  `ufw` disappears after a reboot and the phones stop reaching the master.
+  `install.sh` appends the port to the `tcp` rule that already lists `8111`.
 
 ## CI/CD Failure
 - The mobile app strictly requires Flutter 3.24.x due to dartssh2 and meta package dependencies. Do not downgrade the CI runner.

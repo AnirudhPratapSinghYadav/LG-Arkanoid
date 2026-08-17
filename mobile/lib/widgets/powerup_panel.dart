@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
+import '../utils/app_fonts.dart';
 import 'package:provider/provider.dart';
 import '../services/gameservice.dart';
 import '../utils/constants.dart';
@@ -30,7 +30,7 @@ class PowerupPanel extends StatelessWidget {
                 ? 'Catch power-ups with your paddle'
                 : 'Tap a power-up to activate',
             textAlign: TextAlign.center,
-            style: GoogleFonts.spaceGrotesk(
+            style: AppFonts.spaceGrotesk(
               fontSize: 11,
               color: textSecondary,
               letterSpacing: 0.5,
@@ -122,7 +122,7 @@ class _PowerButton extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
-              style: GoogleFonts.spaceGrotesk(
+              style: AppFonts.spaceGrotesk(
                 fontSize: 9,
                 fontWeight: FontWeight.w700,
                 color: enabled ? def.color : textSecondary.withOpacity(0.35),

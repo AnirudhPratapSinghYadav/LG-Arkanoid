@@ -26,7 +26,7 @@ if [ -f "$SCRIPT_DIR/../server/.env" ]; then
   set +a
 fi
 
-port=${PORT:-3000}
+port=${PORT:-8130}
 
 if [ -z "$LG_PASSWORD" ]; then
   echo "Warning: LG_PASSWORD not set. Assuming passwordless SSH keys."
@@ -37,10 +37,18 @@ else
 fi
 
 FRAMES=()
+for persona in /lg/personavars.txt /home/lg/personavars.txt; do
+  if [ -r "$persona" ]; then
+    # shellcheck disable=SC1090
+    . "$persona"
+    break
+  fi
+done
 if [ -f "${HOME}/etc/shell.conf" ]; then
   # shellcheck disable=SC1090
   . "${HOME}/etc/shell.conf"
 fi
+LG_FRAMES="${LG_FRAMES:-$DHCP_LG_FRAMES}"
 
 if [ -n "$LG_FRAMES" ]; then
   # shellcheck disable=SC2206

@@ -13,9 +13,9 @@ Author: [Anirudh Pratap Singh Yadav](https://github.com/AnirudhPratapSinghYadav)
 
 ## What is this?
 
-LG Arkanoid turns a Liquid Galaxy rig into one continuous brick-breaker playfield. Instead of one monitor, the ball and bricks span **3, 5, 7, 9, or 12** physical screens stitched into a single virtual world (1920×1080 per screen).
+LG Arkanoid turns a Liquid Galaxy rig into one continuous brick-breaker playfield. Instead of one monitor, the ball and bricks span **3, 5, 7, 9, or 12** physical screens stitched into a single virtual world.
 
-Players join with Android phones. The phone never renders the level — it only sends paddle input. Physics, scoring, lives, levels, and power-ups run on an authoritative Node.js server on the master machine (`lg1`). Each screen opens Chromium in kiosk mode and draws only its slice of the world.
+Players join with Android phones. The phone never renders the level — it only sends paddle input. Physics, scoring, lives, levels, and power-ups run on an authoritative Node.js server on the master machine (`lg1`). Each screen opens Chromium in kiosk mode and draws only its slice of the world. Frame width follows the rig's own rotation (`DHCP_RANDR` / `LG_FRAME_ASPECT`): portrait 1080×1920 frames get a 608-wide court, landscape frames stay 1920×1080.
 
 This follows the same deploy pattern as sister games such as [galaxy-pacman](https://github.com/LiquidGalaxyLAB/galaxy-pacman): **Node + pm2 on the master, Chromium on every frame, no Docker.**
 
@@ -99,13 +99,13 @@ sequenceDiagram
 
 ```mermaid
 flowchart TB
-  W["Virtual width = NUM_SCREENS × 1920"]
-  W --> S1["Screen 1: x 0..1919"]
-  W --> S2["Screen 2: x 1920..3839"]
+  W["Virtual width = NUM_SCREENS × SCREEN_WIDTH"]
+  W --> S1["Screen 1: x 0 .. SCREEN_WIDTH-1"]
+  W --> S2["Screen 2: x SCREEN_WIDTH .. 2×SCREEN_WIDTH-1"]
   W --> SN["Screen N: slice N"]
 ```
 
-Each Phaser client receives the full world state but draws only `worldX - (screenId-1)*1920`.
+Each Phaser client receives the full world state but draws only `worldX - (screenId-1)*SCREEN_WIDTH`. `SCREEN_WIDTH` is 1920 on landscape frames and 608 on the stock portrait (`DHCP_RANDR=right`) install.
 
 ---
 
@@ -114,7 +114,7 @@ Each Phaser client receives the full world state but draws only `worldX - (scree
 | Layer | Technology | Why |
 |-------|------------|-----|
 | Game server | Node.js **16+**, Express, Socket.IO 4 | Authoritative physics; works on older LG Ubuntu/glibc |
-| Screen client | Phaser **3.80**, plain JS | Fullscreen 1920×1080 kiosk pages |
+| Screen client | Phaser **3.80**, plain JS | Fullscreen kiosk pages, aspect follows the rig |
 | Phone controller | Flutter **3.24.x**, Dart 3 | Touch paddle + SSH launch (same pattern as LG apps) |
 | Process manager | pm2 | Keep server alive on the master |
 | Display | Chromium `--kiosk` | Standard Liquid Galaxy browser launch |
@@ -129,11 +129,42 @@ Each Phaser client receives the full world state but draws only `worldX - (scree
 | npm | comes with Node 16+ | |
 | Flutter | **3.24.3** (CI pin) | Dart SDK `>=3.0 <4.0` |
 | Screen count | **1–12** | Common LG: 3, 5, 7, 9, 12 |
-| Game port | **3000** | Dedicated port (Pacman uses 8128 — do not collide) |
+| Game port | **8130** | Next free slot in the LG game family (see below) |
 | SSH | 22 | User typically `lg` |
 | Vite | 4.x only | Do not upgrade to Vite 5+ on the rig |
 
 **Do not Dockerize for LAB demos.** Mentors expect native pm2 + Chromium like Pacman / Asteroids.
+
+### Port allocation in the LG ecosystem
+
+Arkanoid takes **8130** because the published games already claim the slots
+below it, and a collision means one of the two games silently fails to bind:
+
+| Port | Project |
+|------|---------|
+| 81, 8111 | `liquid-galaxy` core (already open in `/etc/iptables.conf`) |
+| 3123 | `lg-retro-gaming` launcher |
+| 8112 | `galaxy-pong` |
+| 8114 | `galaxy-snake` |
+| 8128 | `galaxy-pacman` |
+| 8129 | `galaxy-asteroids` |
+| **8130** | **LG-Arkanoid** |
+
+`npm test` asserts this, so the port cannot drift back into a collision.
+
+### Launching from lg-retro-gaming
+
+`install.sh` registers Arkanoid in `lg-retro-gaming/server/games.json` when that
+launcher is present, so it appears next to the other games. LGRG runs
+`bash <openScript> lq`, i.e. it passes the rig password as `$1`;
+`scripts/open-arkanoid.sh` accepts a password there as well as a screen count,
+so both calling conventions work:
+
+```bash
+bash scripts/open-arkanoid.sh 5          # 5 screens (human / phone app)
+bash scripts/open-arkanoid.sh lq         # LGRG: $1 is the password
+bash scripts/open-arkanoid.sh --screens 5 --password lq
+```
 
 ---
 
@@ -159,7 +190,7 @@ LG-Arkanoid/
 git clone https://github.com/AnirudhPratapSinghYadav/LG-Arkanoid.git
 cd LG-Arkanoid
 npm install
-cp server/.env.example server/.env   # set LG_PASSWORD=lg at minimum
+cp server/.env.example server/.env   # set LG_PASSWORD=lq at minimum
 npm start
 ```
 
@@ -167,10 +198,10 @@ Then open:
 
 | URL | Purpose |
 |-----|---------|
-| http://localhost:3000/1 | Screen 1 |
-| http://localhost:3000/2 | Screen 2 |
-| http://localhost:3000/health | Status (no join code — code is on the wall QR only) |
-| http://localhost:3000/controller | Browser paddle (optional) |
+| http://localhost:8130/1 | Leftmost slice of the wall |
+| http://localhost:8130/2 | The slice to its right |
+| http://localhost:8130/health | Status (no join code — code is on the wall QR only) |
+| http://localhost:8130/controller | Browser paddle (optional) |
 
 ```bash
 npm test          # game engine tests
@@ -201,9 +232,9 @@ Stop:
 bash scripts/close-arkanoid.sh
 ```
 
-Phone: same Wi‑Fi → master IP, port **3000**, 4-character token from the **center-screen QR / session code** (not `/health` — join codes are screen-only for security).
+Phone: same Wi‑Fi → master IP, port **8130**, 4-character token from the **center-screen QR / session code** (not `/health` — join codes are screen-only for security).
 
-Or open `http://<master-ip>:3000/controller` on a phone browser if you do not have the Flutter APK yet.
+Or open `http://<master-ip>:8130/controller` on a phone browser if you do not have the Flutter APK yet.
 
 More detail: [docs/lg-setup.md](docs/lg-setup.md) · VirtualBox plan: [docs/virtualbox-test-plan.md](docs/virtualbox-test-plan.md)
 
@@ -225,10 +256,11 @@ More detail: [docs/lg-setup.md](docs/lg-setup.md) · VirtualBox plan: [docs/virt
 `server/.env` (see `server/.env.example`):
 
 ```
-PORT=3000
+PORT=8130
 NUM_SCREENS=3
-LG_PASSWORD=lg
+LG_PASSWORD=lq
 GEMINI_API_KEY=          # optional
+LG_FRAME_ASPECT=         # optional: 9:16 or 16:9 to override the rig's rotation
 ```
 
 ---
@@ -241,6 +273,7 @@ GEMINI_API_KEY=          # optional
 - [Networking](docs/networking.md)
 - [Troubleshooting](docs/troubleshooting.md)
 - [VirtualBox 3-rig test plan](docs/virtualbox-test-plan.md)
+- [GO Web Store submission](docs/GO_WEB_STORE.md)
 
 ---
 

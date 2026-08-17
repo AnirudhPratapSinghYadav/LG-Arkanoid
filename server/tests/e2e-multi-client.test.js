@@ -1,6 +1,6 @@
 'use strict';
 /**
- * Deep multi-client E2E against a running server on PORT (default 3000).
+ * Deep multi-client E2E against a running server on PORT (default 8130).
  * Simulates 3 screen clients + 2 phone/controller clients via Socket.IO.
  *
  * Usage: node server/tests/e2e-multi-client.test.js
@@ -20,7 +20,7 @@ function requireIoClient() {
 }
 const { io } = requireIoClient();
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8130;
 const BASE = `http://127.0.0.1:${PORT}`;
 const results = [];
 
@@ -233,7 +233,7 @@ async function main() {
     once(p1, 'countdown_started', 5000),
     once(screens[0], 'countdown_started', 5000),
   ]);
-  p1.emit('start_game', { durationSeconds: 60 });
+  p1.emit('start_game', { durationSeconds: 60, maxPlayers: 3, ballSpeed: 'medium' });
   const cd = await countdownP.catch((e) => ({ __err: e.message }));
   record('countdown_started emitted', cd && !cd.__err, JSON.stringify(cd));
 

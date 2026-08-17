@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import '../utils/app_fonts.dart';
 import '../utils/constants.dart';
+import '../widgets/dual_brand.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -94,13 +95,19 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Image.asset('assets/app_icon_transparent.png', width: 64, height: 64),
-                                const SizedBox(width: 24),
-                                Image.asset('assets/lg-logo.png', height: 40),
-                              ],
+                            SizedBox(
+                              width: MediaQuery.sizeOf(context).width - 48,
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Image.asset('assets/app_icon_transparent.webp', width: 64, height: 64),
+                                    const SizedBox(width: 24),
+                                    const DualBrand(height: 40),
+                                  ],
+                                ),
+                              ),
                             ),
                             const SizedBox(height: 28),
                             Padding(
@@ -109,8 +116,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                                 fit: BoxFit.scaleDown,
                                 child: Text(
                                   'LG ARKANOID',
-                                  style: const TextStyle(
-                                    fontFamily: 'PressStart2P',
+                                  style: AppFonts.pressStart2P(
                                     fontSize: 14,
                                     color: textPrimary,
                                     letterSpacing: 1.0,
@@ -123,7 +129,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                             const SizedBox(height: 10),
                             Text(
                               'Phone controller for Liquid Galaxy',
-                              style: GoogleFonts.spaceGrotesk(
+                              style: AppFonts.spaceGrotesk(
                                 fontSize: 13,
                                 color: textSecondary,
                                 fontWeight: FontWeight.w600,
@@ -132,8 +138,8 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                             ),
                             const SizedBox(height: 6),
                             Text(
-                              'Anirudh Pratap Singh Yadav · Liquid Galaxy',
-                              style: GoogleFonts.inter(
+                              'Anirudh Pratap Singh Yadav · Gemini SoC 2026',
+                              style: AppFonts.inter(
                                 fontSize: 11,
                                 color: textSecondary,
                                 height: 1.4,
@@ -158,7 +164,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                   children: [
                     Text(
                       'LG Arkanoid',
-                      style: GoogleFonts.inter(
+                      style: AppFonts.inter(
                         fontSize: 11,
                         color: Colors.white,
                         fontWeight: FontWeight.w500,
@@ -167,7 +173,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                     ),
                     Text(
                       'Liquid Galaxy',
-                      style: GoogleFonts.inter(
+                      style: AppFonts.inter(
                         fontSize: 11,
                         color: Colors.white,
                         fontWeight: FontWeight.w500,
@@ -220,7 +226,7 @@ class _DotDotDotState extends State<_DotDotDot> with SingleTickerProviderStateMi
           height: 20,
           child: Text(
             dotsText,
-            style: GoogleFonts.inter(
+            style: AppFonts.inter(
               fontSize: 18,
               color: textSecondary,
               letterSpacing: 4,

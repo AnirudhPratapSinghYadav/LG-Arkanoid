@@ -13,12 +13,47 @@ const numScreens = (typeof window.NUM_SCREENS !== 'undefined') ? window.NUM_SCRE
 const screenId = (typeof window.SCREEN_ID !== 'undefined') ? window.SCREEN_ID : Math.ceil(numScreens / 2);
 const isCenterScreen = screenId === Math.ceil(numScreens / 2);
 
+// ---------------------------------------------------------------------------
+// Court geometry.
+//
+// The logical court is CANVAS_H tall and SCREEN_W wide per frame, both injected
+// by the server, which derives them from the rig's frame aspect. LG frames are
+// portrait by default (DHCP_RANDR="right"), so SCREEN_W is 608 on a stock rig
+// and 1920 when the panels are unrotated. Never hardcode either number.
+// ---------------------------------------------------------------------------
+const CANVAS_H = (typeof window.CANVAS_H === 'number' && window.CANVAS_H > 0) ? window.CANVAS_H : 1080;
+const SCREEN_W = (typeof window.SCREEN_W === 'number' && window.SCREEN_W > 0)
+    ? window.SCREEN_W
+    : Math.round(CANVAS_H * (16 / 9));
+const CENTER_X = SCREEN_W / 2;
+const CENTER_Y = CANVAS_H / 2;
+
+function liveNumScreens(state) {
+    const n = state && state.numScreens;
+    return (typeof n === 'number' && n >= 1) ? n : numScreens;
+}
+
+function qrScreenIds(n) {
+    const total = n || 3;
+    const c = Math.ceil(total / 2);
+    if (total % 2 === 1) return [c];
+    return [c, Math.min(total, c + 1)];
+}
+
+function isQrScreen(state) {
+    return qrScreenIds(liveNumScreens(state)).indexOf(screenId) !== -1;
+}
+
+function isRightmostScreen(state) {
+    return screenId === liveNumScreens(state);
+}
+
 let SCREEN_BOUNDARIES = [];
 for (let i = 1; i <= numScreens; i++) {
     SCREEN_BOUNDARIES.push({
         screenId: i,
-        virtualLeft: (i - 1) * 1920,
-        virtualRight: (i * 1920) - 1
+        virtualLeft: (i - 1) * SCREEN_W,
+        virtualRight: (i * SCREEN_W) - 1
     });
 }
 

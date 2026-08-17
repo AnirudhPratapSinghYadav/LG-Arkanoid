@@ -5,10 +5,12 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const rateLimit = require('express-rate-limit');
+// helmet 7.x is the last line that runs on Node 16 (Ubuntu 16.04 LG masters).
+// helmet 8 declares engines.node >= 18 and will throw on the LAB rig.
 const helmet = require('helmet');
 
 const gameEngine = require('./gameEngine.js');
-const { PORT, TICK_MS, SCREEN_WIDTH, BALL_RADIUS, getLanIp, createInitialWorldState, GEMINI_API_KEY, isAllowedCorsOrigin, resolveWebRoot, generateToken, generateResumeToken } = require('./config.js');
+const { PORT, TICK_MS, SCREEN_WIDTH, CANVAS_HEIGHT, BALL_RADIUS, getLanIp, createInitialWorldState, GEMINI_API_KEY, isAllowedCorsOrigin, resolveWebRoot, generateToken, generateResumeToken } = require('./config.js');
 
 if (!GEMINI_API_KEY) {
   console.warn('WARNING: GEMINI_API_KEY is missing. AI commentary and level generation will be disabled.');
@@ -41,7 +43,7 @@ const limiter = rateLimit({
   skip: (req) => {
     const p = req.path || '';
     if (p.startsWith('/socket.io')) return true;
-    return /\.(js|css|png|jpe?g|gif|svg|woff2?|ttf|ico|map|webmanifest)$/i.test(p);
+    return /\.(js|css|png|jpe?g|gif|svg|webp|woff2?|ttf|ico|map|webmanifest)$/i.test(p);
   },
 });
 app.use(helmet({ 
@@ -53,14 +55,10 @@ app.use(helmet({
         (req, res) => `'nonce-${res.locals.nonce}'`
       ],
       styleSrc: [
-        "'self'", 
-        "'unsafe-inline'", 
-        "https://fonts.googleapis.com"
-      ],
-      fontSrc: [
         "'self'",
-        "https://fonts.gstatic.com"
+        "'unsafe-inline'"
       ],
+      fontSrc: ["'self'"],
       connectSrc: ["'self'", "ws:", "wss:"],
       imgSrc: ["'self'", "data:", "blob:"]
     }
@@ -148,6 +146,8 @@ function broadcastGameState(){
   const payload = {
     sessionId: worldState.sessionId,
     numScreens: worldState.numScreens || 3,
+    screenWidth: worldState.screenWidth || SCREEN_WIDTH,
+    canvasHeight: worldState.canvasHeight || CANVAS_HEIGHT,
     balls: worldState.balls.map(b => ({
       id: b.id,
       x: b.x,
@@ -260,7 +260,7 @@ function returnToLobby() {
   // Rotate join secrets so leaked lobby codes / resumes die with the match.
   worldState.sessionId = require('crypto').randomUUID();
   worldState.sessionToken = generateToken();
-  for (const p of worldState.players) {
+  worldState.players.forEach((p, index) => {
     if (p.connected && p.socketId) {
       p.resumeToken = generateResumeToken();
     } else {
@@ -274,8 +274,8 @@ function returnToLobby() {
     p.lives = 3;
     p.inventory = [];
     p.paddleWidth = gameEngine.DEFAULT_PADDLE_WIDTH;
-    p.paddleX = gameEngine.centerPaddleX(worldState.numScreens, p.paddleWidth);
-  }
+    p.paddleX = gameEngine.paddleXForSlot(index, worldState.maxPlayers, worldState.numScreens, p.paddleWidth);
+  });
   worldState.longestRally = 0;
   worldState.powerupsCollected = 0;
   worldState.highestCombo = 0;
@@ -395,16 +395,20 @@ function gameLoop() {
     if(!ball.active) return;
     const currentScreen = getScreenIdForX(ball.x);
     const oldScreen = beforeBallScreens[i];
-    if(currentScreen !== oldScreen){
-      const handoffId = `${oldScreen}-${currentScreen}-${Date.now()}`;
-      const isMovingRight = oldScreen < currentScreen;
-      const oldScreenInfo = getScreenById(oldScreen);
-      const newScreenInfo = getScreenById(currentScreen);
-      
+    if(currentScreen === oldScreen) return;
+
+    const step = currentScreen > oldScreen ? 1 : -1;
+    for (let from = oldScreen; from !== currentScreen; from += step) {
+      const to = from + step;
+      const handoffId = `${from}-${to}-${ball.id}-${Date.now()}`;
+      const isMovingRight = step > 0;
+      const oldScreenInfo = getScreenById(from);
+      const newScreenInfo = getScreenById(to);
+
       const exitPayload = {
         handoffId,
         ballId: ball.id,
-        screenId: oldScreen,
+        screenId: from,
         exitX: isMovingRight ? oldScreenInfo.virtualRight : oldScreenInfo.virtualLeft,
         exitY: ball.y,
         velocityX: ball.vx,
@@ -414,16 +418,16 @@ function gameLoop() {
       const enterPayload = {
         handoffId,
         ballId: ball.id,
-        screenId: currentScreen,
+        screenId: to,
         entryX: isMovingRight ? newScreenInfo.virtualLeft : newScreenInfo.virtualRight,
         entryY: ball.y,
         velocityX: ball.vx,
         velocityY: ball.vy,
       };
 
-      io.to(`screen-${oldScreen}`).emit('boundary_exit', exitPayload);
-      io.to(`screen-${currentScreen}`).emit('boundary_enter', enterPayload);
-      
+      io.to(`screen-${from}`).emit('boundary_exit', exitPayload);
+      io.to(`screen-${to}`).emit('boundary_enter', enterPayload);
+
       pendingHandoffs.set(handoffId, {
         departingAck: false,
         arrivingAck: false,
@@ -435,13 +439,11 @@ function gameLoop() {
       setTimeout(() => {
         const pending = pendingHandoffs.get(handoffId);
         if(!pending) return;
-
         if(!pending.departingAck || !pending.arrivingAck){
           io.to(`screen-${pending.exitPayload.screenId}`).emit('boundary_exit', pending.exitPayload);
           io.to(`screen-${pending.enterPayload.screenId}`).emit('boundary_enter', pending.enterPayload);
           pending.retried = true;
         }
-
         setTimeout(() => pendingHandoffs.delete(handoffId), 100);
       }, 16);
     }

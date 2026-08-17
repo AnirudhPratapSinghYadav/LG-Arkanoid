@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import '../utils/app_fonts.dart';
 import '../utils/constants.dart';
 
 class LgTextField extends StatefulWidget {
@@ -58,7 +58,7 @@ class _LgTextFieldState extends State<LgTextField> {
       children: [
         Text(
           widget.label,
-          style: GoogleFonts.inter(
+          style: AppFonts.inter(
             fontSize: 12,
             fontWeight: FontWeight.w500,
             color: _isFocused ? accentSystem : textSecondary,
@@ -94,14 +94,14 @@ class _LgTextFieldState extends State<LgTextField> {
             autocorrect: widget.autocorrect,
             enableSuggestions: widget.enableSuggestions,
             textCapitalization: widget.textCapitalization,
-            style: GoogleFonts.inter(
+            style: AppFonts.inter(
               color: textPrimary,
               fontSize: 15,
             ),
             cursorColor: accentSystem,
             decoration: InputDecoration(
               hintText: widget.hint,
-              hintStyle: GoogleFonts.inter(color: textSecondary.withOpacity(0.5)),
+              hintStyle: AppFonts.inter(color: textSecondary.withOpacity(0.5)),
               counterText: '',
               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               border: InputBorder.none,

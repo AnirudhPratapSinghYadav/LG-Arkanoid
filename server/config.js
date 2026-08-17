@@ -5,9 +5,14 @@ const crypto = require('crypto');
 const gameEngine = require('./gameEngine.js');
 
 // Dedicated game port (sister LG games each use their own; Pacman=8128).
-const PORT = Number.parseInt(process.env.PORT || '3000', 10);
-const CANVAS_HEIGHT = 1080;
-const SCREEN_WIDTH = 1920;
+// 8130 is the next free slot in the Liquid Galaxy game port family: pong 8112,
+// snake 8114, pacman 8128, asteroids 8129. The lg-retro-gaming launcher itself
+// runs on 3123, so nothing in the ecosystem competes for this one.
+const PORT = Number.parseInt(process.env.PORT || '8130', 10);
+// Court geometry is owned by the engine: height is fixed, per-frame width comes
+// from the rig's real frame aspect (portrait on a stock LG rotation).
+const CANVAS_HEIGHT = gameEngine.CANVAS_HEIGHT;
+const SCREEN_WIDTH = gameEngine.SCREEN_WIDTH;
 const BALL_RADIUS = 8;
 const TICK_MS = 16;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
@@ -148,6 +153,10 @@ function createInitialWorldState(maxPlayers){
   
   state.maxPlayers = maxPlayers || 3;
   state.numScreens = NUM_SCREENS;
+  // Broadcast the court geometry so controllers and wall clients agree with the
+  // physics without having to guess the rig's orientation.
+  state.screenWidth = SCREEN_WIDTH;
+  state.canvasHeight = CANVAS_HEIGHT;
   
   const centerX = (state.numScreens * SCREEN_WIDTH) / 2;
   state.balls = [
@@ -158,6 +167,7 @@ function createInitialWorldState(maxPlayers){
   
   for(let i = 0; i < state.maxPlayers; i++){
     let p = new gameEngine.Player(null, state.numScreens);
+    p.paddleX = gameEngine.paddleXForSlot(i, state.maxPlayers, state.numScreens, p.paddleWidth);
     p.lastNonces = [];
     p.widePaddleTimer = null;
     p.slowBallTimer = null;

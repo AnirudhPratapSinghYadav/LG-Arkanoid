@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import '../utils/app_fonts.dart';
 import '../utils/constants.dart';
 import '../widgets/lgpanel.dart';
 import '../widgets/mission_background.dart';
 
 import '../services/ssh_service.dart';
+import '../widgets/dual_brand.dart';
 
 class JoinChoiceScreen extends StatefulWidget {
   const JoinChoiceScreen({super.key});
@@ -49,18 +50,11 @@ class _JoinChoiceScreenState extends State<JoinChoiceScreen> {
                   children: [
                     Column(
                       children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Image.asset('assets/app_icon_transparent.png', width: 36, height: 36),
-                            const SizedBox(width: 14),
-                            Image.asset('assets/lg-logo.png', height: 32),
-                          ],
-                        ),
+                        const DualBrand(height: 36),
                         const SizedBox(height: 16),
                         Text(
                           'LG ARKANOID',
-                          style: GoogleFonts.spaceGrotesk(
+                          style: AppFonts.spaceGrotesk(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
                             color: textPrimary,
@@ -71,7 +65,7 @@ class _JoinChoiceScreenState extends State<JoinChoiceScreen> {
                         const SizedBox(height: 4),
                         Text(
                           'Phone controller for Liquid Galaxy',
-                          style: GoogleFonts.inter(
+                          style: AppFonts.inter(
                             fontSize: 12,
                             color: textSecondary,
                             fontWeight: FontWeight.w500,
@@ -174,7 +168,7 @@ class _JoinChoiceScreenState extends State<JoinChoiceScreen> {
                     title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.spaceGrotesk(
+                    style: AppFonts.spaceGrotesk(
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
                       color: textPrimary,
@@ -185,7 +179,7 @@ class _JoinChoiceScreenState extends State<JoinChoiceScreen> {
                     description,
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.inter(
+                    style: AppFonts.inter(
                       fontSize: 12,
                       color: textSecondary,
                     ),

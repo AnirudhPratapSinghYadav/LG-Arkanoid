@@ -133,40 +133,40 @@ async function generateNextLevelAsync(nextLevel, worldState){
       worldState.io.emit('commentary_thinking', { eventType: 'level_generation' });
     }
     const numScreens = worldState.numScreens || 3;
-    const numCols = Math.floor(((numScreens * 1920) - 48) / 144);
-    const prompt = `You are a level designer for a panoramic brick breaker game spanning ${numScreens} screens. 
-Create Level ${nextLevel}.
-Output a JSON 2D array of numbers (8 rows, each row having ${numCols} integers).
-Values: 0 = empty space, 1 = normal brick (1 hit), 2 = hard brick (2 hits), 3 = indestructible brick.
-Make it interesting and symmetric where appropriate. Return ONLY valid JSON 2D array.`;
+    const numCols = gameEngine.brickColumnsForWorld(numScreens, worldState.screenWidth);
+    const tileCols = 13;
+    const prompt = `You are a level designer for a panoramic brick breaker.
+Create a TILE for Level ${nextLevel} that will be mirrored across ${numScreens} Liquid Galaxy screens.
+Output a JSON 2D array of numbers (exactly 8 rows, each row having exactly ${tileCols} integers).
+Values: 0 = empty, 1 = normal brick, 2 = hard brick, 3 = indestructible.
+Keep at least some destructible bricks. Make a motif that looks good when repeated left-to-right with mirroring.
+Return ONLY the JSON 2D array.`;
 
     const text = await callGemini(prompt, { maxOutputTokens: 2048, temperature: 0.4, timeoutMs: 15000 });
     const jsonMatch = text.match(/\[[\s\S]*\]/);
     if (jsonMatch) {
       const grid = JSON.parse(jsonMatch[0]);
-      if (Array.isArray(grid)) {
-        let isValid = grid.length === 8;
-        if (isValid) {
-          for (let i = 0; i < grid.length; i++) {
-            const row = grid[i];
-            if (!Array.isArray(row) || row.length !== numCols) {
-              isValid = false;
+      if (Array.isArray(grid) && grid.length === 8) {
+        let tileOk = true;
+        for (let i = 0; i < grid.length; i++) {
+          const row = grid[i];
+          if (!Array.isArray(row) || row.length !== tileCols) {
+            tileOk = false;
+            break;
+          }
+          for (let j = 0; j < row.length; j++) {
+            if (typeof row[j] !== 'number' || row[j] < 0 || row[j] > 3) {
+              tileOk = false;
               break;
             }
-            for (let j = 0; j < row.length; j++) {
-              if (typeof row[j] !== 'number' || row[j] < 0 || row[j] > 3) {
-                isValid = false;
-                break;
-              }
-            }
-            if (!isValid) break;
           }
+          if (!tileOk) break;
         }
-        
-        if (isValid) {
-          worldState.nextLevelBricks = grid;
+        if (tileOk) {
+          const expanded = gameEngine.expandTiledBrickGrid(grid, numCols);
+          if (expanded) worldState.nextLevelBricks = expanded;
         } else {
-          throw new Error('Gemini response returned invalid grid dimensions or values');
+          throw new Error('Gemini response returned invalid tile dimensions or values');
         }
       }
     }

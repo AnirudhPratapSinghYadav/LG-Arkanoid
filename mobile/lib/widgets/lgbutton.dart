@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
+import '../utils/app_fonts.dart';
 import '../utils/constants.dart';
 
 class LgButton extends StatefulWidget {
@@ -115,7 +115,7 @@ class _LgButtonState extends State<LgButton> with SingleTickerProviderStateMixin
                   child: Text(
                     widget.label,
                     maxLines: 1,
-                    style: GoogleFonts.spaceGrotesk(
+                    style: AppFonts.spaceGrotesk(
                       color: widget.isPrimary ? const Color(0xFF041018) : textPrimary,
                       fontSize: 15,
                       fontWeight: FontWeight.w700,

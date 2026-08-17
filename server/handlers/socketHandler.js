@@ -3,6 +3,7 @@ const {
   PLAYER_SLOT_IDS,
   BALL_RADIUS,
   SCREEN_WIDTH,
+  CANVAS_HEIGHT,
   normalizeDurationSeconds,
   generateResumeToken,
   ALLOWED_BALL_SPEEDS,
@@ -12,19 +13,69 @@ const {
 const { triggerCommentary } = require('../services/geminiService.js');
 const crypto = require('crypto');
 
-function resetPaddle(player, numScreens) {
+function resetPaddle(player, numScreens, slotIndex, maxPlayers) {
   player.paddleWidth = gameEngine.DEFAULT_PADDLE_WIDTH;
   player.paddleHeight = gameEngine.PADDLE_HEIGHT;
-  player.paddleX = gameEngine.centerPaddleX(numScreens, player.paddleWidth);
+  const idx = typeof slotIndex === 'number' ? slotIndex : 0;
+  player.paddleX = gameEngine.paddleXForSlot(idx, maxPlayers || 1, numScreens, player.paddleWidth);
   player.paddleY = gameEngine.PADDLE_Y;
 }
 
-function createEmptyPlayer(numScreens) {
+function createEmptyPlayer(numScreens, slotIndex, maxPlayers) {
   const p = new gameEngine.Player(null, numScreens);
   p.lastNonces = [];
   p.widePaddleTimer = null;
   p.slowBallTimer = null;
+  p.paddleX = gameEngine.paddleXForSlot(slotIndex || 0, maxPlayers || 1, numScreens, p.paddleWidth);
   return p;
+}
+
+// Shared by set_game_settings and start_game. Returns an error payload or null.
+// start_game must apply this *before* spawning balls, otherwise a phone that
+// emits start_game in the same tick as (or before) set_game_settings would
+// launch with the previous lobby size / speed.
+function applyHostLobbySettings(worldState, data) {
+  if (!data || typeof data !== 'object') return null;
+
+  if (data.maxPlayers !== undefined && data.maxPlayers !== null) {
+    const newMax = parseInt(data.maxPlayers, 10);
+    if (!(newMax >= 1 && newMax <= 5)) {
+      return { errorCode: 1005, message: 'Invalid player count' };
+    }
+    if (worldState.players.slice(newMax).some((p) => p.connected)) {
+      return {
+        errorCode: 1011,
+        message: 'Cannot reduce slots: active players occupy higher slots. Please wait for them to leave.',
+      };
+    }
+    worldState.maxPlayers = newMax;
+    while (worldState.players.length < newMax) {
+      worldState.players.push(createEmptyPlayer(worldState.numScreens, worldState.players.length, newMax));
+    }
+    if (worldState.players.length > newMax) {
+      worldState.players = worldState.players.slice(0, newMax);
+    }
+    if (worldState.masterPlayerIndex >= worldState.players.length || !worldState.players[worldState.masterPlayerIndex]?.connected) {
+      const connectedIdx = worldState.players.findIndex((p) => p.connected);
+      worldState.masterPlayerIndex = connectedIdx >= 0 ? connectedIdx : 0;
+    }
+  }
+
+  if (typeof data.ballSpeed === 'string') {
+    if (!ALLOWED_BALL_SPEEDS.has(data.ballSpeed)) {
+      return { errorCode: 1005, message: 'Invalid ball speed' };
+    }
+    worldState.ballSpeed = data.ballSpeed;
+  }
+
+  if (data.durationSeconds !== undefined && data.durationSeconds !== null) {
+    worldState.gameDurationSeconds = normalizeDurationSeconds(
+      data.durationSeconds,
+      worldState.gameDurationSeconds || 180
+    );
+  }
+
+  return null;
 }
 
 const socketToPlayerIndex = new Map();
@@ -226,6 +277,27 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
       });
     });
 
+    // A wall client reports the viewport it actually got. If the rig is rotated
+    // but the server was started with the wrong aspect, the court would be
+    // letterboxed on every frame — so surface it in the pm2 log instead of
+    // letting someone discover it during a demo.
+    socket.on('screen_register', (data)=>{
+      if(isNaN(screenId) || screenId < 1 || screenId > (worldState.numScreens || 3)) return;
+      const vw = Number(data && data.viewportWidth);
+      const vh = Number(data && data.viewportHeight);
+      if(!Number.isFinite(vw) || !Number.isFinite(vh) || vw <= 0 || vh <= 0) return;
+
+      const measured = vw / vh;
+      const configured = (worldState.screenWidth || SCREEN_WIDTH) / (worldState.canvasHeight || CANVAS_HEIGHT);
+      if(Math.abs(measured - configured) / configured > 0.08){
+        console.warn(
+          `Screen ${screenId} reports ${vw}x${vh} (aspect ${measured.toFixed(3)}) but the court is ` +
+          `configured for aspect ${configured.toFixed(3)}. Set LG_FRAME_ASPECT=` +
+          `${measured < 1 ? '9:16' : '16:9'} (or LG_RANDR) and relaunch, or the court will be letterboxed.`
+        );
+      }
+    });
+
     const socketRateLimits = new Map();
     
     socket.on('ping_test', (data, callback)=>{
@@ -244,6 +316,11 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
       }
       if (worldState.gameStatus === 'playing' || worldState.gameStatus === 'countdown') {
         socket.emit('error', { errorCode: 1010, message: 'Game is already in progress' });
+        return;
+      }
+      const settingsErr = applyHostLobbySettings(worldState, data);
+      if (settingsErr) {
+        socket.emit('error', settingsErr);
         return;
       }
       if (typeof cancelReturnToLobby === 'function') cancelReturnToLobby();
@@ -279,7 +356,8 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
         worldState.balls.push(ball);
       }
       
-      for (let p of worldState.players) {
+      for (let i = 0; i < worldState.players.length; i++) {
+        const p = worldState.players[i];
         p.score = 0;
         p.lives = 3;
         p.inventory = [];
@@ -287,13 +365,16 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
           clearTimeout(p.widePaddleTimer);
           p.widePaddleTimer = null;
         }
-        resetPaddle(p, worldState.numScreens);
+        resetPaddle(p, worldState.numScreens, i, worldState.maxPlayers);
       }
       
       worldState.gameStatus = 'countdown';
       worldState.countdownStartedAt = Date.now();
       worldState.gameActive = false;
-      worldState.gameDurationSeconds = normalizeDurationSeconds(data?.durationSeconds, 180);
+      worldState.gameDurationSeconds = normalizeDurationSeconds(
+        data?.durationSeconds,
+        worldState.gameDurationSeconds ?? 180
+      );
       
       io.emit('countdown_started', { countdown: 3 });
       broadcastGameState();
@@ -323,37 +404,10 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
         socket.emit('error', { errorCode: 1010, message: 'Cannot change settings during a match' });
         return;
       }
-      const newMax = parseInt(data?.maxPlayers, 10);
-      if(newMax >= 1 && newMax <= 5){
-        if (worldState.players.slice(newMax).some(p => p.connected)) {
-          socket.emit('error', { errorCode: 1011, message: 'Cannot reduce slots: active players occupy higher slots. Please wait for them to leave.' });
-          return;
-        }
-        worldState.maxPlayers = newMax;
-        while(worldState.players.length < newMax){
-          worldState.players.push(createEmptyPlayer(worldState.numScreens));
-        }
-        if(worldState.players.length > newMax){
-          worldState.players = worldState.players.slice(0, newMax);
-        }
-        if(worldState.masterPlayerIndex >= worldState.players.length || !worldState.players[worldState.masterPlayerIndex]?.connected){
-          const connectedIdx = worldState.players.findIndex((p) => p.connected);
-          worldState.masterPlayerIndex = connectedIdx >= 0 ? connectedIdx : 0;
-        }
-      }
-      if(typeof data?.ballSpeed === 'string'){
-        if(!ALLOWED_BALL_SPEEDS.has(data.ballSpeed)){
-          socket.emit('error', { errorCode: 1005, message: 'Invalid ball speed' });
-          return;
-        }
-        worldState.ballSpeed = data.ballSpeed;
-      }
-      if(data?.durationSeconds !== undefined && data?.durationSeconds !== null){
-        worldState.gameDurationSeconds = normalizeDurationSeconds(data.durationSeconds, worldState.gameDurationSeconds || 180);
-      }
-      if(worldState.masterPlayerIndex >= worldState.players.length || !worldState.players[worldState.masterPlayerIndex]?.connected){
-        const connectedIdx = worldState.players.findIndex((p) => p.connected);
-        worldState.masterPlayerIndex = connectedIdx >= 0 ? connectedIdx : 0;
+      const settingsErr = applyHostLobbySettings(worldState, data);
+      if (settingsErr) {
+        socket.emit('error', settingsErr);
+        return;
       }
       broadcastGameState();
     });
@@ -376,7 +430,7 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
         }
         worldState.maxPlayers = newMax;
         while(worldState.players.length < newMax){
-          worldState.players.push(createEmptyPlayer(worldState.numScreens));
+          worldState.players.push(createEmptyPlayer(worldState.numScreens, worldState.players.length, newMax));
         }
         if(worldState.players.length > newMax){
           worldState.players = worldState.players.slice(0, newMax);
@@ -462,7 +516,7 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
       player.name = cleanName.length > 0 ? cleanName.substring(0, 12) : `Player ${slotIndex + 1}`;
       player.socketId = socket.id;
       player.resumeToken = generateResumeToken();
-      resetPaddle(player, worldState.numScreens);
+      resetPaddle(player, worldState.numScreens, slotIndex, worldState.maxPlayers);
       if (!Array.isArray(player.inventory)) player.inventory = [];
       player.lastNonces = [];
       socketToPlayerIndex.set(socket.id, slotIndex);
@@ -521,7 +575,11 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
         return;
       }
 
-      deltaX = Math.max(-5000, Math.min(5000, deltaX));
+      const maxStep = Math.round(2500 * gameEngine.inputScaleForWorld(
+        worldState.numScreens,
+        worldState.screenWidth
+      ));
+      deltaX = Math.max(-maxStep, Math.min(maxStep, deltaX));
 
       const maxRight = (worldState.numScreens || 3) * SCREEN_WIDTH;
       player.paddleX += deltaX;
@@ -642,7 +700,7 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
       player.socketId = null;
       player.lastNonces = [];
       player.name = null;
-      resetPaddle(player, worldState.numScreens);
+      resetPaddle(player, worldState.numScreens, index, worldState.maxPlayers);
       player.score = 0;
       player.lives = 3;
       player.inventory = [];
@@ -728,7 +786,7 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
         player.lastNonces = [];
         clearPlayerTimers(player);
         player.name = null;
-        resetPaddle(player, worldState.numScreens);
+        resetPaddle(player, worldState.numScreens, index, worldState.maxPlayers);
         player.score = 0;
         player.lives = 3;
         player.inventory = [];

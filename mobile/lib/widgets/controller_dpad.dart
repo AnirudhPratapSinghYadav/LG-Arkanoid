@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
+import '../utils/app_fonts.dart';
 import '../utils/constants.dart';
 
 class ControllerDpad extends StatefulWidget {
@@ -84,7 +84,7 @@ class _ControllerDpadState extends State<ControllerDpad> {
                         const SizedBox(height: 12),
                         Text(
                           'HOLD LEFT',
-                          style: GoogleFonts.spaceGrotesk(
+                          style: AppFonts.spaceGrotesk(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
                             color: textPrimary,
@@ -130,7 +130,7 @@ class _ControllerDpadState extends State<ControllerDpad> {
                         const SizedBox(height: 12),
                         Text(
                           'HOLD RIGHT',
-                          style: GoogleFonts.spaceGrotesk(
+                          style: AppFonts.spaceGrotesk(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
                             color: textPrimary,

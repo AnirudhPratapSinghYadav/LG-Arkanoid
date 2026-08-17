@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import '../utils/app_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -178,7 +178,7 @@ class _ConnectingScreenState extends State<ConnectingScreen> {
             children: [
               Text(
                 'JOINING SESSION',
-                style: GoogleFonts.spaceGrotesk(
+                style: AppFonts.spaceGrotesk(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
                   color: textSecondary,
@@ -204,7 +204,7 @@ class _ConnectingScreenState extends State<ConnectingScreen> {
     final bool isActive = index == _currentStepIndex;
     
     Color textColor = textSecondary.withOpacity(0.3);
-    Widget icon = Text('[ ]', style: GoogleFonts.jetBrainsMono(color: textColor));
+    Widget icon = Text('[ ]', style: AppFonts.jetBrainsMono(color: textColor));
 
     if (isCompleted) {
       textColor = accentSuccess;
@@ -225,7 +225,7 @@ class _ConnectingScreenState extends State<ConnectingScreen> {
         Expanded(
           child: Text(
             _stages[index],
-            style: GoogleFonts.jetBrainsMono(
+            style: AppFonts.jetBrainsMono(
               fontSize: 13,
               color: textColor,
               fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
@@ -253,7 +253,7 @@ class _ConnectingScreenState extends State<ConnectingScreen> {
                 const SizedBox(height: 16),
                 Text(
                   'Connection Failed',
-                  style: GoogleFonts.spaceGrotesk(
+                  style: AppFonts.spaceGrotesk(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                     color: textPrimary,
@@ -262,7 +262,7 @@ class _ConnectingScreenState extends State<ConnectingScreen> {
                 const SizedBox(height: 12),
                 Text(
                   _errorMessage ?? 'An unknown connection error occurred.',
-                  style: GoogleFonts.inter(
+                  style: AppFonts.inter(
                     fontSize: 13,
                     color: textSecondary,
                     height: 1.4,

@@ -23,6 +23,16 @@ const STORAGE_HOST = 'lgark_host_settings';
 let hostMaxPlayers = 3;
 let hostBallSpeed = 'medium';
 let hostDuration = 180;
+let worldNumScreens = 3;
+let worldScreenWidth = 1920;
+
+// Swipes are authored for a 3-screen landscape court. Scale by the real court
+// width so a 12-screen wall stays reachable and a portrait wall (608 logical px
+// per frame) does not fling the paddle across the world.
+function worldInputScale() {
+    const world = (worldNumScreens || 3) * (worldScreenWidth || 1920);
+    return Math.max(0.15, Math.min(5, world / (3 * 1920)));
+}
 
 function joinGame() {
     const token = document.getElementById('tokenInput').value.trim().toUpperCase();
@@ -34,7 +44,7 @@ function joinGame() {
 
     let serverOrigin = window.location.origin;
     if (window.location.port === '5173') {
-        serverOrigin = window.location.protocol + '//' + window.location.hostname + ':3000';
+        serverOrigin = window.location.protocol + '//' + window.location.hostname + ':8130';
     }
 
     if (socket) {
@@ -126,6 +136,8 @@ function joinGame() {
             }
         }
 
+        if (typeof state.numScreens === 'number') worldNumScreens = state.numScreens;
+        if (typeof state.screenWidth === 'number' && state.screenWidth > 0) worldScreenWidth = state.screenWidth;
         isHost = !isSpectator && state.masterPlayerIndex === (myPlayerNumber - 1);
         const status = state.gameStatus;
         const inLobby = status === 'lobby' || status === 'waiting';
@@ -275,7 +287,11 @@ function startMatch() {
         ballSpeed: hostBallSpeed,
         durationSeconds: hostDuration
     });
-    socket.emit('start_game', { durationSeconds: hostDuration });
+    socket.emit('start_game', {
+        durationSeconds: hostDuration,
+        maxPlayers: hostMaxPlayers,
+        ballSpeed: hostBallSpeed
+    });
 }
 
 function persistHostSettings() {
@@ -489,7 +505,7 @@ function setupTouchControls() {
         const dx = currentX - lastX;
         const absDx = Math.abs(dx);
         const acceleration = 1.0 + Math.min(3.0, absDx / 20.0);
-        const rigDeltaX = dx * acceleration * 12;
+        const rigDeltaX = dx * acceleration * 12 * worldInputScale();
 
         let currentTransform = puck.style.transform || 'translateX(0px)';
         let match = currentTransform.match(/translateX\(([^p]+)px\)/);
@@ -536,7 +552,7 @@ function setupTouchControls() {
         const dx = e.clientX - mouseLastX;
         const absDx = Math.abs(dx);
         const acceleration = 1.0 + Math.min(3.0, absDx / 20.0);
-        const rigDeltaX = dx * acceleration * 12;
+        const rigDeltaX = dx * acceleration * 12 * worldInputScale();
 
         let currentTransform = puck.style.transform || 'translateX(0px)';
         let match = currentTransform.match(/translateX\(([^p]+)px\)/);

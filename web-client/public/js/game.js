@@ -11,7 +11,8 @@ class GameScene extends Phaser.Scene {
     }
 
     preload() {
-        this.load.image('lg_logo', 'assets/lg-logo.png');
+        this.load.image('lg_logo', 'assets/lg-logo.webp');
+        this.load.image('gesoc_logo', 'assets/gesoc-logo.webp');
     }
 
     create() {
@@ -22,7 +23,7 @@ class GameScene extends Phaser.Scene {
         bgGraphics.fillStyle(0x0c1420, 1);
         bgGraphics.fillRect(0, 0, 64, 1);
         bgGraphics.generateTexture('bg_court', 64, 64);
-        this.bg = this.add.tileSprite(960, 540, 1920, 1080, 'bg_court');
+        this.bg = this.add.tileSprite(CENTER_X, CENTER_Y, SCREEN_W, CANVAS_H, 'bg_court');
         this.bg.setTint(0xffffff);
         this.bg.setAlpha(1);
 
@@ -47,12 +48,12 @@ class GameScene extends Phaser.Scene {
         this.robotStates = {}; // playerId -> idle|talking|alert|excited
         this.ensureRobotSlots(5);
 
-        this.centerCommentaryTitle = this.add.text(960, 120, 'COMMENTARY', {
+        this.centerCommentaryTitle = this.add.text(CENTER_X, 120, 'COMMENTARY', {
             fontFamily: FONTS.heading, fontSize: '18px', color: HEX.system, fontWeight: 'bold', letterSpacing: 3
         }).setOrigin(0.5, 0).setVisible(false).setDepth(60);
-        this.centerCommentaryText = this.add.text(960, 148, '', {
+        this.centerCommentaryText = this.add.text(CENTER_X, 148, '', {
             fontFamily: FONTS.body, fontSize: '26px', color: HEX.textLight, align: 'center',
-            wordWrap: { width: 900 }
+            wordWrap: { width: Math.min(900, SCREEN_W - 80) }
         }).setOrigin(0.5, 0).setVisible(false).setDepth(60);
 
         this.screenLabel = this.add.text(20, 20, 'SCREEN ' + screenId, {
@@ -87,7 +88,7 @@ class GameScene extends Phaser.Scene {
         if (screenId !== 1) this.hudText.setVisible(false);
 
         this.timerPanelGraphics = this.add.graphics();
-        this.timerText = this.add.text(960, 40, '00:00', {
+        this.timerText = this.add.text(CENTER_X, 40, '00:00', {
             fontFamily: FONTS.heading,
             fontSize: '48px',
             color: HEX.white,
@@ -97,7 +98,7 @@ class GameScene extends Phaser.Scene {
         this.leaderboardPanelGraphics = this.add.graphics();
         this.leaderboardTexts = [];
         for(let i = 0; i < 5; i++) {
-            let txt = this.add.text(1880, 80 + (i * 36), '', {
+            let txt = this.add.text(SCREEN_W - 40, 80 + (i * 36), '', {
                 fontFamily: FONTS.mono,
                 fontSize: '22px'
             }).setOrigin(1, 0);
@@ -105,7 +106,7 @@ class GameScene extends Phaser.Scene {
             this.leaderboardTexts.push(txt);
         }
 
-        this.leaderboardTitle = this.add.text(1880, 40, 'SCORES', {
+        this.leaderboardTitle = this.add.text(SCREEN_W - 40, 40, 'SCORES', {
             fontFamily: FONTS.heading,
             fontSize: '20px',
             color: HEX.accent,
@@ -114,14 +115,14 @@ class GameScene extends Phaser.Scene {
         if (screenId !== numScreens) this.leaderboardTitle.setVisible(false);
 
         this.geminiCardGraphics = this.add.graphics();
-        this.geminiText = this.add.text(1880, 300, '', {
+        this.geminiText = this.add.text(SCREEN_W - 40, 300, '', {
             fontFamily: FONTS.body,
             fontSize: '16px',
             color: HEX.textSecondary,
-            wordWrap: { width: 400, useAdvancedWrap: true }
+            wordWrap: { width: Math.min(400, SCREEN_W - 80), useAdvancedWrap: true }
         }).setOrigin(1, 0).setVisible(false);
 
-        this.geminiTitle = this.add.text(1880, 270, '', {
+        this.geminiTitle = this.add.text(SCREEN_W - 40, 270, '', {
             fontFamily: FONTS.heading,
             fontSize: '18px',
             color: HEX.accent,
@@ -134,15 +135,17 @@ class GameScene extends Phaser.Scene {
             color: HEX.textDim
         }).setAlpha(0);
 
-        this.sessionTokenText = this.add.text(960, 560, '', {
+        this.sessionTokenText = this.add.text(CENTER_X, 560, '', {
             fontFamily: FONTS.heading,
             fontSize: '48px',
             color: HEX.system,
             align: 'center'
         }).setOrigin(0.5, 0.5).setAlpha(0);
         
-        this.logo = this.add.image(960, 420, 'lg_logo').setOrigin(0.5, 0.5).setAlpha(0);
+        this.logo = this.add.image(CENTER_X, 420, 'lg_logo').setOrigin(0.5, 0.5).setAlpha(0);
         this.logo.setScale(0.5);
+        this.gesocLogo = this.add.image(CENTER_X, 520, 'gesoc_logo').setOrigin(0.5, 0.5).setAlpha(0);
+        this.gesocLogo.setScale(0.5);
         this.setupLeftmostBrand();
 
         this.powerUpTexts = [];
@@ -234,12 +237,12 @@ class GameScene extends Phaser.Scene {
     drawCourt() {
         // Physical bezel hint: this Chromium window is one slice of the panoramic world.
         this.graphics.lineStyle(2, 0x1a2430, 0.9);
-        this.graphics.lineBetween(0, 0, 0, 1080);
-        this.graphics.lineBetween(1919, 0, 1919, 1080);
+        this.graphics.lineBetween(0, 0, 0, CANVAS_H);
+        this.graphics.lineBetween(SCREEN_W - 1, 0, SCREEN_W - 1, CANVAS_H);
         this.graphics.fillStyle(0x0a1018, 1);
-        this.graphics.fillRect(0, 992, 1920, 88);
+        this.graphics.fillRect(0, 992, SCREEN_W, 88);
         this.graphics.fillStyle(0x151c26, 1);
-        this.graphics.fillRect(0, 988, 1920, 4);
+        this.graphics.fillRect(0, 988, SCREEN_W, 4);
     }
 
     ensureRobotSlots(count) {
@@ -258,7 +261,11 @@ class GameScene extends Phaser.Scene {
     }
 
     setupLeftmostBrand() {
-        // Leftmost panoramic browser (/1): Liquid Galaxy logo top-left during connect + lobby.
+        // Leftmost panoramic browser (/1): official LG + GESOC marks during
+        // connect + lobby. Same convention as Super Liquid Galaxy Controller,
+        // which writes a ScreenOverlay to slave_{n~/2+2}.kml (the leftmost
+        // frame). Arkanoid replaces Earth with Chromium, so the overlay lives
+        // in the kiosk page instead of a KML balloon.
         if (screenId !== 1) return;
         document.body.classList.add('is-leftmost-screen');
         const corner = document.getElementById('lgCorner');
@@ -268,21 +275,25 @@ class GameScene extends Phaser.Scene {
         }
         // Keep Phaser SCREEN label clear of the HTML logo badge.
         if (this.screenLabel) {
-            this.screenLabel.setPosition(22, 96);
+            this.screenLabel.setPosition(22, 168);
             this.screenLabel.setText('SCREEN 1');
         }
         if (this.rigStatusText) {
-            this.rigStatusText.setPosition(22, 122);
+            this.rigStatusText.setPosition(22, 194);
         }
-        // Soft in-canvas logo accent under the HTML badge (visible if overlay lags).
-        if (this.logo) {
-            this.logo
-                .setOrigin(0, 0)
-                .setPosition(28, 22)
-                .setScale(0.28)
+        const maxLogoW = Math.min(160, SCREEN_W * 0.28);
+        const place = (img, x) => {
+            if (!img) return;
+            const w = img.width || 640;
+            const scale = Math.min(0.42, maxLogoW / w);
+            img.setOrigin(0, 0)
+                .setPosition(x, 18)
+                .setScale(scale)
                 .setAlpha(0)
                 .setDepth(70);
-        }
+        };
+        place(this.logo, 18);
+        place(this.gesocLogo, 18 + maxLogoW + 10);
     }
 
     setRobotState(playerId, state, ms = 2800) {
@@ -317,7 +328,7 @@ class GameScene extends Phaser.Scene {
         qr.style.left = `${rect.left + rect.width / 2}px`;
         qr.style.top = `${rect.top + rect.height * 0.50}px`;
         qr.style.transform = 'translate(-50%, -50%)';
-        const scale = Math.min(rect.width / 1920, rect.height / 1080);
+        const scale = Math.min(rect.width / SCREEN_W, rect.height / CANVAS_H);
         const cardW = Math.max(300, Math.min(420, 420 * scale));
         qr.style.width = `${cardW}px`;
         qr.style.maxHeight = `${Math.max(400, Math.min(rect.height * 0.88, 900))}px`;
@@ -340,7 +351,7 @@ class GameScene extends Phaser.Scene {
             const paddleW = p.paddleWidth || 300;
             const worldX = p.paddleX + paddleW / 2;
             const localX = worldX - virtualLeft;
-            if (localX < -60 || localX > 1980) continue;
+            if (localX < -60 || localX > SCREEN_W + 60) continue;
 
             const color = PADDLE_COLORS[i % PADDLE_COLORS.length];
             const state = this.robotStates[p.id] || 'idle';
@@ -375,17 +386,17 @@ class GameScene extends Phaser.Scene {
 
     drawAttractMode() {
         this.showBootOverlay('Connecting to lobby…');
-        if (!isCenterScreen) {
+        if (!isQrScreen(this.currentState)) {
             this.hideBootOverlay();
             if (!this.bootSideText) {
-                this.bootSideText = this.add.text(960, 540, '', {
+                this.bootSideText = this.add.text(CENTER_X, 540, '', {
                     fontFamily: FONTS.display,
                     fontSize: '52px',
                     fill: HEX.textPrimary,
                     align: 'center'
                 }).setOrigin(0.5).setDepth(6);
             }
-            this.bootSideText.setPosition(960, screenId === 1 ? 560 : 540);
+            this.bootSideText.setPosition(CENTER_X, screenId === 1 ? 560 : 540);
             this.bootSideText.setText(screenId === 1 ? 'LG ARKANOID' : 'WAITING');
             this.bootSideText.setVisible(true);
         } else if (this.bootSideText) {
@@ -403,7 +414,7 @@ class GameScene extends Phaser.Scene {
 
     showBootOverlay(statusText) {
         // Connecting card belongs on the center display; side screens keep brand chrome only.
-        if (!isCenterScreen) {
+        if (!isQrScreen(this.currentState)) {
             this.hideBootOverlay();
             return;
         }
@@ -428,7 +439,7 @@ class GameScene extends Phaser.Scene {
         if (rect.width < 40 || rect.height < 40) return;
         boot.style.left = `${rect.left + rect.width / 2}px`;
         boot.style.top = `${rect.top + rect.height * 0.48}px`;
-        const scale = Math.min(rect.width / 1920, rect.height / 1080);
+        const scale = Math.min(rect.width / SCREEN_W, rect.height / CANVAS_H);
         boot.style.width = `${Math.max(320, Math.min(520, 520 * scale))}px`;
     }
     
@@ -437,25 +448,25 @@ class GameScene extends Phaser.Scene {
             this.lobbyDecorGfx = this.add.graphics().setDepth(5);
         }
         if (!this.ambientLeftText) {
-            this.ambientLeftText = this.add.text(960, 250, '', {
+            this.ambientLeftText = this.add.text(CENTER_X, 250, '', {
                 fontFamily: FONTS.display, fontSize: '68px', fill: HEX.systemAlt,
                 align: 'center'
             }).setOrigin(0.5, 0).setVisible(false).setDepth(6);
         }
         if (!this.ambientLeftSub) {
-            this.ambientLeftSub = this.add.text(960, 340, '', {
+            this.ambientLeftSub = this.add.text(CENTER_X, 340, '', {
                 fontFamily: FONTS.heading, fontSize: '20px', fill: HEX.textSecondary,
                 align: 'center', lineSpacing: 12
             }).setOrigin(0.5, 0).setVisible(false).setDepth(6);
         }
         if (!this.ambientRightText) {
-            this.ambientRightText = this.add.text(960, 250, '', {
+            this.ambientRightText = this.add.text(CENTER_X, 250, '', {
                 fontFamily: FONTS.display, fontSize: '68px', fill: HEX.systemAlt,
                 align: 'center'
             }).setOrigin(0.5, 0).setVisible(false).setDepth(6);
         }
         if (!this.ambientRightSub) {
-            this.ambientRightSub = this.add.text(960, 340, '', {
+            this.ambientRightSub = this.add.text(CENTER_X, 340, '', {
                 fontFamily: FONTS.heading, fontSize: '20px', fill: HEX.textSecondary,
                 align: 'center', lineSpacing: 12
             }).setOrigin(0.5, 0).setVisible(false).setDepth(6);
@@ -466,7 +477,7 @@ class GameScene extends Phaser.Scene {
         }
         while (this.lobbyPlayerTexts.length < maxP) {
             const idx = this.lobbyPlayerTexts.length;
-            const txt = this.add.text(960, 470 + (idx * 62), '', {
+            const txt = this.add.text(CENTER_X, 470 + (idx * 62), '', {
                 fontFamily: FONTS.heading, fontSize: '26px', fill: HEX.textSecondary
             }).setOrigin(0.5).setVisible(false).setDepth(6);
             this.lobbyPlayerTexts.push({ text: txt });
@@ -475,13 +486,18 @@ class GameScene extends Phaser.Scene {
 
     drawLobbyFrame() {
         if (!this.lobbyDecorGfx) return;
+        // Sized as a fraction of the frame: portrait LG frames are only 608
+        // logical px wide, so the old fixed 1200px panel spilled off the glass.
+        const panelW = Math.min(1200, SCREEN_W * 0.86);
+        const panelX = CENTER_X - panelW / 2;
+        const inset = panelW * 0.1;
         this.lobbyDecorGfx.clear();
         this.lobbyDecorGfx.fillStyle(0x0a1018, 0.55);
-        this.lobbyDecorGfx.fillRect(360, 180, 1200, 720);
+        this.lobbyDecorGfx.fillRect(panelX, 180, panelW, 720);
         this.lobbyDecorGfx.lineStyle(2, 0x2a3a4a, 1);
-        this.lobbyDecorGfx.strokeRect(360, 180, 1200, 720);
+        this.lobbyDecorGfx.strokeRect(panelX, 180, panelW, 720);
         this.lobbyDecorGfx.lineStyle(1, 0x20c5ff, 0.35);
-        this.lobbyDecorGfx.lineBetween(480, 430, 1440, 430);
+        this.lobbyDecorGfx.lineBetween(panelX + inset, 430, panelX + panelW - inset, 430);
     }
 
     layoutSideSlots(maxP) {
@@ -492,7 +508,7 @@ class GameScene extends Phaser.Scene {
         const step = maxP <= 1 ? 0 : Math.min(70, (endY - startY) / span);
         for (let i = 0; i < this.lobbyPlayerTexts.length; i++) {
             const y = startY + (i * step);
-            this.lobbyPlayerTexts[i].text.setPosition(960, y);
+            this.lobbyPlayerTexts[i].text.setPosition(CENTER_X, y);
         }
     }
 
@@ -514,11 +530,15 @@ class GameScene extends Phaser.Scene {
         if (this.ambientRightText) this.ambientRightText.setVisible(false);
         if (this.ambientRightSub) this.ambientRightSub.setVisible(false);
         if (this.lobbyPlayerTexts) this.lobbyPlayerTexts.forEach((p) => p.text.setVisible(false));
+        if (this.logo) this.logo.setVisible(false).setAlpha(0);
+        if (this.gesocLogo) this.gesocLogo.setVisible(false).setAlpha(0);
 
         if (screenId === 1) {
             this.hideBootOverlay();
             this.drawLobbyFrame();
             this.layoutSideSlots(maxP);
+            if (this.logo) this.logo.setVisible(true).setAlpha(0.9);
+            if (this.gesocLogo) this.gesocLogo.setVisible(true).setAlpha(0.9);
             this.ambientLeftText.setText('LG ARKANOID');
             this.ambientLeftText.setVisible(true).setAlpha(0.98);
             this.ambientLeftSub.setText(
@@ -538,7 +558,7 @@ class GameScene extends Phaser.Scene {
                 slot.text.setColor(filled ? (PLAYER_HEX[i % PLAYER_HEX.length]) : HEX.textDim);
                 slot.text.setVisible(true).setAlpha(filled ? 1 : 0.55);
             }
-        } else if (screenId === numScreens) {
+        } else if (isRightmostScreen(this.currentState)) {
             this.hideBootOverlay();
             this.drawLobbyFrame();
             this.layoutSideSlots(maxP);
@@ -561,7 +581,7 @@ class GameScene extends Phaser.Scene {
                 slot.text.setColor(filled ? (PLAYER_HEX[i % PLAYER_HEX.length]) : HEX.textDim);
                 slot.text.setVisible(true).setAlpha(filled ? 1 : 0.5);
             }
-        } else if (isCenterScreen) {
+        } else if (isQrScreen(this.currentState)) {
             const token = this.sessionToken || this.currentState.sessionToken;
             if (!token) {
                 this.showBootOverlay('Fetching session code…');
@@ -636,6 +656,22 @@ class GameScene extends Phaser.Scene {
                     });
                 }
             }
+        } else {
+            this.hideBootOverlay();
+            const qrDiv = document.getElementById('qrcode');
+            if (qrDiv) qrDiv.style.display = 'none';
+            this.drawLobbyFrame();
+            const n = liveNumScreens(this.currentState);
+            if (this.ambientLeftText) {
+                this.ambientLeftText.setText('LOOK CENTER');
+                this.ambientLeftText.setVisible(true).setAlpha(0.95);
+            }
+            if (this.ambientLeftSub) {
+                this.ambientLeftSub.setText(
+                    `Screen ${screenId} of ${n}\nScan the QR on the middle display\nPhone is the paddle`
+                );
+                this.ambientLeftSub.setVisible(true).setAlpha(0.9);
+            }
         }
     }
 
@@ -681,6 +717,8 @@ class GameScene extends Phaser.Scene {
         if (this.ambientRightSub) this.ambientRightSub.setVisible(false);
         if (this.lobbyPlayerTexts) this.lobbyPlayerTexts.forEach(p => p.text.setVisible(false));
         if (this.paddleNameTexts) this.paddleNameTexts.forEach((t) => t.setVisible(false));
+        if (this.logo) this.logo.setVisible(false).setAlpha(0);
+        if (this.gesocLogo) this.gesocLogo.setVisible(false).setAlpha(0);
         this.hideJoinToast();
     }
 
@@ -697,7 +735,7 @@ class GameScene extends Phaser.Scene {
 
     drawCountdownMode() {
         if (!this.countdownText) {
-            this.countdownText = this.add.text(960, 540, '', {
+            this.countdownText = this.add.text(CENTER_X, 540, '', {
                 fontFamily: FONTS.display, fontSize: '240px', color: HEX.accent, fontWeight: 'bold'
             }).setOrigin(0.5, 0.5);
         }
@@ -727,20 +765,20 @@ class GameScene extends Phaser.Scene {
 
     drawWinMode() {
         if (!this.winTitle) {
-            this.winTitle = this.add.text(960, 200, 'MATCH OVER', {
+            this.winTitle = this.add.text(CENTER_X, 200, 'MATCH OVER', {
                 fontFamily: FONTS.heading, fontSize: '72px', color: HEX.game, fontWeight: 'bold'
             }).setOrigin(0.5, 0.5);
             
-            this.winName = this.add.text(960, 320, '', {
+            this.winName = this.add.text(CENTER_X, 320, '', {
                 fontFamily: FONTS.heading, fontSize: '110px', color: HEX.textPrimary, fontWeight: 'bold'
             }).setOrigin(0.5, 0.5);
             
-            this.winStatsText = this.add.text(960, 540, '', {
+            this.winStatsText = this.add.text(CENTER_X, 540, '', {
                 fontFamily: FONTS.body, fontSize: '28px', color: HEX.textSecondary, align: 'center', lineSpacing: 20
             }).setOrigin(0.5, 0.5);
 
             this.winConfetti = this.add.particles(0, 0, 'particle', {
-                x: 960, y: -50,
+                x: CENTER_X, y: -50,
                 speed: { min: 200, max: 800 },
                 angle: { min: 45, max: 135 },
                 gravityY: 1000,
@@ -835,7 +873,7 @@ class GameScene extends Phaser.Scene {
             this.centerCommentaryTitle.setVisible(false);
             this.centerCommentaryText.setText(this.currentState.lastCommentary);
             this.centerCommentaryText.setVisible(true);
-            this.centerCommentaryText.setPosition(960, 96);
+            this.centerCommentaryText.setPosition(CENTER_X, 96);
         } else if (this.centerCommentaryTitle) {
             this.centerCommentaryTitle.setVisible(false);
             this.centerCommentaryText.setVisible(false);
@@ -1012,7 +1050,7 @@ class GameScene extends Phaser.Scene {
         for (const p of powerUps) {
             if (!p.falling) continue;
             const localX = p.x - virtualLeft;
-            if (localX < -50 || localX > 1970) continue;
+            if (localX < -50 || localX > SCREEN_W + 50) continue;
 
             let pColor = COLORS.powerRed;
             let pLetter = 'B';
@@ -1108,7 +1146,7 @@ class GameScene extends Phaser.Scene {
             this.ballTrails[i].push({ x: localX, y: ball.y });
             if (this.ballTrails[i].length > 8) this.ballTrails[i].shift();
 
-            if (localX < -40 || localX > 1960) continue;
+            if (localX < -40 || localX > SCREEN_W + 40) continue;
 
             for (let t = 0; t < this.ballTrails[i].length; t++) {
                 const pos = this.ballTrails[i][t];
@@ -1157,7 +1195,7 @@ class GameScene extends Phaser.Scene {
 
             const localX = paddleX - virtualLeft;
             const color = PADDLE_COLORS[(playerNumber - 1) % PADDLE_COLORS.length];
-            if (localX + paddleWidth < 0 || localX > 1920) {
+            if (localX + paddleWidth < 0 || localX > SCREEN_W) {
                 if (nameText) nameText.setVisible(false);
                 continue;
             }
@@ -1207,6 +1245,23 @@ class GameScene extends Phaser.Scene {
 
         this.socket.on('connect', () => {
             this.fetchSessionInfo();
+            // Report the viewport we actually got so a wrong LG_FRAME_ASPECT
+            // shows up in the server log instead of as a letterboxed wall.
+            this.socket.emit('screen_register', {
+                screenId: screenId,
+                viewportWidth: window.innerWidth,
+                viewportHeight: window.innerHeight,
+                devicePixelRatio: window.devicePixelRatio || 1,
+            });
+            const measured = window.innerWidth / window.innerHeight;
+            const configured = SCREEN_W / CANVAS_H;
+            if (Math.abs(measured - configured) / configured > 0.08) {
+                console.warn(
+                    `[LG] Frame aspect mismatch: viewport ${window.innerWidth}x${window.innerHeight} ` +
+                    `but court is ${SCREEN_W}x${CANVAS_H}. Relaunch with LG_FRAME_ASPECT=` +
+                    (measured < 1 ? '9:16' : '16:9')
+                );
+            }
         });
 
         this.socket.on('lobby_ready', (data) => {
@@ -1348,7 +1403,7 @@ class GameScene extends Phaser.Scene {
             const connectedCount = data.connectedCount || 1;
 
             if (!this.joinToastText) {
-                this.joinToastText = this.add.text(960, -80, '', {
+                this.joinToastText = this.add.text(CENTER_X, -80, '', {
                     fontFamily: FONTS.display,
                     fontSize: '48px',
                     color: HEX.successBright,
@@ -1359,7 +1414,7 @@ class GameScene extends Phaser.Scene {
             }
 
             if (!this.joinToastSubText) {
-                this.joinToastSubText = this.add.text(960, -30, '', {
+                this.joinToastSubText = this.add.text(CENTER_X, -30, '', {
                     fontFamily: FONTS.body,
                     fontSize: '20px',
                     color: HEX.textSecondary,
@@ -1436,18 +1491,21 @@ class GameScene extends Phaser.Scene {
     }
 }
 
+// Canvas size is the logical slice this frame owns, so Scale.FIT maps it 1:1
+// onto the physical frame instead of letterboxing a landscape court into a
+// rotated portrait panel.
 const config = {
     type: Phaser.AUTO,
-    width: 1920,
-    height: 1080,
+    width: SCREEN_W,
+    height: CANVAS_H,
     backgroundColor: HEX.bgDark,
     scene: [GameScene],
     banner: false,
     scale: {
         mode: Phaser.Scale.FIT,
         autoCenter: Phaser.Scale.CENTER_BOTH,
-        width: 1920,
-        height: 1080,
+        width: SCREEN_W,
+        height: CANVAS_H,
     },
 };
 

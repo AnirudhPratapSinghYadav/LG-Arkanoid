@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import '../utils/app_fonts.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../utils/constants.dart';
 import '../widgets/mission_background.dart';
@@ -24,7 +24,7 @@ class QrInviteScreen extends StatelessWidget {
                   fit: BoxFit.scaleDown,
                   child: Text(
                     'INVITE PLAYERS',
-                    style: GoogleFonts.inter(
+                    style: AppFonts.inter(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                       color: accentPrimary,
@@ -46,7 +46,7 @@ class QrInviteScreen extends StatelessWidget {
                       children: [
                         Text(
                           'Scan this QR code from another device on the same Wi-Fi network to join the game.',
-                          style: GoogleFonts.inter(
+                          style: AppFonts.inter(
                             color: textSecondary,
                             fontSize: 14,
                             height: 1.5,

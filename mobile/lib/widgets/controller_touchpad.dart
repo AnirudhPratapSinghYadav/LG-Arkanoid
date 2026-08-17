@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import '../utils/app_fonts.dart';
 import '../utils/constants.dart';
 
 class ControllerTouchpad extends StatefulWidget {
@@ -126,7 +126,7 @@ class _ControllerTouchpadState extends State<ControllerTouchpad> {
                   bottom: 20,
                   child: Text(
                     'SLIDE TO MOVE PADDLE',
-                    style: GoogleFonts.spaceGrotesk(
+                    style: AppFonts.spaceGrotesk(
                       fontSize: 10,
                       color: textSecondary.withOpacity(0.4),
                       fontWeight: FontWeight.bold,

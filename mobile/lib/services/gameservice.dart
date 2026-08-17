@@ -2,7 +2,6 @@ import 'dart:math';
 import 'dart:io';
 import 'dart:async';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
 import 'ttsservice.dart';
@@ -245,8 +244,14 @@ class GameService extends ChangeNotifier {
   void sendPaddleMove(double deltaX){
     if(socket==null || !connected || playerId==null) return;
     if(lives <= 0) return;
+    // Scale by the real court width, not just the screen count: LG frames are
+    // portrait by default, which makes each frame 608 logical px wide instead
+    // of 1920, so the same swipe must move the paddle proportionally less.
+    final n = latestGameState?['numScreens'] as int? ?? 3;
+    final frameWidth = (latestGameState?['screenWidth'] as num?)?.toDouble() ?? 1920.0;
+    final scale = ((n * frameWidth) / (3 * 1920.0)).clamp(0.15, 5.0);
     socket!.emit('paddle_move', {
-      'deltaX': deltaX.round(),
+      'deltaX': (deltaX * scale).round(),
       'timestamp': DateTime.now().millisecondsSinceEpoch,
       'nonce': generateNonce(),
     });
@@ -277,9 +282,19 @@ class GameService extends ChangeNotifier {
     socket!.emit('set_max_players', {'maxPlayers': count});
   }
 
-  void startGame(int durationSeconds){
+  void startGame({
+    required int durationSeconds,
+    required int maxPlayers,
+    required String ballSpeed,
+  }) {
     if(socket==null || !connected) return;
-    socket!.emit('start_game', {'durationSeconds': durationSeconds});
+    // One message so START cannot race a delayed set_game_settings emit
+    // (the lobby persist path awaits SharedPreferences first).
+    socket!.emit('start_game', {
+      'durationSeconds': durationSeconds,
+      'maxPlayers': maxPlayers,
+      'ballSpeed': ballSpeed,
+    });
   }
 
   void leaveGame(){

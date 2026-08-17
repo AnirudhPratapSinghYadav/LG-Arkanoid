@@ -17,7 +17,7 @@ function requireIoClient() {
 }
 const { io } = requireIoClient();
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8130;
 const BASE = `http://127.0.0.1:${PORT}`;
 const PLAY_MS = Number(process.env.PLAY_MS || 180000);
 const DURATION_SEC = Math.max(60, Math.ceil(PLAY_MS / 1000));
@@ -172,7 +172,7 @@ async function main() {
   await new Promise((r) => setTimeout(r, 300));
 
   const cdP = once(p1, 'countdown_started', 8000);
-  p1.emit('start_game', { durationSeconds: DURATION_SEC });
+  p1.emit('start_game', { durationSeconds: DURATION_SEC, maxPlayers: 3, ballSpeed: 'medium' });
   await cdP;
   const playing = await waitForGameState(p1, (st) => st.gameStatus === 'playing', 10000);
   console.log(`match live — duration=${playing.gameDurationSeconds}s startedAt=${playing.gameStartedAt}`);

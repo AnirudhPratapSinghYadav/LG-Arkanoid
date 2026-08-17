@@ -1,7 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
+import '../utils/app_fonts.dart';
 import 'package:provider/provider.dart';
 import '../utils/constants.dart';
 import '../services/gameservice.dart';
@@ -160,7 +160,7 @@ class _ControllerScreenState extends State<ControllerScreen>
                           const SizedBox(width: 6),
                           Text(
                             'P${service.playerNumber ?? 1}',
-                            style: GoogleFonts.spaceGrotesk(
+                            style: AppFonts.spaceGrotesk(
                               fontSize: 13,
                               fontWeight: FontWeight.bold,
                               color: textPrimary,
@@ -174,7 +174,7 @@ class _ControllerScreenState extends State<ControllerScreen>
                             '${service.latencyMs}ms',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.jetBrainsMono(
+                            style: AppFonts.jetBrainsMono(
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
                               color: textSecondary,
@@ -218,7 +218,7 @@ class _ControllerScreenState extends State<ControllerScreen>
                         ),
                         child: Text(
                           service.lastCommentary,
-                          style: GoogleFonts.inter(
+                          style: AppFonts.inter(
                             fontSize: 12,
                             color: textSecondary,
                           ),
@@ -279,7 +279,7 @@ class _ControllerScreenState extends State<ControllerScreen>
                                     const SizedBox(width: 6),
                                     Text(
                                       'TOUCH',
-                                      style: GoogleFonts.spaceGrotesk(
+                                      style: AppFonts.spaceGrotesk(
                                         fontSize: 11,
                                         fontWeight: FontWeight.bold,
                                         color: _controlMode == 'touch'
@@ -325,7 +325,7 @@ class _ControllerScreenState extends State<ControllerScreen>
                                     const SizedBox(width: 6),
                                     Text(
                                       'D-PAD',
-                                      style: GoogleFonts.spaceGrotesk(
+                                      style: AppFonts.spaceGrotesk(
                                         fontSize: 11,
                                         fontWeight: FontWeight.bold,
                                         color: _controlMode == 'dpad'

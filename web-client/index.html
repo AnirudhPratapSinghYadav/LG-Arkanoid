@@ -2,11 +2,11 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=1920, height=1080">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="LG Arkanoid">
-    <link rel="apple-touch-icon" href="assets/lg-logo.png">
+    <link rel="apple-touch-icon" href="assets/icon-192.png">
     <link rel="manifest" href="/manifest.webmanifest">
     <title>LG Arkanoid</title>
     <link rel="stylesheet" href="/fonts/fonts.css">
@@ -18,9 +18,12 @@
 <body>
     <div class="stage-vignette" aria-hidden="true"></div>
     <div id="lgCorner" class="lg-corner" hidden>
-        <img class="lg-corner__logo" src="assets/lg-logo.png" alt="Liquid Galaxy">
+        <div class="lg-corner__logos">
+            <img class="lg-corner__logo" src="assets/lg-logo.webp" alt="Liquid Galaxy">
+            <img class="lg-corner__logo" src="assets/gesoc-logo.webp" alt="Gemini Summer of Code">
+        </div>
         <div class="lg-corner__text">
-            <span class="lg-corner__eyebrow">Liquid Galaxy</span>
+            <span class="lg-corner__eyebrow">Liquid Galaxy · Gemini SoC 2026</span>
             <span class="lg-corner__name">LG Arkanoid</span>
         </div>
     </div>
@@ -30,8 +33,11 @@
     </div>
 
     <div id="bootOverlay" class="boot-overlay" aria-live="polite">
-        <img class="boot-overlay__logo" src="assets/lg-logo.png" alt="">
-        <p class="boot-overlay__eyebrow">Liquid Galaxy</p>
+        <div class="boot-overlay__logos">
+            <img class="boot-overlay__logo" src="assets/lg-logo.webp" alt="">
+            <img class="boot-overlay__logo" src="assets/gesoc-logo.webp" alt="">
+        </div>
+        <p class="boot-overlay__eyebrow">Liquid Galaxy · Gemini Summer of Code 2026</p>
         <h1 class="boot-overlay__title">LG Arkanoid</h1>
         <p class="boot-overlay__sub">Phone controller · panoramic wall</p>
         <div class="boot-overlay__status">

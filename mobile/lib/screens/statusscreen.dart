@@ -1,4 +1,4 @@
-import 'package:google_fonts/google_fonts.dart';
+import '../utils/app_fonts.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/gameservice.dart';
@@ -19,7 +19,7 @@ class StatusScreen extends StatelessWidget {
         backgroundColor: bgDark,
         title: Text(
           'DEBUG STATUS',
-          style: GoogleFonts.inter(
+          style: AppFonts.inter(
             fontSize: 24,
             color: accentPrimary,
             letterSpacing: 1,
@@ -56,7 +56,7 @@ class StatusScreen extends StatelessWidget {
                       'Screen Width', '${state['rigVirtualWidth'] ?? 0}'),
                   const SizedBox(height: 8),
                   Text('BALLS',
-                      style: GoogleFonts.inter(
+                      style: AppFonts.inter(
                           color: accentPrimary,
                           fontWeight: FontWeight.bold)),
                   ...?((state['balls'] as List<dynamic>?)?.map((b) =>
@@ -74,12 +74,12 @@ class StatusScreen extends StatelessWidget {
                   service.lastCommentary.isEmpty
                       ? 'No commentary yet'
                       : service.lastCommentary,
-                  style: GoogleFonts.inter(color: textPrimary),
+                  style: AppFonts.inter(color: textPrimary),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'Source: ${service.lastCommentarySource}',
-                  style: GoogleFonts.inter(color: textPrimary, fontSize: 10),
+                  style: AppFonts.inter(color: textPrimary, fontSize: 10),
                 ),
               ],
             ),
@@ -96,7 +96,7 @@ class StatusScreen extends StatelessWidget {
         children: [
           Text(
             title,
-            style: GoogleFonts.inter(
+            style: AppFonts.inter(
               color: accentPrimary,
               fontSize: 24,
               letterSpacing: 1,
@@ -117,10 +117,10 @@ class StatusScreen extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label,
-              style: GoogleFonts.inter(color: textPrimary, fontSize: 12)),
+              style: AppFonts.inter(color: textPrimary, fontSize: 12)),
           Text(
             value,
-            style: GoogleFonts.inter(
+            style: AppFonts.inter(
               color: color ?? accentPrimary,
               fontWeight: FontWeight.bold,
               fontSize: 12,

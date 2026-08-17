@@ -1,4 +1,4 @@
-package com.example.lg_arkanoid
+package com.anirudh.lg_arkanoid
 
 import io.flutter.embedding.android.FlutterActivity
 

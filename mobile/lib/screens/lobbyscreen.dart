@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import '../utils/app_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/constants.dart';
@@ -10,6 +10,7 @@ import '../widgets/lgbutton.dart';
 import '../widgets/connectionstatus.dart';
 import '../services/ssh_service.dart';
 import '../widgets/mission_background.dart';
+import '../widgets/dual_brand.dart';
 
 class LobbyScreen extends StatefulWidget {
   const LobbyScreen({super.key});
@@ -126,7 +127,11 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
 
   void _onStartMatch() {
     _persistAndPushSettings();
-    _gameService.startGame(_selectedDuration);
+    _gameService.startGame(
+      durationSeconds: _selectedDuration,
+      maxPlayers: _selectedMaxPlayers,
+      ballSpeed: _selectedBallSpeed,
+    );
   }
 
   Future<void> _applyScreensToRig() async {
@@ -167,7 +172,7 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
         ),
         child: Text(
           '$n',
-          style: GoogleFonts.spaceGrotesk(
+          style: AppFonts.spaceGrotesk(
             fontSize: 13,
             fontWeight: FontWeight.bold,
             color: selected ? textPrimary : textSecondary,
@@ -226,11 +231,11 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
                             ),
                             Column(
                               children: [
-                                Image.asset('assets/lg-logo.png', height: 40),
+                                const DualBrand(height: 36),
                                 const SizedBox(height: 12),
                                 Text(
                                   'LG ARKANOID',
-                                  style: GoogleFonts.vt323(
+                                  style: AppFonts.vt323(
                                     fontSize: 32,
                                     color: accentSystem,
                                     letterSpacing: 2.0,
@@ -239,7 +244,7 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
                                 ),
                                 Text(
                                   'MULTIPLAYER LOBBY',
-                                  style: GoogleFonts.spaceGrotesk(
+                                  style: AppFonts.spaceGrotesk(
                                     fontSize: 12,
                                     color: textSecondary,
                                     letterSpacing: 3.0,
@@ -261,7 +266,7 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
                                 children: [
                                   Text(
                                     'PLAYERS',
-                                    style: GoogleFonts.spaceGrotesk(
+                                    style: AppFonts.spaceGrotesk(
                                       fontSize: 14,
                                       fontWeight: FontWeight.bold,
                                       color: textPrimary,
@@ -275,7 +280,7 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
                                       textAlign: TextAlign.right,
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
-                                      style: GoogleFonts.spaceGrotesk(
+                                      style: AppFonts.spaceGrotesk(
                                         fontSize: 13,
                                         fontWeight: FontWeight.w700,
                                         color: accentGame,
@@ -306,7 +311,7 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
                           const SizedBox(height: 16),
                           Text(
                             'MAX PLAYERS',
-                            style: GoogleFonts.spaceGrotesk(
+                            style: AppFonts.spaceGrotesk(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
                               color: textSecondary,
@@ -338,7 +343,7 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
                                     ),
                                     child: Text(
                                       '$p',
-                                      style: GoogleFonts.spaceGrotesk(
+                                      style: AppFonts.spaceGrotesk(
                                         fontSize: 13,
                                         fontWeight: FontWeight.bold,
                                         color: _selectedMaxPlayers == p ? textPrimary : textSecondary,
@@ -351,7 +356,7 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
                           const SizedBox(height: 16),
                           Text(
                             'SCREENS (RIG)',
-                            style: GoogleFonts.spaceGrotesk(
+                            style: AppFonts.spaceGrotesk(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
                               color: textSecondary,
@@ -377,7 +382,7 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
                             const SizedBox(height: 8),
                             Text(
                               _screenApplyMsg!,
-                              style: GoogleFonts.inter(fontSize: 11, color: textSecondary, height: 1.35),
+                              style: AppFonts.inter(fontSize: 11, color: textSecondary, height: 1.35),
                               textAlign: TextAlign.center,
                             ),
                           ],
@@ -385,7 +390,7 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
 
                           Text(
                             'BALL SPEED',
-                            style: GoogleFonts.spaceGrotesk(
+                            style: AppFonts.spaceGrotesk(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
                               color: textSecondary,
@@ -409,7 +414,7 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
 
                           Text(
                             'MATCH DURATION',
-                            style: GoogleFonts.spaceGrotesk(
+                            style: AppFonts.spaceGrotesk(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
                               color: textSecondary,
@@ -460,7 +465,7 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
                                 opacity: _pulseAnimation.value,
                                 child: Text(
                                   'WAITING FOR HOST TO START',
-                                  style: GoogleFonts.spaceGrotesk(
+                                  style: AppFonts.spaceGrotesk(
                                     fontSize: 13,
                                     color: textSecondary,
                                     fontWeight: FontWeight.bold,
@@ -489,7 +494,7 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
                     children: [
                       Text(
                         'GET READY',
-                        style: GoogleFonts.spaceGrotesk(
+                        style: AppFonts.spaceGrotesk(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
                           color: textSecondary,
@@ -499,7 +504,7 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
                       const SizedBox(height: 24),
                       Text(
                         '$_countdownVal',
-                        style: GoogleFonts.vt323(
+                        style: AppFonts.vt323(
                           fontSize: 140,
                           color: accentGame,
                           fontWeight: FontWeight.bold,
@@ -538,7 +543,7 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
             displayName,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.inter(
+            style: AppFonts.inter(
               fontSize: 15,
               color: isSlotConnected ? textPrimary : textSecondary.withOpacity(0.4),
               fontWeight: isSlotConnected ? FontWeight.w600 : FontWeight.normal,
@@ -548,7 +553,7 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
         if (isSlotConnected)
           Text(
             isPlayerMaster ? 'HOST' : 'READY',
-            style: GoogleFonts.spaceGrotesk(
+            style: AppFonts.spaceGrotesk(
               fontSize: 11,
               color: isPlayerMaster ? accentGame : accentSuccess,
               fontWeight: FontWeight.bold,
@@ -588,7 +593,7 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
         ),
         child: Text(
           label,
-          style: GoogleFonts.spaceGrotesk(
+          style: AppFonts.spaceGrotesk(
             fontSize: 12,
             fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
             color: isSelected ? accentSystem : textSecondary,
@@ -620,7 +625,7 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
         ),
         child: Text(
           label,
-          style: GoogleFonts.spaceGrotesk(
+          style: AppFonts.spaceGrotesk(
             fontSize: 12,
             fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
             color: isSelected ? accentSystem : textSecondary,

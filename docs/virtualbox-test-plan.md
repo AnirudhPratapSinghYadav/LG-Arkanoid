@@ -20,7 +20,7 @@ This is what you can verify on a laptop. It is **not** a substitute for LAB Llei
 - Node: **16.x** via nvm on lg1.
 - Chromium / `chromium-browser` on all three.
 - `pm2`, `sshpass` (if using password SSH).
-- Game port: **3000**.
+- Game port: **8130** (pong 8112, snake 8114, pacman 8128, asteroids 8129 are taken).
 
 ## SSH
 
@@ -49,20 +49,22 @@ LG_FRAMES="lg3 lg1 lg2"
 cd ~/projects/LG-Arkanoid   # or clone there
 bash install.sh
 bash scripts/open-arkanoid.sh 3
-curl -s http://localhost:3000/health
+curl -s http://localhost:8130/health
 ```
 
 Expect JSON with `"numScreens":3` and `lanIp` (no `sessionToken` — that is only on the wall).
 
 Screens:
 
-- Master: `http://localhost:3000/1` (or whichever index `$LG_FRAMES` assigned to lg1)
-- Slaves: Chromium should open `http://lg1:3000/<n>`
+- Master: `http://localhost:8130/<n>` where `<n>` is lg1's left→right position
+  (slice `/2` for the standard `lg3 lg1 lg2` order). Confirm with
+  `bash scripts/open-arkanoid.sh --frames 3`.
+- Slaves: Chromium should open `http://lg1:8130/<n>`
 
 ## Phone join
 
 1. Note lg1 LAN IP from `/health` (`lanIp`) and the **4-letter session code from the center-screen QR** (token is not on `/health`).
-2. On phone: Flutter app **or** browser → `http://<lg1-ip>:3000/controller`
+2. On phone: Flutter app **or** browser → `http://<lg1-ip>:8130/controller`
 3. Join with the on-screen code; host starts match. Drag paddle; ball should move on the Chromium windows.
 
 ## Test cases
@@ -85,7 +87,7 @@ Screens:
 | Symptom | Check |
 |---------|--------|
 | `GLIBC_… not found` | Use Node 16, not 18+ |
-| Phone cannot connect | Same subnet; `ufw allow 3000`; port is 3000 not 8128 |
+| Phone cannot connect | Same subnet; port **8130** open in `/etc/iptables.conf` (not just `ufw`, which the rig resets on `ifup`) |
 | Slave blank | SSH from lg1 to lgN; `DISPLAY=:0`; Chromium installed |
 | Wrong panorama order | Fix `$LG_FRAMES` |
 | pm2 old screens | `pm2 delete lg-arkanoid` then open script again |

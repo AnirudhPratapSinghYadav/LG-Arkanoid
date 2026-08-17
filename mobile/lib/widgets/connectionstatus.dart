@@ -1,4 +1,4 @@
-import 'package:google_fonts/google_fonts.dart';
+import '../utils/app_fonts.dart';
 import 'package:flutter/material.dart';
 import '../utils/constants.dart';
 
@@ -67,7 +67,7 @@ class _ConnectionStatusState extends State<ConnectionStatus> with SingleTickerPr
           style: TextStyle(
             color: widget.isConnected ? accentSystem : accentError,
             fontSize: 12,
-            fontFamily: GoogleFonts.jetBrainsMono().fontFamily,
+            fontFamily: AppFonts.jetBrainsMono().fontFamily,
             fontWeight: FontWeight.bold,
             letterSpacing: 1.0,
           ),

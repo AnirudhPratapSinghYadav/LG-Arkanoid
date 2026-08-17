@@ -63,6 +63,9 @@ jobs:
         run: flutter analyze
         working-directory: ./mobile
 
-      - name: Build APK
-        run: flutter build apk --release
+      - name: Build split-per-ABI release APKs
+        # Matches the GO Web Store size target (<50 MB). R8 minify + resource
+        # shrinking are enabled in android/app/build.gradle.kts. arm64-v8a is
+        # the APK that goes to the store; the others exist for emulators.
+        run: flutter build apk --release --split-per-abi
         working-directory: ./mobile

@@ -16,8 +16,10 @@ dependencies:
   flutter_tts: 3.8.5
   mobile_scanner: 5.2.3
   qr_flutter: 4.1.0
-  google_fonts: 6.1.0
   dartssh2: 2.11.0
+  # google_fonts is deliberately absent: it downloads .ttf files at runtime and
+  # the rig's LAN has no internet, so every label would fall back mid-demo.
+  # Typography lives in lib/utils/app_fonts.dart against the bundled faces below.
 
 dev_dependencies:
   flutter_test:
@@ -27,12 +29,32 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  # assets/fonts/ is intentionally not listed here — the faces below already put
+  # those files in the bundle, and listing the folder as well ships them twice.
+  # assets/app_icon.png is only read by flutter_launcher_icons at build time, so
+  # it stays a 1024px PNG and never reaches the APK.
+  #
+  # Everything below is lossless WebP rendered at the size it is actually drawn
+  # at: the three images together are 155 KB instead of the 1.2 MB the 1024px
+  # PNGs cost. Both logos are the official artwork from liquidgalaxy.eu.
   assets:
-    - assets/fonts/
-    - assets/app_icon.png
-    - assets/app_icon_transparent.png
-    - assets/lg-logo.png
+    - assets/app_icon_transparent.webp
+    - assets/lg-logo.webp
+    - assets/gesoc-logo.webp
+    # OFL texts for the bundled typefaces, shown via LicenseRegistry (~21 KB).
+    - assets/fonts/licenses/
   fonts:
+    # Inter and Space Grotesk ship upstream only as variable fonts, so there is
+    # one file per family and AppFonts drives the wght axis via fontVariations.
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter-Variable.ttf
+    - family: SpaceGrotesk
+      fonts:
+        - asset: assets/fonts/SpaceGrotesk-Variable.ttf
+    - family: VT323
+      fonts:
+        - asset: assets/fonts/VT323-Regular.ttf
     - family: PressStart2P
       fonts:
         - asset: assets/fonts/PressStart2P-Regular.ttf
@@ -41,8 +63,6 @@ flutter:
         - asset: assets/fonts/JetBrainsMono-Regular.ttf
         - asset: assets/fonts/JetBrainsMono-Bold.ttf
           weight: 700
-        - asset: assets/fonts/JetBrainsMono-Italic.ttf
-          style: italic
 
 flutter_launcher_icons:
   android: "launcher_icon"

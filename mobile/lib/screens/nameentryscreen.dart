@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import '../utils/app_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/constants.dart';
 import '../widgets/lgpanel.dart';
@@ -80,7 +80,7 @@ class _NameEntryScreenState extends State<NameEntryScreen> {
                   children: [
                     Text(
                       'YOUR NAME',
-                      style: GoogleFonts.spaceGrotesk(
+                      style: AppFonts.spaceGrotesk(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
                         color: textPrimary,
@@ -91,7 +91,7 @@ class _NameEntryScreenState extends State<NameEntryScreen> {
                     const SizedBox(height: 8),
                     Text(
                       'Enter a display name to verify connection',
-                      style: GoogleFonts.inter(
+                      style: AppFonts.inter(
                         fontSize: 13,
                         color: textSecondary,
                       ),

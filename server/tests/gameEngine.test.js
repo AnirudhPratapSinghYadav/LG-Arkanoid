@@ -5,9 +5,16 @@ const path = require('path');
 
 const gameEngine = require(path.join(__dirname, '..', 'gameEngine.js'));
 
+// Per-frame width depends on the rig's frame aspect, so tests must never assume
+// 1920. Run the suite with LG_FRAME_ASPECT=9:16 to exercise a portrait rig.
+const FRAME_W = gameEngine.SCREEN_WIDTH;
+const PADDLE_W = gameEngine.DEFAULT_PADDLE_WIDTH;
+
 function makePlayingState(numScreens = 3) {
   const state = new gameEngine.GameState();
   state.numScreens = numScreens;
+  state.screenWidth = FRAME_W;
+  state.canvasHeight = gameEngine.CANVAS_HEIGHT;
   state.gameStatus = 'playing';
   state.gameActive = true;
   state.level = 1;
@@ -19,13 +26,13 @@ function makePlayingState(numScreens = 3) {
   p.connected = true;
   p.lives = 3;
   p.score = 0;
-  p.paddleX = (numScreens * 1920) / 2 - 150;
-  p.paddleY = 1000;
-  p.paddleWidth = 300;
+  p.paddleX = (numScreens * FRAME_W) / 2 - PADDLE_W / 2;
+  p.paddleY = gameEngine.PADDLE_Y;
+  p.paddleWidth = PADDLE_W;
   p.inventory = [];
   state.players = [p];
 
-  const ball = new gameEngine.Ball('ball_1', (numScreens * 1920) / 2, 500, 3, 4, 8);
+  const ball = new gameEngine.Ball('ball_1', (numScreens * FRAME_W) / 2, 500, 3, 4, 8);
   ball.active = true;
   state.balls = [ball];
   state.powerUps = [];
@@ -52,7 +59,7 @@ test('loadLevel creates destructible bricks for N screens', () => {
     for (const row of bricks) {
       for (const brick of row) {
         if (brick.active && brick.type !== 'indestructible') destructible++;
-        assert.ok(brick.x + brick.width <= n * 1920 + 1, 'brick within world width');
+        assert.ok(brick.x + brick.width <= n * FRAME_W + 1, 'brick within world width');
       }
     }
     assert.ok(destructible > 0, `has destructible bricks for ${n} screens`);
@@ -117,15 +124,42 @@ test('all lives lost sets game_over', () => {
   assert.strictEqual(state.gameStatus, 'game_over');
 });
 
+test('paddles spread across the court for N players', () => {
+  const xs = [0, 1, 2].map((i) => gameEngine.paddleXForSlot(i, 3, 5, PADDLE_W));
+  assert.ok(xs[0] < xs[1] && xs[1] < xs[2], 'slots increase left to right');
+  assert.ok(xs[0] < FRAME_W, 'player 1 starts on screen 1 of 5');
+  assert.ok(xs[2] > FRAME_W * 3, 'player 3 starts on the right half');
+});
+
+test('brick tile expands and mirrors to panoramic width', () => {
+  const tile = [
+    [1, 2, 0],
+    [0, 1, 2],
+  ];
+  const expanded = gameEngine.expandTiledBrickGrid(tile, 8);
+  assert.strictEqual(expanded.length, 2);
+  assert.strictEqual(expanded[0].length, 8);
+  assert.deepStrictEqual(expanded[0].slice(0, 3), [1, 2, 0]);
+  assert.deepStrictEqual(expanded[0].slice(3, 6), [0, 2, 1]);
+});
+
+test('input scale grows with screen count', () => {
+  assert.ok(gameEngine.inputScaleForScreens(9) > gameEngine.inputScaleForScreens(5));
+  assert.strictEqual(gameEngine.inputScaleForWorld(3, 1920), 1);
+  assert.strictEqual(gameEngine.inputScaleForWorld(12, 1920), 4);
+  // A portrait rig has a narrower court, so the same swipe must move less.
+  assert.ok(gameEngine.inputScaleForWorld(3, 608) < gameEngine.inputScaleForWorld(3, 1920));
+});
+
 test('paddle spawn X is world-center left edge for N screens', () => {
   for (const n of [3, 5, 7, 9, 12]) {
     const p = new gameEngine.Player(null, n);
-    const expected = gameEngine.centerPaddleX(n, 300);
+    const expected = gameEngine.centerPaddleX(n, PADDLE_W);
     assert.strictEqual(p.paddleX, expected, `paddleX for ${n} screens`);
-    const worldCenter = (n * 1920) / 2;
+    const worldCenter = (n * FRAME_W) / 2;
     assert.ok(Math.abs((p.paddleX + p.paddleWidth / 2) - worldCenter) < 1, `centered on ${n}`);
     if (n !== 3) {
-      assert.notStrictEqual(p.paddleX, 2880, 'must not hardcode 3-screen X');
+      assert.notStrictEqual(p.paddleX, gameEngine.centerPaddleX(3, PADDLE_W), 'must not hardcode 3-screen X');
     }
   }
 });
@@ -172,11 +206,74 @@ test('levels 4 and 5 have destructible bricks', () => {
 test('CORS allows LAN origins and empty Flutter origin', () => {
   const { isAllowedCorsOrigin } = require('../config.js');
   assert.strictEqual(isAllowedCorsOrigin(undefined), true);
-  assert.strictEqual(isAllowedCorsOrigin('http://192.168.1.20:3000'), true);
-  assert.strictEqual(isAllowedCorsOrigin('http://10.0.0.4:3000'), true);
-  assert.strictEqual(isAllowedCorsOrigin('http://lg1:3000'), true);
+  assert.strictEqual(isAllowedCorsOrigin('http://192.168.1.20:8130'), true);
+  assert.strictEqual(isAllowedCorsOrigin('http://10.0.0.4:8130'), true);
+  assert.strictEqual(isAllowedCorsOrigin('http://lg1:8130'), true);
   assert.strictEqual(isAllowedCorsOrigin('http://localhost:5173'), true);
   assert.strictEqual(isAllowedCorsOrigin('https://evil.example'), false);
+});
+
+test('default port does not collide with other LG games', () => {
+  const { PORT } = require('../config.js');
+  // Ports claimed by the published Liquid Galaxy games and their launcher.
+  const taken = {
+    8112: 'galaxy-pong',
+    8114: 'galaxy-snake',
+    8128: 'galaxy-pacman',
+    8129: 'galaxy-asteroids',
+    3123: 'lg-retro-gaming',
+    8111: 'lg core (iptables)',
+    81: 'lg core (iptables)',
+  };
+  assert.strictEqual(PORT, 8130, 'Arkanoid owns 8130 in the LG port family');
+  assert.ok(!taken[PORT], `port ${PORT} is already used by ${taken[PORT]}`);
+});
+
+test('frame aspect comes from LG rotation vars', () => {
+  const r = gameEngine.resolveFrameAspect;
+  // Stock LG rigs rotate frames to portrait; DHCP_RANDR defaults to "right".
+  assert.ok(Math.abs(r({ DHCP_RANDR: 'right' }) - 1080 / 1920) < 1e-9);
+  assert.ok(Math.abs(r({ DHCP_RANDR: 'left' }) - 1080 / 1920) < 1e-9);
+  assert.ok(Math.abs(r({ LG_RANDR: 'normal' }) - 1920 / 1080) < 1e-9);
+  // Explicit settings win over the rig's rotation.
+  assert.ok(Math.abs(r({ LG_FRAME_ASPECT: '9:16', DHCP_RANDR: 'normal' }) - 0.5625) < 1e-9);
+  assert.ok(Math.abs(r({ LG_FRAME_WIDTH: '1200', LG_FRAME_HEIGHT: '1600' }) - 0.75) < 1e-9);
+  // Nonsense falls back to landscape rather than producing a broken court.
+  assert.ok(Math.abs(r({ LG_FRAME_ASPECT: 'banana' }) - 1920 / 1080) < 1e-9);
+  assert.ok(Math.abs(r({ LG_FRAME_ASPECT: '100:1' }) - 1920 / 1080) < 1e-9);
+  assert.ok(Math.abs(r({}) - 1920 / 1080) < 1e-9);
+});
+
+test('a level has the same columns in portrait and landscape', () => {
+  assert.strictEqual(gameEngine.brickColumnsForWorld(3), 39, '3 screens keep the authored 39 columns');
+  for (const n of [3, 5, 9, 12]) {
+    const landscape = gameEngine.loadLevel(1, null, n, 1920);
+    const portrait = gameEngine.loadLevel(1, null, n, 608);
+    assert.strictEqual(landscape.length, portrait.length, `row count for ${n} screens`);
+    for (let r = 0; r < landscape.length; r++) {
+      assert.strictEqual(
+        landscape[r].length, portrait[r].length,
+        `column count is aspect independent for ${n} screens`
+      );
+      for (let c = 0; c < landscape[r].length; c++) {
+        assert.strictEqual(landscape[r][c].type, portrait[r][c].type, 'same brick types');
+        assert.strictEqual(landscape[r][c].active, portrait[r][c].active, 'same brick pattern');
+      }
+    }
+  }
+});
+
+test('brick grid fits inside the court in either aspect', () => {
+  for (const frameW of [1920, 608]) {
+    for (const n of [3, 5, 12]) {
+      const m = gameEngine.brickMetrics(frameW);
+      const cols = gameEngine.brickColumnsForWorld(n, frameW);
+      const rightEdge = m.gutter + (cols - 1) * m.cell + m.brickWidth;
+      assert.ok(rightEdge <= n * frameW, `grid fits ${n}x${frameW}`);
+      assert.ok(m.brickWidth > 0 && m.cell > m.brickWidth, 'bricks have a gap');
+      assert.ok(m.top + 8 * m.rowPitch < gameEngine.PADDLE_Y, 'bricks stay above the paddle');
+    }
+  }
 });
 
 test('normalizeDurationSeconds keeps endless (0)', () => {

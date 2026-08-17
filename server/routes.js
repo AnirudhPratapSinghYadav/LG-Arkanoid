@@ -3,7 +3,7 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
-const { getLanIp, resolveWebRoot } = require('./config.js');
+const { getLanIp, resolveWebRoot, SCREEN_WIDTH, CANVAS_HEIGHT, PORT } = require('./config.js');
 
 function createRouter(worldState) {
   const router = express.Router();
@@ -20,7 +20,7 @@ function createRouter(worldState) {
       connectedPlayers: worldState.players.filter((p) => p.connected).length,
       // sessionToken intentionally omitted — join code is pushed only to screen sockets.
       lanIp: getLanIp(),
-      port: process.env.PORT || 3000,
+      port: PORT,
     });
   });
 
@@ -51,8 +51,11 @@ function createRouter(worldState) {
 
   // -- Screen route (LG convention) -------------------------------------------
   // Each screen on the Liquid Galaxy rig is addressed by its screen number:
-  //   http://lg1:3000/1  -- screen 1
-  //   http://lg1:3000/2  -- screen 2
+  //   http://lg1:8130/1  -- leftmost slice of the wall
+  //   http://lg1:8130/2  -- the slice to its right
+  // Unlike galaxy-pacman, which puts the *hostname* digit in the URL, the slice
+  // index here is the physical left→right position the launcher derived from
+  // LG_FRAMES. See docs/lg-setup.md for why.
   // Injects SCREEN_ID + NUM_SCREENS for the Phaser client (Pacman-style routes).
 
   router.get('/:screenNum(\\d+)', (req, res) => {
@@ -77,6 +80,8 @@ function createRouter(worldState) {
       const injectedScript = `<script nonce="${nonce}">
         window.SCREEN_ID = ${screenNum};
         window.NUM_SCREENS = ${worldState.numScreens || 3};
+        window.SCREEN_W = ${worldState.screenWidth || SCREEN_WIDTH};
+        window.CANVAS_H = ${worldState.canvasHeight || CANVAS_HEIGHT};
       </script>`;
       const modifiedHtml = html.replace('</head>', injectedScript + '\n</head>');
 

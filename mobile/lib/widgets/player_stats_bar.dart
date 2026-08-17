@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import '../utils/app_fonts.dart';
 import 'package:provider/provider.dart';
 import '../services/gameservice.dart';
 import '../utils/constants.dart';
@@ -46,7 +46,7 @@ class PlayerStatsBar extends StatelessWidget {
             child: Text(
               value,
               maxLines: 1,
-              style: GoogleFonts.spaceGrotesk(
+              style: AppFonts.spaceGrotesk(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
                 color: color,
@@ -56,7 +56,7 @@ class PlayerStatsBar extends StatelessWidget {
           const SizedBox(height: 2),
           Text(
             label,
-            style: GoogleFonts.spaceGrotesk(
+            style: AppFonts.spaceGrotesk(
               fontSize: 10,
               fontWeight: FontWeight.bold,
               color: textSecondary,

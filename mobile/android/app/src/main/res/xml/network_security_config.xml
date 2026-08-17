@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  A Liquid Galaxy rig serves plain HTTP on the LAN (the game server on :8130 and
+  Google Earth's KML over lighttpd on :81), and the master is reached by an IP or
+  hostname the operator types in at runtime. There is no certificate to pin and
+  no domain list to enumerate, so cleartext has to stay permitted — this is a
+  property of the rig, not a shortcut.
+
+  What this file does buy over a blanket android:usesCleartextTraffic="true":
+  user-installed and debug CAs are not trusted, so a phone with a rogue CA
+  profile cannot transparently intercept the session traffic.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import '../utils/app_fonts.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../utils/constants.dart';
 import '../widgets/lgpanel.dart';
@@ -91,7 +91,7 @@ class _ManualEntryScreenState extends State<ManualEntryScreen> {
                   children: [
                     Text(
                       'ENTER SESSION CODE',
-                      style: GoogleFonts.spaceGrotesk(
+                      style: AppFonts.spaceGrotesk(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
                         color: textPrimary,
@@ -102,7 +102,7 @@ class _ManualEntryScreenState extends State<ManualEntryScreen> {
                     const SizedBox(height: 8),
                     Text(
                       'Enter the 4-letter token displayed on the Liquid Galaxy rig',
-                      style: GoogleFonts.inter(
+                      style: AppFonts.inter(
                         fontSize: 13,
                         color: textSecondary,
                       ),
@@ -128,7 +128,7 @@ class _ManualEntryScreenState extends State<ManualEntryScreen> {
                           const SizedBox(height: 16),
                           Text(
                             'SERVER CONNECTION INFO',
-                            style: GoogleFonts.spaceGrotesk(
+                            style: AppFonts.spaceGrotesk(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
                               color: accentWarning,
@@ -137,8 +137,8 @@ class _ManualEntryScreenState extends State<ManualEntryScreen> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'Using USB debugging? Run "adb reverse tcp:3000 tcp:3000" and use IP 127.0.0.1',
-                            style: GoogleFonts.inter(
+                            'Using USB debugging? Run "adb reverse tcp:8130 tcp:8130" and use IP 127.0.0.1',
+                            style: AppFonts.inter(
                               fontSize: 11,
                               color: textSecondary,
                               height: 1.4,

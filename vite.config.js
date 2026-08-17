@@ -9,10 +9,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 //
 // This is used only during local development on a laptop/desktop. On the
 // actual Liquid Galaxy rig, Chromium connects directly to the Express
-// server on port 3000 -- Vite is not involved in production at all.
+// server on port 8130 -- Vite is not involved in production at all.
 //
 // The proxy rules forward Socket.IO and health-check requests from the
-// Vite dev server (port 5173) to the Express game server (port 3000).
+// Vite dev server (port 5173) to the Express game server (port 8130).
 // ---------------------------------------------------------------------------
 
 export default defineConfig({
@@ -34,12 +34,12 @@ export default defineConfig({
     strictPort: true,
     proxy: {
       '/socket.io': {
-        target: 'http://localhost:3000',
+        target: 'http://localhost:8130',
         ws: true,
         changeOrigin: true
       },
       '/health': {
-        target: 'http://localhost:3000',
+        target: 'http://localhost:8130',
         changeOrigin: true
       }
     }

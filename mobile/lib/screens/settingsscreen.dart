@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import '../utils/app_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:provider/provider.dart';
@@ -8,6 +8,7 @@ import '../services/ssh_service.dart';
 import '../utils/constants.dart';
 import '../widgets/lgpanel.dart';
 import '../widgets/connectionstatus.dart';
+import '../widgets/dual_brand.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -98,17 +99,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
       }
     }
     
+    // The rig knows its own width, so stop making the operator guess it.
+    int? detectedScreens;
+    if (connected) {
+      detectedScreens = await SSHService().detectScreenCount();
+    }
+
     if (!mounted) return;
     setState(() { 
       _isConnecting = false; 
       _isConnected = connected; 
+      if (detectedScreens != null) {
+        _screensController.text = detectedScreens.toString();
+      }
     });
-    
+
+    if (detectedScreens != null) {
+      await _saveValues();
+    }
+
+    if (!mounted) return;
+    final message = connected
+        ? (detectedScreens != null
+            ? 'Connected to rig — $detectedScreens screens detected.'
+            : 'Connected to rig. Screen count not reported, using the value above.')
+        : 'Failed to connect after $retries retries.';
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          connected ? 'Connected to rig.' : 'Failed to connect after $retries retries.',
-          style: GoogleFonts.inter(color: Colors.white),
+          message,
+          style: AppFonts.inter(color: Colors.white),
         ),
         backgroundColor: connected ? accentSystem : accentError,
       )
@@ -179,7 +200,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       children: [
         Text(
           label,
-          style: GoogleFonts.jetBrainsMono(
+          style: AppFonts.jetBrainsMono(
             fontSize: 12,
             fontWeight: FontWeight.bold,
             color: accentSystem,
@@ -191,7 +212,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           controller: controller,
           obscureText: obscure,
           keyboardType: keyboardType,
-          style: GoogleFonts.jetBrainsMono(color: textPrimary, fontSize: 15),
+          style: AppFonts.jetBrainsMono(color: textPrimary, fontSize: 15),
           cursorColor: accentSystem,
           validator: validator ?? (value) {
             if (value == null || value.trim().isEmpty) {
@@ -201,7 +222,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           },
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: GoogleFonts.jetBrainsMono(color: textSecondary.withOpacity(0.5)),
+            hintStyle: AppFonts.jetBrainsMono(color: textSecondary.withOpacity(0.5)),
             suffixIcon: suffixIcon,
             filled: true,
             fillColor: cardSecondary,
@@ -252,7 +273,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 'SETTINGS',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.jetBrainsMono(
+                style: AppFonts.jetBrainsMono(
                   fontSize: 16,
                   color: accentSystem,
                   letterSpacing: 1,
@@ -276,7 +297,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 children: [
                   Text(
                     'ROBOT COMMENTARY',
-                    style: GoogleFonts.spaceGrotesk(
+                    style: AppFonts.spaceGrotesk(
                       fontWeight: FontWeight.bold,
                       color: textPrimary,
                       fontSize: 16,
@@ -289,7 +310,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       return SwitchListTile(
                         title: Text(
                           'Enable TTS Voice',
-                          style: GoogleFonts.inter(
+                          style: AppFonts.inter(
                             color: textPrimary,
                             fontSize: 14,
                           ),
@@ -318,8 +339,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Text(
-                      'LG CREDENTIALS',
-                      style: GoogleFonts.spaceGrotesk(
+                      'CONNECTION',
+                      style: AppFonts.spaceGrotesk(
                         fontWeight: FontWeight.bold,
                         color: textPrimary,
                         fontSize: 16,
@@ -328,32 +349,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                     const SizedBox(height: 20),
                     _buildTextField(
-                      label: 'SSH USERNAME',
+                      label: 'USERNAME',
                       hint: 'lg',
                       controller: _usernameController,
                     ),
                     const SizedBox(height: 16),
                     _buildTextField(
-                      label: 'LG MASTER IP',
-                      hint: '192.168.1.1',
-                      controller: _hostController,
-                    ),
-                    const SizedBox(height: 16),
-                    _buildTextField(
-                      label: 'SSH PORT',
-                      hint: '22',
-                      controller: _portController,
-                      keyboardType: TextInputType.number,
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) return 'This field is required';
-                        if (int.tryParse(value) == null) return 'Must be a valid port number';
-                        return null;
-                      }
-                    ),
-                    const SizedBox(height: 16),
-                    _buildTextField(
-                      label: 'SSH PASSWORD',
-                      hint: 'Enter password',
+                      label: 'PASSWORD',
+                      hint: 'lq',
                       controller: _passwordController,
                       obscure: _obscurePassword,
                       suffixIcon: IconButton(
@@ -369,13 +372,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                     const SizedBox(height: 16),
                     _buildTextField(
+                      label: 'IP ADDRESS',
+                      hint: '192.168.1.42',
+                      controller: _hostController,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildTextField(
+                      label: 'PORT',
+                      hint: '22',
+                      controller: _portController,
+                      keyboardType: TextInputType.number,
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) return 'This field is required';
+                        if (int.tryParse(value) == null) return 'Must be a valid port number';
+                        return null;
+                      }
+                    ),
+                    const SizedBox(height: 16),
+                    _buildTextField(
                       label: 'NUMBER OF SCREENS',
-                      hint: 'e.g. 3, 5, 7, 9, 12',
+                      hint: '3',
                       controller: _screensController,
                       keyboardType: TextInputType.number,
                       validator: (value) {
                         if (value == null || value.trim().isEmpty) return 'This field is required';
-                        if (int.tryParse(value) == null) return 'Must be a number';
+                        final n = int.tryParse(value);
+                        if (n == null) return 'Must be a number';
+                        if (n < 1 || n > 12) return 'Use 1–12 (typical LG: 3, 5, 7, 9, 12)';
                         return null;
                       }
                     ),
@@ -438,7 +461,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: cardSecondary,
                 foregroundColor: textPrimary,
-                textStyle: GoogleFonts.spaceGrotesk(fontSize: 16, fontWeight: FontWeight.bold),
+                textStyle: AppFonts.spaceGrotesk(fontSize: 16, fontWeight: FontWeight.bold),
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               ),
@@ -448,12 +471,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
               onPressed: _isConnecting ? null : _connectToRig,
               icon: _isConnecting
                   ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                  : const Icon(Icons.link),
-              label: Text(_isConnecting ? 'CONNECTING...' : (_isConnected ? 'RECONNECT' : 'CONNECT TO RIG')),
+                  : const Icon(Icons.wifi_tethering),
+              label: Text(_isConnecting ? 'CONNECTING...' : (_isConnected ? 'RECONNECT LG' : 'CONNECT LG')),
               style: ElevatedButton.styleFrom(
                 backgroundColor: accentSystem,
                 foregroundColor: bgDark,
-                textStyle: GoogleFonts.spaceGrotesk(fontSize: 16, fontWeight: FontWeight.bold),
+                textStyle: AppFonts.spaceGrotesk(fontSize: 16, fontWeight: FontWeight.bold),
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               ),
@@ -466,7 +489,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: accentGame,
                 foregroundColor: bgDark,
-                textStyle: GoogleFonts.spaceGrotesk(fontSize: 16, fontWeight: FontWeight.bold),
+                textStyle: AppFonts.spaceGrotesk(fontSize: 16, fontWeight: FontWeight.bold),
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               ),
@@ -479,7 +502,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: accentGame.withOpacity(0.2),
                 foregroundColor: accentGame,
-                textStyle: GoogleFonts.spaceGrotesk(fontSize: 16, fontWeight: FontWeight.bold),
+                textStyle: AppFonts.spaceGrotesk(fontSize: 16, fontWeight: FontWeight.bold),
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               ),
@@ -492,7 +515,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: accentError.withOpacity(0.2),
                 foregroundColor: accentError,
-                textStyle: GoogleFonts.spaceGrotesk(fontSize: 16, fontWeight: FontWeight.bold),
+                textStyle: AppFonts.spaceGrotesk(fontSize: 16, fontWeight: FontWeight.bold),
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               ),
@@ -505,7 +528,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: cardFill,
                 foregroundColor: textPrimary,
-                textStyle: GoogleFonts.spaceGrotesk(fontSize: 16, fontWeight: FontWeight.bold),
+                textStyle: AppFonts.spaceGrotesk(fontSize: 16, fontWeight: FontWeight.bold),
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               ),
@@ -518,15 +541,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Image.asset('assets/app_icon_transparent.png', width: 28, height: 28),
-                      const SizedBox(width: 10),
-                      Image.asset('assets/lg-logo.png', height: 24),
+                      Image.asset('assets/app_icon_transparent.webp', width: 28, height: 28),
+                      const SizedBox(width: 12),
+                      const DualBrand(height: 24),
                     ],
                   ),
                   const SizedBox(height: 12),
                   Text(
                     'LG Arkanoid',
-                    style: GoogleFonts.spaceGrotesk(
+                    style: AppFonts.spaceGrotesk(
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
                       color: textPrimary,
@@ -535,7 +558,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   const SizedBox(height: 4),
                   Text(
                     'Panoramic Arkanoid for Liquid Galaxy',
-                    style: GoogleFonts.inter(
+                    style: AppFonts.inter(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                       color: accentSystem,
@@ -544,7 +567,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   const SizedBox(height: 4),
                   Text(
                     'Built by Anirudh Pratap Singh Yadav for Liquid Galaxy\nGemini SoC 2026',
-                    style: GoogleFonts.inter(
+                    style: AppFonts.inter(
                       fontSize: 11,
                       color: textSecondary,
                       height: 1.4,

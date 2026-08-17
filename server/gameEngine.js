@@ -1,11 +1,139 @@
-const SCREEN_WIDTH = 1920;
+// ---------------------------------------------------------------------------
+// Frame geometry.
+//
+// A Liquid Galaxy frame is a 1920x1080 panel that the rig usually rotates to
+// portrait: /etc/X11/Xsession.d/45x11-custom_xrandr rotates by DHCP_RANDR,
+// which defaults to "right". So the browser viewport is 1080x1920 on a stock
+// rig and 1920x1080 only when the panels are left unrotated.
+//
+// Like every other LG game (galaxy-pacman derives its whole grid from
+// window.innerHeight, galaxy-asteroids from window.innerWidth), we normalise on
+// height: the logical court is always CANVAS_HEIGHT tall and each frame is
+// CANVAS_HEIGHT * aspect wide. Everything vertical therefore stays fixed while
+// horizontal sizes scale, which keeps a level's brick layout identical in both
+// orientations instead of letterboxing the court into a third of the screen.
+// ---------------------------------------------------------------------------
+const CANVAS_HEIGHT = 1080;
+const LANDSCAPE_SCREEN_WIDTH = 1920;
+
+/** Frame aspect (width/height) from the environment; see docs/lg-setup.md. */
+function resolveFrameAspect(env) {
+  const e = env || process.env;
+  const clamp = (v) => (Number.isFinite(v) && v >= 0.25 && v <= 4 ? v : null);
+
+  const explicit = String(e.LG_FRAME_ASPECT || '').trim();
+  if (explicit) {
+    const ratio = explicit.split(':');
+    if (ratio.length === 2) {
+      const w = Number.parseFloat(ratio[0]);
+      const h = Number.parseFloat(ratio[1]);
+      const v = clamp(w / h);
+      if (v) return v;
+    }
+    const v = clamp(Number.parseFloat(explicit));
+    if (v) return v;
+  }
+
+  const w = Number.parseFloat(e.LG_FRAME_WIDTH);
+  const h = Number.parseFloat(e.LG_FRAME_HEIGHT);
+  if (Number.isFinite(w) && Number.isFinite(h) && h > 0) {
+    const v = clamp(w / h);
+    if (v) return v;
+  }
+
+  // The rig's own rotation variable, passed straight through by the launcher.
+  const randr = String(e.LG_RANDR || e.DHCP_RANDR || '').trim().toLowerCase();
+  if (randr === 'left' || randr === 'right') return 1080 / 1920;
+  if (randr === 'normal' || randr === 'inverted') return 1920 / 1080;
+
+  return 1920 / 1080;
+}
+
+const FRAME_ASPECT = resolveFrameAspect();
+const SCREEN_WIDTH = Math.round(CANVAS_HEIGHT * FRAME_ASPECT);
+
 const PADDLE_HEIGHT = 18;
 const PADDLE_Y = 1000;
-const DEFAULT_PADDLE_WIDTH = 300;
+/** 300px on a landscape frame — same share of a frame in either orientation. */
+const DEFAULT_PADDLE_WIDTH = Math.round(SCREEN_WIDTH * (300 / LANDSCAPE_SCREEN_WIDTH));
+
+// Reference grid, authored against a landscape frame. Portrait frames use the
+// same column count with proportionally narrower cells, so a level's shape is
+// identical in either orientation instead of drifting with rounding.
+const REF_GUTTER = 24;
+const REF_CELL = 144;
+const REF_BRICK_WIDTH = 140;
+
+/** Column count for the full panoramic court — aspect independent by design. */
+function brickColumnsForWorld(numScreens) {
+  const refWorld = (numScreens || 3) * LANDSCAPE_SCREEN_WIDTH;
+  return Math.max(1, Math.floor((refWorld - REF_GUTTER * 2) / REF_CELL));
+}
+
+/** Brick grid metrics for a frame width. Vertical values never scale. */
+function brickMetrics(screenWidth = SCREEN_WIDTH) {
+  const scale = (screenWidth || SCREEN_WIDTH) / LANDSCAPE_SCREEN_WIDTH;
+  return {
+    gutter: REF_GUTTER * scale,
+    cell: REF_CELL * scale,
+    brickWidth: REF_BRICK_WIDTH * scale,
+    brickHeight: 30,
+    rowPitch: 40,
+    top: 100,
+  };
+}
 
 function centerPaddleX(numScreens, paddleWidth = DEFAULT_PADDLE_WIDTH) {
   const width = paddleWidth || DEFAULT_PADDLE_WIDTH;
   return Math.round(((numScreens || 3) * SCREEN_WIDTH) / 2 - width / 2);
+}
+
+/** Spread players across the panoramic court so 5 paddles are not stacked on the center bezel. */
+function paddleXForSlot(slotIndex, maxPlayers, numScreens, paddleWidth = DEFAULT_PADDLE_WIDTH) {
+  const n = Math.max(1, maxPlayers || 1);
+  const width = paddleWidth || DEFAULT_PADDLE_WIDTH;
+  const world = (numScreens || 3) * SCREEN_WIDTH;
+  const idx = Math.max(0, Math.min(n - 1, slotIndex || 0));
+  const center = ((idx + 0.5) / n) * world;
+  return Math.max(0, Math.round(center - width / 2));
+}
+
+/**
+ * Phone delta is authored for a 3-screen landscape court. Scale by the real
+ * court width so a 12-screen wall stays traversable and a narrow portrait wall
+ * does not send the paddle flying.
+ */
+function inputScaleForWorld(numScreens, screenWidth) {
+  const world = (Number(numScreens) || 3) * (Number(screenWidth) || SCREEN_WIDTH);
+  const reference = 3 * LANDSCAPE_SCREEN_WIDTH;
+  return Math.max(0.15, Math.min(5, world / reference));
+}
+
+function inputScaleForScreens(numScreens) {
+  return inputScaleForWorld(numScreens, SCREEN_WIDTH);
+}
+
+function expandTiledBrickGrid(tile, numCols) {
+  if (!Array.isArray(tile) || tile.length === 0) return null;
+  const cols = Math.max(1, numCols || 1);
+  const tileW = Array.isArray(tile[0]) ? tile[0].length : 0;
+  if (tileW <= 0) return null;
+  const expanded = [];
+  for (let r = 0; r < tile.length; r++) {
+    const src = Array.isArray(tile[r]) ? tile[r] : [];
+    const row = [];
+    let mirror = false;
+    while (row.length < cols) {
+      const chunk = mirror ? src.slice().reverse() : src;
+      for (let c = 0; c < chunk.length && row.length < cols; c++) {
+        const v = chunk[c];
+        row.push(typeof v === 'number' ? v : 0);
+      }
+      mirror = !mirror;
+    }
+    expanded.push(row);
+  }
+  return expanded;
 }
 
 function getBallSpeedMultiplier(ballSpeed) {
@@ -136,34 +264,36 @@ function applyGameMasterMod(gameState, modType){
   }
 }
 
-function loadLevel(levelNumber, aiGeneratedGrid = null, numScreens = 3){
+function loadLevel(levelNumber, aiGeneratedGrid = null, numScreens = 3, screenWidth = SCREEN_WIDTH){
   try {
     let newBricks = [];
-    
+    const m = brickMetrics(screenWidth);
+    const brickAt = (r, c) => new Brick(
+      r, c,
+      m.gutter + c * m.cell,
+      m.top + r * m.rowPitch,
+      m.brickWidth, m.brickHeight
+    );
+
     if(aiGeneratedGrid && Array.isArray(aiGeneratedGrid) && aiGeneratedGrid.length > 0){
       for(let r = 0; r < aiGeneratedGrid.length; r++){
         let rowBricks = [];
         for(let c = 0; c < aiGeneratedGrid[r].length; c++){
           let val = aiGeneratedGrid[r][c];
+          let brick = brickAt(r, c);
           if(val > 0){
-            let brickType = val===3 ? 'indestructible' : (val===2 ? 'hard' : 'normal');
-            let xPos = 24+c*144;
-            let brick = new Brick(r, c, xPos, 100+r*40, 140, 30);
-            brick.type = brickType;
-            rowBricks.push(brick);
+            brick.type = val===3 ? 'indestructible' : (val===2 ? 'hard' : 'normal');
           }else{
-            let xPos = 24+c*144;
-            let brick = new Brick(r, c, xPos, 100+r*40, 140, 30);
             brick.active = false;
-            rowBricks.push(brick);
           }
+          rowBricks.push(brick);
         }
         newBricks.push(rowBricks);
       }
       return newBricks;
     }
 
-    let numCols = Math.floor(((numScreens * SCREEN_WIDTH) - 48) / 144);
+    let numCols = brickColumnsForWorld(numScreens);
     for(let row = 0; row < 8; row++){
       let rowBricks = [];
       for(let col = 0; col < numCols; col++){
@@ -190,8 +320,7 @@ function loadLevel(levelNumber, aiGeneratedGrid = null, numScreens = 3){
           }
         }
         
-        let xPos = 24+col*144;
-        let brick = new Brick(row, col, xPos, 100+row*40, 140, 30);
+        let brick = brickAt(row, col);
         brick.type = brickType;
         brick.active = active;
         rowBricks.push(brick);
@@ -371,7 +500,7 @@ function updatePowerUps(gameState, applyPowerUpEffectCallback){
       
       p.y += 5;
       
-      if(p.y > 1080){
+      if(p.y > CANVAS_HEIGHT){
         gameState.powerUps.splice(i, 1);
         continue;
       }
@@ -457,7 +586,7 @@ function updateGameLoop(gameState, applyPowerUpEffectCallback){
         }
       }
 
-      if(ball.y-ball.radius>=1080){
+      if(ball.y-ball.radius>=CANVAS_HEIGHT){
         ball.active = false;
         if(ball.lastTouchedByPlayerId){
           gameState.lastFallenBallToucher = ball.lastTouchedByPlayerId;
@@ -560,10 +689,21 @@ module.exports = {
   Brick,
   PowerUp,
   GameState,
+  CANVAS_HEIGHT,
+  SCREEN_WIDTH,
+  FRAME_ASPECT,
+  LANDSCAPE_SCREEN_WIDTH,
   PADDLE_HEIGHT,
   PADDLE_Y,
   DEFAULT_PADDLE_WIDTH,
+  resolveFrameAspect,
+  brickMetrics,
+  brickColumnsForWorld,
   centerPaddleX,
+  paddleXForSlot,
+  inputScaleForScreens,
+  inputScaleForWorld,
+  expandTiledBrickGrid,
   getBallSpeedMultiplier,
   getRespawnVelocity,
   loadLevel,

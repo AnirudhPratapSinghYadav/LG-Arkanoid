@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import '../utils/app_fonts.dart';
 import '../utils/constants.dart';
 
 class GameEndOverlay extends StatelessWidget {
@@ -45,7 +45,7 @@ class GameEndOverlay extends StatelessWidget {
                     title,
                     textAlign: TextAlign.center,
                     maxLines: 1,
-                    style: GoogleFonts.spaceGrotesk(
+                    style: AppFonts.spaceGrotesk(
                       fontSize: 36,
                       fontWeight: FontWeight.bold,
                       color: accentWarning,
@@ -61,7 +61,7 @@ class GameEndOverlay extends StatelessWidget {
                 child: Text(
                   subtitle,
                   textAlign: TextAlign.center,
-                  style: GoogleFonts.inter(
+                  style: AppFonts.inter(
                     fontSize: 20,
                     color: textPrimary,
                     fontWeight: FontWeight.w600,
@@ -71,7 +71,7 @@ class GameEndOverlay extends StatelessWidget {
               const SizedBox(height: 12),
               Text(
                 'Your Score: $score',
-                style: GoogleFonts.jetBrainsMono(
+                style: AppFonts.jetBrainsMono(
                   fontSize: 18,
                   color: playerColor,
                   fontWeight: FontWeight.bold,
@@ -79,7 +79,7 @@ class GameEndOverlay extends StatelessWidget {
               ),
               Text(
                 'Final Rank: #$rank',
-                style: GoogleFonts.jetBrainsMono(
+                style: AppFonts.jetBrainsMono(
                   fontSize: 16,
                   color: textSecondary,
                 ),
@@ -87,7 +87,7 @@ class GameEndOverlay extends StatelessWidget {
               const SizedBox(height: 12),
               Text(
                 'The wall returns to the lobby automatically.',
-                style: GoogleFonts.inter(
+                style: AppFonts.inter(
                   fontSize: 13,
                   color: textSecondary,
                 ),
@@ -108,7 +108,7 @@ class GameEndOverlay extends StatelessWidget {
                   ),
                   child: Text(
                     'NEXT LOBBY',
-                    style: GoogleFonts.spaceGrotesk(
+                    style: AppFonts.spaceGrotesk(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 1,

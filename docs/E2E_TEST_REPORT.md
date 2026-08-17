@@ -1,7 +1,7 @@
 # LG Arkanoid — End-to-end test report
 
 **Date:** 2026-08-10 (local)  
-**Environment:** Windows 10 · Node v24 · server `NUM_SCREENS=3` `PORT=3000`  
+**Environment:** Windows 10 · Node v24 · server `NUM_SCREENS=3` `PORT=8130`  
 **Branch:** `polish/final-9`
 
 ## What was tested
@@ -66,11 +66,13 @@ Offline vendor assets (`/js/vendor/phaser.min.js`, `/js/vendor/qrcode.min.js`) r
 
 ## How to re-run
 
+> The default port moved to **8130** after this run (see the port table in the
+> root README), so `PORT` no longer needs to be set by hand.
+
 ```bash
 # terminal 1
-set LG_PASSWORD=lg
+set LG_PASSWORD=lq
 set NUM_SCREENS=3
-set PORT=3000
 node server/index.js
 
 # terminal 2

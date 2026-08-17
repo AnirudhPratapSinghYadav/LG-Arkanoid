@@ -1,4 +1,4 @@
-import 'package:google_fonts/google_fonts.dart';
+import '../utils/app_fonts.dart';
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../utils/constants.dart';
@@ -28,7 +28,7 @@ class _QrScanScreenState extends State<QrScanScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: Text('Scan QR Code', style: GoogleFonts.spaceGrotesk(fontSize: 16, color: accentPrimary)),
+        title: Text('Scan QR Code', style: AppFonts.spaceGrotesk(fontSize: 16, color: accentPrimary)),
         iconTheme: const IconThemeData(color: accentPrimary),
       ),
       body: Stack(
@@ -44,7 +44,7 @@ class _QrScanScreenState extends State<QrScanScreen> {
                     const SizedBox(height: 16),
                     Text(
                       'Camera permission denied.',
-                      style: GoogleFonts.inter(color: Colors.white, fontSize: 16),
+                      style: AppFonts.inter(color: Colors.white, fontSize: 16),
                     ),
                     const SizedBox(height: 16),
                     ElevatedButton(
@@ -97,7 +97,7 @@ class _QrScanScreenState extends State<QrScanScreen> {
             child: Text(
               'SCAN THIS QR',
               textAlign: TextAlign.center,
-              style: GoogleFonts.vt323(
+              style: AppFonts.vt323(
                 fontSize: 32,
                 color: accentPrimary,
                 letterSpacing: 2,

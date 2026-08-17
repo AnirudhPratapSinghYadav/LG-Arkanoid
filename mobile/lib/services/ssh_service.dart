@@ -117,6 +117,28 @@ class SSHService {
   }
 
   // --------------------------------------------------------------------------
+  // detectScreenCount
+  //
+  // Asks the rig how wide it is instead of making the operator guess. DHCP
+  // writes DHCP_LG_FRAMES_MAX into /lg/personavars.txt on every frame, which is
+  // the same source the other Liquid Galaxy games read during install.
+  //
+  // Returns the screen count, or null when the rig does not answer.
+  // --------------------------------------------------------------------------
+  Future<int?> detectScreenCount() async {
+    const command =
+        "cat /lg/personavars.txt /home/lg/personavars.txt 2>/dev/null | "
+        "grep -m1 DHCP_LG_FRAMES_MAX | cut -d= -f2 | tr -dc '0-9'";
+
+    final output = await sendCommand(command);
+    if (output.startsWith('ERROR:')) return null;
+
+    final screens = int.tryParse(output.trim());
+    if (screens == null || screens < 1 || screens > 12) return null;
+    return screens;
+  }
+
+  // --------------------------------------------------------------------------
   // launchGame
   //
   // Launches the LG Arkanoid game on the rig by running the open-arkanoid.sh

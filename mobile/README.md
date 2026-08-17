@@ -18,9 +18,47 @@ flutter run
 Release APK:
 
 ```bash
-flutter build apk --release
+flutter build apk --release --split-per-abi
 ```
 
-Connect with master IP, port **3000**, and the session token shown on the Liquid Galaxy center screen (QR / 4-letter code). `/health` does not include the join code.
+`--split-per-abi` keeps each APK well inside the Play Store / GO Web Store
+comfort zone by shipping one native ABI instead of all of them. Release
+builds also run R8 (`isMinifyEnabled`) and the Android resource shrinker
+(`isShrinkResources`) — see `android/app/build.gradle.kts`. In-app images
+are lossless WebP. Use `flutter build appbundle --release` only if you also
+upload to Play; the GO Store wants the arm64 APK.
+
+The listing itself is a pull request against
+[LiquidGalaxyLAB/Data](https://github.com/LiquidGalaxyLAB/Data), not against
+GO-Web-Store. Full steps: [docs/GO_WEB_STORE.md](../docs/GO_WEB_STORE.md).
+
+Connect with master IP, port **8130**, and the session token shown on the Liquid Galaxy center screen (QR / 4-letter code). `/health` does not include the join code.
+
+## Typography is offline by design
+
+The controller does **not** use the `google_fonts` package. That package pulls
+its `.ttf` files from `fonts.gstatic.com` on first use, and a phone joined to a
+Liquid Galaxy rig's LAN usually has no route to the internet — every label would
+quietly fall back to the platform font in the middle of a demo.
+
+Instead all five faces are bundled (~1.6 MB total) and used through
+`lib/utils/app_fonts.dart`:
+
+| Family | File | Notes |
+| --- | --- | --- |
+| Inter | `Inter-Variable.ttf` | variable, `wght` 100–900 |
+| Space Grotesk | `SpaceGrotesk-Variable.ttf` | variable, `wght` 300–700 |
+| JetBrains Mono | Regular + Bold | static faces, used for codes and IPs |
+| VT323 | Regular | single weight |
+| Press Start 2P | Regular | single weight, splash title |
+
+Inter and Space Grotesk exist upstream only as variable fonts, so `AppFonts`
+sets `fontVariations: [FontVariation('wght', …)]` as well as `fontWeight`.
+Space Grotesk's axis *defaults to 300 (Light)*, so asking for a regular weight
+without that variation renders visibly thin — use `AppFonts`, not a raw
+`TextStyle(fontFamily: 'SpaceGrotesk')`.
+
+Their SIL Open Font License texts are bundled too and registered with
+`LicenseRegistry` in `main.dart`, so they appear in the app's licence page.
 
 See the root [README.md](../README.md) and [docs/mobile-setup.md](../docs/mobile-setup.md).
