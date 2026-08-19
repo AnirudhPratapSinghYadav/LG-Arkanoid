@@ -460,6 +460,29 @@ body {
 
 .game-end-overlay.active { display: flex; }
 
+.ge-kicker {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.72rem;
+    letter-spacing: 0.28em;
+    color: #ffc300;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+.ge-message {
+    max-width: 28rem;
+    margin: 12px 0 8px;
+    color: #c5d0da;
+    font-size: 0.92rem;
+    line-height: 1.4;
+}
+.ge-board {
+    margin: 10px 0 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    color: #20c5ff;
+    line-height: 1.6;
+}
+
 .ge-title {
     font-family: 'VT323', monospace;
     font-size: clamp(28px, 10vw, 48px);

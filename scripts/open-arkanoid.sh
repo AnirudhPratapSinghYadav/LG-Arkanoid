@@ -212,6 +212,13 @@ else
 fi
 export LG_FRAME_ASPECT="${LG_FRAME_ASPECT:-}"
 
+# Always rebuild the wall client. Express prefers dist/ when it exists, so a
+# git pull without a rebuild would keep serving yesterday's JS on the glass.
+if command -v npm >/dev/null 2>&1; then
+  echo "Building wall client (dist/)…"
+  (cd "$PROJECT_DIR" && npm run build) || echo "WARNING: npm run build failed — existing dist/ may be stale."
+fi
+
 # Serve source tree if dist was never built (Pacman-style fallback).
 if [ ! -f "$PROJECT_DIR/dist/index.html" ]; then
   export NODE_ENV=development

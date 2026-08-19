@@ -36,6 +36,25 @@ jobs:
       - name: Run Server Tests
         run: npm test
 
+      - name: Socket.IO E2E
+        env:
+          PORT: 8130
+          NUM_SCREENS: 3
+          GEMINI_API_KEY: ""
+          NODE_ENV: development
+        run: |
+          node server/index.js &
+          SERVER_PID=$!
+          for i in $(seq 1 40); do
+            curl -sf http://127.0.0.1:8130/health && break
+            sleep 0.25
+          done
+          curl -sf http://127.0.0.1:8130/health
+          node server/tests/e2e-multi-client.test.js
+          STATUS=$?
+          kill "$SERVER_PID" 2>/dev/null || true
+          exit $STATUS
+
       - name: Build Web Client
         run: npm run build
 

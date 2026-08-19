@@ -29,6 +29,8 @@ class _ControllerScreenState extends State<ControllerScreen>
   bool _showGameEndOverlay = false;
   String _gameEndTitle = '';
   String _gameEndSubtitle = '';
+  String _gameEndMessage = '';
+  List<Map<String, dynamic>> _gameEndRankings = <Map<String, dynamic>>[];
 
   late AnimationController _glowController;
   late Animation<double> _glowAnimation;
@@ -97,7 +99,28 @@ class _ControllerScreenState extends State<ControllerScreen>
         } else {
           _gameEndTitle = 'GAME OVER';
         }
-        _gameEndSubtitle = '$winnerName wins!';
+        _gameEndSubtitle = 'Congratulations — $winnerName wins!';
+        final commentary = (gameState['lastCommentary'] as String?)?.trim() ?? '';
+        if (commentary.isNotEmpty) {
+          _gameEndMessage = commentary;
+        } else if (status == 'time_up') {
+          _gameEndMessage =
+              'Congratulations $winnerName — the clock hit zero and you own the wall.';
+        } else if (status == 'win') {
+          _gameEndMessage =
+              'Congratulations $winnerName — you cleared the Liquid Galaxy wall.';
+        } else {
+          _gameEndMessage =
+              'Congratulations $winnerName — last paddle standing.';
+        }
+        _gameEndRankings = sorted.take(5).map((raw) {
+          final row = raw as Map;
+          return <String, dynamic>{
+            'name': row['name'] as String? ??
+                'Player ${row['playerNumber'] ?? ''}',
+            'score': row['score'] as int? ?? 0,
+          };
+        }).toList();
       });
 
       HapticFeedback.heavyImpact();
@@ -372,6 +395,8 @@ class _ControllerScreenState extends State<ControllerScreen>
               GameEndOverlay(
                 title: _gameEndTitle,
                 subtitle: _gameEndSubtitle,
+                message: _gameEndMessage,
+                rankings: _gameEndRankings,
                 score: service.score,
                 rank: service.rank,
                 playerColor: playerColor,

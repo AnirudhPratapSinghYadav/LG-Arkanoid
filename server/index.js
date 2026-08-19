@@ -261,6 +261,7 @@ function returnToLobby() {
   worldState.gameActive = false;
   worldState.gameStartedAt = null;
   worldState.countdownStartedAt = null;
+  worldState.gameStatus = 'lobby';
   worldState.level = 1;
   worldState.currentLevel = 1;
   // Rotate join secrets so leaked lobby codes / resumes die with the match.

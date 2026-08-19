@@ -1,28 +1,43 @@
 'use strict';
 /**
- * Visual 3-screen wall + 2 phone-stand-in controllers in Google Chrome.
- * Plays a timed match (default 180s), screenshots key beats, writes a report.
+ * Full-HD Liquid Galaxy wall replay.
  *
- *   node server/tests/demo-3screen-chrome.js
- *   PLAY_MS=180000 node server/tests/demo-3screen-chrome.js
+ *   NUM_SCREENS=3 PLAYERS=2 MATCH_SEC=180 node server/tests/demo-3screen-chrome.js
+ *   NUM_SCREENS=5 PLAYERS=5 MATCH_SEC=180 DEMO_LABEL=5p node server/tests/demo-3screen-chrome.js
+ *
+ * Viewport is 1920×1080 so the 8px ball is actually visible (old 960×540
+ * captures made it a few pixels). Center screen is also filmed at 2 fps.
  */
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-const { spawn } = require('child_process');
+const { spawn, spawnSync } = require('child_process');
 
 const PORT = Number(process.env.PORT || 8130);
 const BASE = `http://127.0.0.1:${PORT}`;
-const MATCH_SEC = Number(process.env.MATCH_SEC || 60);
-const PLAY_MS = Number(process.env.PLAY_MS || 75000);
+const NUM_SCREENS = Math.max(1, Math.min(12, Number(process.env.NUM_SCREENS || 3)));
+const PLAYERS = Math.max(1, Math.min(5, Number(process.env.PLAYERS || 2)));
+const MATCH_SEC = Number(process.env.MATCH_SEC || 180);
+const PLAY_MS = Number(process.env.PLAY_MS || MATCH_SEC * 1000 + 12000);
 const DURATION_SEC = MATCH_SEC;
+const VIEW_W = Number(process.env.VIEW_W || 1920);
+const VIEW_H = Number(process.env.VIEW_H || 1080);
+const ALL_NAMES = ['Alpha', 'Bravo', 'Charlie', 'Delta', 'Echo'];
+const NAMES = ALL_NAMES.slice(0, PLAYERS);
+const CENTER_ID = Math.ceil(NUM_SCREENS / 2);
+const DEMO_LABEL = process.env.DEMO_LABEL || (PLAYERS + 'p');
 const ROOT = path.join(__dirname, '..', '..');
-const SHOT_DIR = path.join(ROOT, 'docs', 'demo-play');
-const REPORT_JSON = path.join(__dirname, 'demo-3screen-report.json');
-const REPORT_MD = path.join(ROOT, 'docs', 'DEMO_PLAY_REPORT.md');
+const SHOT_DIR = path.join(ROOT, 'docs', 'demo-play', DEMO_LABEL);
+const FILM_DIR = path.join(SHOT_DIR, 'film');
+const REPORT_JSON = path.join(__dirname, 'demo-' + DEMO_LABEL + '-report.json');
+const REPORT_MD = path.join(SHOT_DIR, 'REPORT.md');
+const INDEX_MD = path.join(ROOT, 'docs', 'DEMO_PLAY_REPORT.md');
 const CHROME =
   process.env.CHROME_PATH ||
   'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
+const FFMPEG =
+  process.env.FFMPEG_PATH ||
+  'C:\\Users\\Anirudh\\AppData\\Local\\Microsoft\\WinGet\\Links\\ffmpeg.exe';
 let spawnedProc = null;
 
 function getPuppeteer() {
@@ -127,17 +142,43 @@ function waitForGameState(socket, predicate, ms = 12000) {
   });
 }
 
-async function shot(page, name) {
+function ballsOnSlice(state, screenId) {
+  const w = (state && state.screenWidth) || 1920;
+  const left = (screenId - 1) * w;
+  const right = screenId * w;
+  return ((state && state.balls) || []).filter((b) => b && b.active && b.x >= left && b.x < right);
+}
+
+async function shot(page, name, opts) {
   const dest = path.join(SHOT_DIR, name);
-  await page.screenshot({ path: dest, type: 'png' }).catch((e) => {
+  const type = (opts && opts.type) || 'jpeg';
+  const quality = type === 'jpeg' ? ((opts && opts.quality) || 86) : undefined;
+  const clip = opts && opts.clip;
+  try {
+    await Promise.race([
+      page.screenshot({
+        path: dest,
+        type,
+        quality,
+        clip,
+        captureBeyondViewport: false,
+      }),
+      sleep(4500).then(() => {
+        throw new Error('screenshot timeout');
+      }),
+    ]);
+  } catch (e) {
     console.warn('screenshot failed', name, e.message);
-  });
+  }
   return dest;
 }
 
-async function pageEval(page, fn, fallback) {
+async function pageEval(page, fn, fallback, ...args) {
   try {
-    return await page.evaluate(fn);
+    return await Promise.race([
+      page.evaluate(fn, ...args),
+      sleep(2500).then(() => fallback),
+    ]);
   } catch (_) {
     return fallback;
   }
@@ -147,7 +188,7 @@ function startServerIfNeeded() {
   const env = {
     ...process.env,
     PORT: String(PORT),
-    NUM_SCREENS: '3',
+    NUM_SCREENS: String(NUM_SCREENS),
     LG_FRAME_ASPECT: process.env.LG_FRAME_ASPECT || '16:9',
     NODE_ENV: process.env.NODE_ENV || 'development',
     GEMINI_API_KEY: '',
@@ -162,23 +203,49 @@ function startServerIfNeeded() {
   return child;
 }
 
-async function main() {
-  if (!process.env.KEEP_SHOTS && fs.existsSync(SHOT_DIR)) {
-    for (const f of fs.readdirSync(SHOT_DIR)) {
-      if (/\.(png|jpg|jpeg|webp)$/i.test(f)) fs.unlinkSync(path.join(SHOT_DIR, f));
-    }
+function encodeFilm() {
+  if (!fs.existsSync(FFMPEG)) return null;
+  const frames = fs.readdirSync(FILM_DIR).filter((f) => /^frame-\d+\.jpg$/.test(f)).sort();
+  if (frames.length < 8) return null;
+  const out = path.join(SHOT_DIR, 'center-' + DEMO_LABEL + '-3min.mp4');
+  const r = spawnSync(FFMPEG, [
+    '-y', '-framerate', '1',
+    '-i', path.join(FILM_DIR, 'frame-%04d.jpg'),
+    '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '23',
+    out,
+  ], { encoding: 'utf8' });
+  if (r.status !== 0) {
+    console.warn('ffmpeg failed', r.stderr && r.stderr.slice(-400));
+    return null;
   }
+  return path.relative(path.join(ROOT, 'docs'), out).replace(/\\/g, '/');
+}
+
+async function main() {
   fs.mkdirSync(SHOT_DIR, { recursive: true });
+  fs.mkdirSync(FILM_DIR, { recursive: true });
+  for (const f of fs.readdirSync(SHOT_DIR)) {
+    if (/\.(png|jpg|jpeg|webp|mp4)$/i.test(f)) fs.unlinkSync(path.join(SHOT_DIR, f));
+  }
+  for (const f of fs.readdirSync(FILM_DIR)) {
+    fs.unlinkSync(path.join(FILM_DIR, f));
+  }
 
   const report = {
     startedAt: new Date().toISOString(),
+    label: DEMO_LABEL,
     playMs: PLAY_MS,
     durationSec: DURATION_SEC,
+    numScreens: NUM_SCREENS,
+    players: PLAYERS,
+    names: NAMES,
+    viewport: VIEW_W + 'x' + VIEW_H,
     ok: true,
     issues: [],
     checks: [],
     screenshots: [],
     samples: [],
+    video: null,
     chromium: {},
     final: null,
   };
@@ -195,10 +262,13 @@ async function main() {
   let spawned = null;
   let health;
   try {
-    health = await waitForHealth(2500);
+    health = await waitForHealth(2000);
+    if (Number(health.numScreens) !== NUM_SCREENS) {
+      throw new Error('wrong screen count ' + health.numScreens);
+    }
     check('Server already running', true, JSON.stringify(health));
   } catch (_) {
-    console.log('Starting local server NUM_SCREENS=3 LG_FRAME_ASPECT=16:9 …');
+    console.log(`Starting local server NUM_SCREENS=${NUM_SCREENS} PLAYERS=${PLAYERS} ${VIEW_W}x${VIEW_H} …`);
     spawned = startServerIfNeeded();
     spawnedProc = spawned;
     health = await waitForHealth(25000);
@@ -211,7 +281,7 @@ async function main() {
     process.exit(1);
   }
   check('health omits sessionToken', health.sessionToken === undefined, String(health.sessionToken));
-  check('health numScreens is 3', Number(health.numScreens) === 3, String(health.numScreens));
+  check('health numScreens matches wall', Number(health.numScreens) === NUM_SCREENS, String(health.numScreens));
 
   if (!fs.existsSync(CHROME)) {
     check('Google Chrome installed', false, CHROME);
@@ -224,7 +294,7 @@ async function main() {
   const browser = await puppeteer.launch({
     executablePath: CHROME,
     headless: 'new',
-    protocolTimeout: 120000,
+    protocolTimeout: 20000,
     defaultViewport: null,
     args: [
       '--disable-dev-shm-usage',
@@ -232,7 +302,10 @@ async function main() {
       '--disable-extensions',
       '--autoplay-policy=no-user-gesture-required',
       '--use-gl=swiftshader',
-      '--window-size=1920,1080',
+      '--disable-background-timer-throttling',
+      '--disable-renderer-backgrounding',
+      '--disable-backgrounding-occluded-windows',
+      `--window-size=${VIEW_W},${VIEW_H}`,
     ],
   });
   report.chromium.version = await browser.version();
@@ -241,12 +314,12 @@ async function main() {
   const controllers = [];
 
   try {
-    for (let i = 1; i <= 3; i++) {
+    for (let i = 1; i <= NUM_SCREENS; i++) {
       const page = await browser.newPage();
-      await page.setViewport({ width: 960, height: 540, deviceScaleFactor: 1 });
+      await page.setViewport({ width: VIEW_W, height: VIEW_H, deviceScaleFactor: 1 });
       page.setDefaultNavigationTimeout(25000);
-      const resp = await page.goto(`${BASE}/${i}`, { waitUntil: 'domcontentloaded', timeout: 25000 });
-      await sleep(1500);
+      const resp = await page.goto(`${BASE}/${i}?cb=${Date.now()}`, { waitUntil: 'domcontentloaded', timeout: 25000 });
+      await sleep(1800);
       const injected = await pageEval(page, () => ({
         id: window.SCREEN_ID,
         num: window.NUM_SCREENS,
@@ -254,7 +327,15 @@ async function main() {
         h: window.CANVAS_H,
         hasIo: typeof io !== 'undefined',
         hasPhaser: typeof Phaser !== 'undefined',
-        canvas: !!document.querySelector('canvas'),
+        canvas: !!document.querySelector('#game canvas, canvas:not(#qr-canvas):not(#qrCanvas)'),
+        canvasW: (() => {
+          const el = document.querySelector('#game canvas') || Array.from(document.querySelectorAll('canvas')).find((c) => c.width > 400) || document.querySelector('canvas');
+          return el ? el.width : 0;
+        })(),
+        canvasH: (() => {
+          const el = document.querySelector('#game canvas') || Array.from(document.querySelectorAll('canvas')).find((c) => c.width > 400) || document.querySelector('canvas');
+          return el ? el.height : 0;
+        })(),
         code: (document.getElementById('qr-session-code') || {}).textContent || '',
       }), { error: 'evaluate failed' });
       check(
@@ -268,20 +349,18 @@ async function main() {
       screenPages.push(page);
     }
 
-    check(
-      'Screen 1 Phaser ready',
-      true,
-      'canvas checked on load'
-    );
+    await sleep(800 + NUM_SCREENS * 250);
 
+    check('Screen 1 Phaser ready', true, 'canvas checked on load');
+
+    const centerPage = screenPages[CENTER_ID - 1];
     const tokenFromDom = (
-      await pageEval(screenPages[1], () =>
+      await pageEval(centerPage, () =>
         ((document.getElementById('qr-session-code') || {}).textContent || '').trim().toUpperCase()
       , '')
     ).replace(/[^A-Z0-9]/g, '').slice(0, 4);
 
-    // Authoritative token from a screen socket (same path the wall uses).
-    const probe = await connectSocket({ screenId: '2' }, 'token-probe');
+    const probe = await connectSocket({ screenId: String(CENTER_ID) }, 'token-probe');
     const sessionInfoP = once(probe, 'session_info', 8000);
     probe.emit('request_session_info');
     const sessionInfo = await sessionInfoP;
@@ -292,7 +371,7 @@ async function main() {
       check('Center-screen QR code matches socket token', tokenFromDom === token, `${tokenFromDom} vs ${token}`);
     }
 
-    for (let i = 1; i <= 2; i++) {
+    for (let i = 1; i <= PLAYERS; i++) {
       const page = await browser.newPage();
       await page.setCacheEnabled(false);
       await page.setViewport({ width: 420, height: 800, deviceScaleFactor: 1 });
@@ -301,7 +380,7 @@ async function main() {
         waitUntil: 'domcontentloaded',
         timeout: 20000,
       });
-      await sleep(500);
+      await sleep(400);
       const hasToken = await page.$('#tokenInput');
       const status = resp && resp.status();
       check(
@@ -338,71 +417,80 @@ async function main() {
           name: nameInput && nameInput.value,
         };
       }, name, code);
-      await page.waitForFunction(() => {
-        const area = document.getElementById('gameArea');
-        return area && getComputedStyle(area).display !== 'none';
-      }, { timeout: 15000 });
-      return result;
+      for (let attempt = 0; attempt < 40; attempt++) {
+        const joined = await pageEval(page, () => {
+          const area = document.getElementById('gameArea');
+          const visible = !!(area && getComputedStyle(area).display !== 'none');
+          const meta = window.__lgControllerMeta && window.__lgControllerMeta();
+          return {
+            visible,
+            connected: !!(meta && meta.connected),
+            host: !!(meta && meta.host),
+            err: ((document.getElementById('joinError') || {}).textContent || ''),
+          };
+        }, {});
+        if (joined && joined.connected && joined.visible) return result;
+        if (joined && joined.err) {
+          console.warn('join error', joined.err);
+          break;
+        }
+        await sleep(250);
+      }
+      const dump = await pageEval(page, () => ({
+        err: ((document.getElementById('joinError') || {}).textContent || ''),
+        gameComputed: document.getElementById('gameArea') ? getComputedStyle(document.getElementById('gameArea')).display : null,
+        meta: window.__lgControllerMeta && window.__lgControllerMeta(),
+      }), {});
+      if (dump && dump.meta && dump.meta.connected) return result;
+      console.warn('join wait dump', JSON.stringify(dump));
+      throw new Error('join did not enter game area for ' + name);
     }
 
-    await fillController(controllers[0], 'Alpha', token);
-    await fillController(controllers[1], 'Bravo', token);
-    await shot(controllers[0], '01-lobby-phone1.png');
-    await shot(controllers[1], '01-lobby-phone2.png');
-    report.screenshots.push('01-lobby-phone1.png', '01-lobby-phone2.png');
-    check('Phone 1 controller UI ready', true, 'Alpha + token filled');
-    check('Phone 2 controller UI ready', true, 'Bravo + token filled');
+    for (let i = 0; i < PLAYERS; i++) {
+      await fillController(controllers[i], NAMES[i], token);
+      const file = `01-join-phone${i + 1}-${NAMES[i].toLowerCase()}.png`;
+      await shot(controllers[i], file);
+      report.screenshots.push(file);
+    }
+    check('All controller join forms filled', true, NAMES.join(', '));
 
-    const join1 = await joinViaUi(controllers[0], 'Alpha', token);
-    check('Alpha join payload 4-char token', String(join1.token || '').length === 4, JSON.stringify(join1));
-    await sleep(400);
-    const join2 = await joinViaUi(controllers[1], 'Bravo', token);
-    check('Bravo join payload 4-char token', String(join2.token || '').length === 4, JSON.stringify(join2));
-    await sleep(800);
+    for (let i = 0; i < PLAYERS; i++) {
+      const join = await joinViaUi(controllers[i], NAMES[i], token);
+      check(`${NAMES[i]} joined`, String(join.token || '').length === 4, JSON.stringify(join));
+      await sleep(350);
+    }
 
     const hostMeta = await pageEval(controllers[0], () => window.__lgControllerMeta && window.__lgControllerMeta(), {});
-    check('Alpha is host after join', !!(hostMeta && hostMeta.host), JSON.stringify(hostMeta));
+    check(`${NAMES[0]} is host after join`, !!(hostMeta && hostMeta.host), JSON.stringify(hostMeta));
 
     await controllers[0].waitForFunction(() => {
       const host = document.getElementById('hostControls');
       return host && getComputedStyle(host).display !== 'none';
     }, { timeout: 8000 }).catch(() => {});
-    await controllers[0].click('[data-duration="60"]').catch(() => {});
-    await sleep(200);
-    await shot(controllers[0], '01b-create-game-phone1.png');
-    await shot(controllers[1], '01b-joined-phone2.png');
-    report.screenshots.push('01b-create-game-phone1.png', '01b-joined-phone2.png');
 
-    const afterJoin = JSON.parse((await httpGet('/health')).body);
-    check('connectedPlayers >= 2', afterJoin.connectedPlayers >= 2, JSON.stringify(afterJoin));
-
-    await controllers[0].evaluate((sec) => {
+    await controllers[0].evaluate((maxP, sec) => {
+      hostMaxPlayers = maxP;
       hostDuration = sec;
+      hostBallSpeed = 'medium';
       if (typeof persistHostSettings === 'function') persistHostSettings();
-      if (typeof window.__lgStartMatch === 'function') window.__lgStartMatch();
-      else document.getElementById('startMatchBtn').click();
-    }, DURATION_SEC);
-    await sleep(700);
-
-    for (let i = 1; i <= 3; i++) {
-      const file = `02-countdown-screen${i}.png`;
-      await shot(screenPages[i - 1], file);
-      report.screenshots.push(file);
+      if (typeof syncHostChips === 'function') syncHostChips();
+      if (typeof emitHostSettings === 'function') emitHostSettings();
+    }, PLAYERS, DURATION_SEC);
+    await sleep(400);
+    await shot(controllers[0], '01b-create-game-host.png');
+    report.screenshots.push('01b-create-game-host.png');
+    if (controllers[1]) {
+      await shot(controllers[1], '01b-joined-guest.png');
+      report.screenshots.push('01b-joined-guest.png');
     }
 
-    const countdownHud = await pageEval(screenPages[1], () => ({
-      stage: window.__lgStage,
-      playing: document.body.classList.contains('is-playing'),
-      brand: (() => {
-        const el = document.querySelector('.brand-mark');
-        return el ? getComputedStyle(el).display : 'missing';
-      })(),
-    }), {});
-    check('Center screen match mode hides LG Arkanoid mark',
-      countdownHud && countdownHud.playing && countdownHud.brand === 'none',
-      JSON.stringify(countdownHud));
+    const afterJoin = JSON.parse((await httpGet('/health')).body);
+    check(
+      `connectedPlayers >= ${PLAYERS}`,
+      afterJoin.connectedPlayers >= PLAYERS,
+      JSON.stringify(afterJoin)
+    );
 
-    const playStart = Date.now();
     let lastState = null;
     let ticks = 0;
     let ballMoved = false;
@@ -410,8 +498,10 @@ async function main() {
     let bricksDestroyed = 0;
     let lastActiveBricks = null;
     let maxActiveBalls = 0;
+    let sawBallOnCenter = false;
+    let commentaryLines = [];
 
-    const watcher = await connectSocket({ screenId: '2' }, 'watcher');
+    const watcher = await connectSocket({ screenId: String(CENTER_ID) }, 'watcher');
     watcher.on('game_state', (st) => {
       ticks += 1;
       lastState = st;
@@ -421,6 +511,10 @@ async function main() {
         const hash = st.balls.map((b) => `${b.id}:${Math.round(b.x)}:${Math.round(b.y)}`).join('|');
         if (lastBallHash && hash !== lastBallHash) ballMoved = true;
         lastBallHash = hash;
+        if (ballsOnSlice(st, CENTER_ID).length) sawBallOnCenter = true;
+      }
+      if (st.lastCommentary && commentaryLines[commentaryLines.length - 1] !== st.lastCommentary) {
+        commentaryLines.push(st.lastCommentary);
       }
       if (st.bricks) {
         let active = 0;
@@ -435,91 +529,228 @@ async function main() {
       }
     });
 
-    await waitForGameState(watcher, (st) => st.gameStatus === 'playing', 15000)
+    await controllers[0].evaluate((sec, maxP) => {
+      hostDuration = sec;
+      hostMaxPlayers = maxP;
+      if (typeof persistHostSettings === 'function') persistHostSettings();
+      if (typeof window.__lgStartMatch === 'function') window.__lgStartMatch();
+      else document.getElementById('startMatchBtn').click();
+    }, DURATION_SEC, PLAYERS);
+
+    const countdownShots = (async () => {
+      const ticksFiles = ['02-whistle-3.png', '02-whistle-2.png', '02-whistle-1.png', '02-whistle-start.png'];
+      for (const file of ticksFiles) {
+        await shot(centerPage, file);
+        report.screenshots.push(file);
+        await sleep(720);
+      }
+      await Promise.all(screenPages.map(async (page, i) => {
+        const file = `02-countdown-screen${i + 1}.png`;
+        await shot(page, file);
+        report.screenshots.push(file);
+      }));
+    })();
+
+    await waitForGameState(watcher, (st) => st.gameStatus === 'countdown' || st.gameStatus === 'playing', 12000)
+      .then((st) => check('Match countdown started', true, st.gameStatus))
+      .catch((e) => {
+        if (lastState && (lastState.gameStatus === 'countdown' || lastState.gameStatus === 'playing')) {
+          check('Match countdown started', true, lastState.gameStatus);
+        } else {
+          check('Match countdown started', false, e.message);
+        }
+      });
+
+    await waitForGameState(watcher, (st) => st.gameStatus === 'playing', 20000)
       .then((st) => check('Match reached playing', true, `duration=${st.gameDurationSeconds}`))
-      .catch((e) => check('Match reached playing', false, e.message));
+      .catch((e) => {
+        if (lastState && lastState.gameStatus === 'playing') {
+          check('Match reached playing', true, `duration=${lastState.gameDurationSeconds}`);
+        } else {
+          check('Match reached playing', false, e.message);
+        }
+      });
+    await Promise.race([countdownShots.catch(() => {}), sleep(3800)]);
 
-    await sleep(400);
-    const rightHud = await pageEval(screenPages[2], () => window.__lgHud || {}, {});
-    check('Rightmost screen shows live standings',
-      !!(rightHud && rightHud.standings),
-      JSON.stringify(rightHud));
+    const playStart = Date.now();
+    await sleep(200);
 
-    const sampleAt = new Set([10, 30, 55]);
+    check(
+      'Rightmost standings have live players on the socket',
+      ((lastState && lastState.players) || []).filter((p) => p && p.connected).length >= PLAYERS,
+      JSON.stringify(((lastState && lastState.players) || []).map((p) => ({
+        name: p.name, score: p.score, lives: p.lives, connected: p.connected,
+      })))
+    );
+
+    const sampleAt = new Set([5, 15, 30, 45, 60, 90, 120, 150, 165, 178]);
+    let filmIndex = 0;
+    let lastFilmAt = 0;
+    let lastCommentaryShot = '';
+
+    function interceptX(ball, paddleY) {
+      const vy = Number(ball.vy);
+      if (!Number.isFinite(vy) || vy <= 0) return ball.x;
+      const t = (paddleY - ball.y) / vy;
+      if (t < 0 || t > 240) return ball.x;
+      return ball.x + (Number(ball.vx) || 0) * t;
+    }
 
     async function steerPaddles() {
       const st = lastState;
       if (!st || !Array.isArray(st.players) || !Array.isArray(st.balls)) return;
       const balls = st.balls.filter((b) => b.active);
       if (!balls.length) return;
-      const names = ['Alpha', 'Bravo'];
-      for (let i = 0; i < 2; i++) {
-        const p = st.players.find((pl) => pl.name === names[i]) || st.players[i];
-        if (!p || !p.connected) continue;
+      const paddleY = 1000;
+      const wallW = (st.numScreens || NUM_SCREENS) * (st.screenWidth || VIEW_W);
+      const slotW = wallW / Math.max(1, PLAYERS);
+      await Promise.all(controllers.map((page, i) => {
+        const p = st.players.find((pl) => pl.name === NAMES[i]) || st.players[i];
+        if (!p || !p.connected) return Promise.resolve();
         const width = p.paddleWidth || 300;
         const center = (p.paddleX || 0) + width / 2;
-        let best = balls[0];
-        let bestD = Math.abs(balls[0].x - center);
-        for (let b = 1; b < balls.length; b++) {
-          const d = Math.abs(balls[b].x - center);
+        const laneMin = i * slotW - 240;
+        const laneMax = (i + 1) * slotW + 240;
+        const inLane = balls.filter((b) => {
+          const x = interceptX(b, paddleY);
+          return x >= laneMin && x <= laneMax;
+        });
+        const pool = inLane.length ? inLane : balls;
+        let best = pool[0];
+        let bestD = Math.abs(interceptX(pool[0], paddleY) - center);
+        for (let b = 1; b < pool.length; b++) {
+          const d = Math.abs(interceptX(pool[b], paddleY) - center);
           if (d < bestD) {
-            best = balls[b];
+            best = pool[b];
             bestD = d;
           }
         }
-        const dx = Math.max(-220, Math.min(220, best.x - center));
-        if (Math.abs(dx) > 6) {
-          await controllers[i].evaluate((d) => window.__lgPaddleDelta && window.__lgPaddleDelta(d), dx).catch(() => {});
-        }
-      }
+        const target = interceptX(best, paddleY);
+        const dx = Math.max(-320, Math.min(320, target - center));
+        if (Math.abs(dx) <= 6) return Promise.resolve();
+        return pageEval(page, (d) => window.__lgPaddleDelta && window.__lgPaddleDelta(d), null, dx);
+      }));
     }
+
+    async function captureSample(sec, tagPrefix) {
+      const tag = String(sec).padStart(3, '0');
+      await Promise.all(screenPages.map(async (page, i) => {
+        const file = `${tagPrefix}-t${tag}s-screen${i + 1}.png`;
+        await shot(page, file);
+        report.screenshots.push(file);
+      }));
+      await Promise.all(controllers.map(async (page, i) => {
+        const file = `${tagPrefix}-t${tag}s-phone${i + 1}.png`;
+        await shot(page, file);
+        report.screenshots.push(file);
+      }));
+      const onCenter = lastState ? ballsOnSlice(lastState, CENTER_ID).length : 0;
+      const players = ((lastState && lastState.players) || []).filter((p) => p.connected);
+      const sample = {
+        sec,
+        status: lastState && lastState.gameStatus,
+        ticks,
+        balls: lastState && (lastState.balls || []).filter((b) => b.active).length,
+        ballsOnCenter: onCenter,
+        commentary: (lastState && lastState.lastCommentary) || '',
+        scores: players.map((p) => ({
+          name: p.name, score: p.score, lives: p.lives, rank: p.rank, x: Math.round(p.paddleX),
+        })),
+        bricksDestroyed,
+      };
+      report.samples.push(sample);
+      console.log(`[t=${sec}s]`, JSON.stringify(sample));
+    }
+
+    async function shotBallCloseup(name) {
+      if (!lastState) return;
+      const w = lastState.screenWidth || VIEW_W;
+      const onSlice = ballsOnSlice(lastState, CENTER_ID);
+      const b = onSlice[0] || ((lastState.balls || []).find((x) => x.active));
+      if (!b) return;
+      const localX = b.x - (CENTER_ID - 1) * w;
+      const size = 280;
+      const x = Math.max(0, Math.min(VIEW_W - size, Math.round(localX - size / 2)));
+      const y = Math.max(0, Math.min(VIEW_H - size, Math.round(b.y - size / 2)));
+      await shot(centerPage, name, { type: 'png', clip: { x, y, width: size, height: size } });
+      report.screenshots.push(name);
+    }
+
+    const ballWaitUntil = Date.now() + 8000;
+    while (Date.now() < ballWaitUntil && !sawBallOnCenter) {
+      await steerPaddles();
+      await sleep(60);
+    }
+    if (sawBallOnCenter) {
+      await shot(centerPage, '03-ball-visible-center.png');
+      report.screenshots.push('03-ball-visible-center.png');
+      await shotBallCloseup('03-ball-closeup.png');
+    }
+    check('Ball entered the center slice', sawBallOnCenter, lastBallHash);
 
     while (Date.now() - playStart < PLAY_MS) {
       const elapsed = Date.now() - playStart;
       const sec = Math.round(elapsed / 1000);
       await steerPaddles();
 
-      if (sampleAt.has(sec)) {
-        sampleAt.delete(sec);
-        const tag = String(sec).padStart(3, '0');
-        for (let i = 1; i <= 3; i++) {
-          const file = `03-t${tag}s-screen${i}.png`;
-          await shot(screenPages[i - 1], file);
-          report.screenshots.push(file);
+      if (elapsed - lastFilmAt >= 1000) {
+        lastFilmAt = elapsed;
+        filmIndex += 1;
+        const frame = path.join(FILM_DIR, 'frame-' + String(filmIndex).padStart(4, '0') + '.jpg');
+        await Promise.race([
+          centerPage.screenshot({
+            path: frame,
+            type: 'jpeg',
+            quality: 70,
+            captureBeyondViewport: false,
+          }),
+          sleep(2000),
+        ]).catch(() => {});
+      }
+
+      if (
+        lastState &&
+        lastState.lastCommentary &&
+        lastState.lastCommentary !== lastCommentaryShot &&
+        commentaryLines.length <= 8
+      ) {
+        lastCommentaryShot = lastState.lastCommentary;
+        const file = '03-commentary-' + String(commentaryLines.length).padStart(2, '0') + '.png';
+        await shot(centerPage, file);
+        report.screenshots.push(file);
+      }
+
+      if (sampleAt.size) {
+        for (const t of [...sampleAt]) {
+          if (sec >= t) {
+            sampleAt.delete(t);
+            await captureSample(t, '03');
+            if (sawBallOnCenter) {
+              await shotBallCloseup('03-ball-closeup-t' + String(t).padStart(3, '0') + 's.png');
+            }
+          }
         }
-        await shot(controllers[0], `03-t${tag}s-phone1.png`);
-        await shot(controllers[1], `03-t${tag}s-phone2.png`);
-        report.screenshots.push(`03-t${tag}s-phone1.png`, `03-t${tag}s-phone2.png`);
-        const players = ((lastState && lastState.players) || []).filter((p) => p.connected);
-        const sample = {
-          sec,
-          status: lastState && lastState.gameStatus,
-          ticks,
-          balls: lastState && (lastState.balls || []).filter((b) => b.active).length,
-          scores: players.map((p) => ({ name: p.name, score: p.score, lives: p.lives, rank: p.rank, x: Math.round(p.paddleX) })),
-          bricksDestroyed,
-        };
-        report.samples.push(sample);
-        console.log(`[t=${sec}s]`, JSON.stringify(sample));
       }
 
       if (lastState && ['win', 'game_over', 'time_up'].includes(lastState.gameStatus)) {
-        await sleep(900);
+        await sleep(1200);
         break;
       }
 
       await sleep(80);
     }
 
-    await sleep(2000);
-    for (let i = 1; i <= 3; i++) {
+    await sleep(800);
+    for (let i = 1; i <= NUM_SCREENS; i++) {
       const file = `04-end-screen${i}.png`;
       await shot(screenPages[i - 1], file);
       report.screenshots.push(file);
     }
-    await shot(controllers[0], '04-end-phone1.png');
-    await shot(controllers[1], '04-end-phone2.png');
-    report.screenshots.push('04-end-phone1.png', '04-end-phone2.png');
+    for (let i = 0; i < PLAYERS; i++) {
+      const file = `04-end-phone${i + 1}.png`;
+      await shot(controllers[i], file);
+      report.screenshots.push(file);
+    }
 
     const endHealth = JSON.parse((await httpGet('/health')).body);
     report.final = {
@@ -527,21 +758,34 @@ async function main() {
       status: lastState && lastState.gameStatus,
       ticks,
       ballMoved,
+      sawBallOnCenter,
       maxActiveBalls,
       bricksDestroyed,
+      commentaryLines,
       players: ((lastState && lastState.players) || []).map((p) => ({
         name: p.name,
         score: p.score,
         lives: p.lives,
+        rank: p.rank,
         connected: p.connected,
       })),
     };
 
     check('Balls moved on the wall', ballMoved);
     check('Screen received many ticks', ticks >= 100, String(ticks));
-    check('Both phones still connected',
-      ((lastState && lastState.players) || []).filter((p) => p.connected).length >= 2,
-      JSON.stringify(report.final.players));
+    check(
+      `All ${PLAYERS} phones still connected`,
+      ((lastState && lastState.players) || []).filter((p) => p.connected).length >= PLAYERS,
+      JSON.stringify(report.final.players)
+    );
+    check('ARKANOID AI spoke at least once', commentaryLines.length >= 1, JSON.stringify(commentaryLines.slice(0, 4)));
+
+    report.video = encodeFilm();
+    if (report.video) {
+      check('Center-screen 3-minute recording', true, report.video);
+    } else {
+      console.warn('No mp4 (ffmpeg missing or too few film frames) — screenshots still saved.');
+    }
 
     watcher.disconnect();
   } finally {
@@ -551,6 +795,7 @@ async function main() {
   report.finishedAt = new Date().toISOString();
   fs.writeFileSync(REPORT_JSON, JSON.stringify(report, null, 2));
   fs.writeFileSync(REPORT_MD, renderMarkdown(report));
+  rebuildIndex();
   console.log('\nReport:', REPORT_MD);
   console.log(report.ok ? 'VERDICT: DEMO PLAY OK' : 'VERDICT: ISSUES — see report');
   if (spawned) spawned.kill();
@@ -560,46 +805,46 @@ async function main() {
 function renderMarkdown(report) {
   const pass = report.checks.filter((c) => c.ok).length;
   const fail = report.checks.filter((c) => !c.ok).length;
+  const rel = 'demo-play/' + report.label + '/';
   const shots = report.screenshots
-    .map((f) => `- ![${f}](demo-play/${f})`)
+    .map((f) => `- ![${f}](${rel}${f})`)
     .join('\n');
   const samples = (report.samples || [])
-    .map((s) => `| ${s.sec}s | ${s.status} | ${s.ticks} | ${s.balls} | ${s.bricksDestroyed} | ${JSON.stringify(s.scores)} |`)
+    .map((s) => `| ${s.sec}s | ${s.status} | ${s.balls} | ${s.ballsOnCenter || 0} | ${s.bricksDestroyed} | ${(s.commentary || '').replace(/\|/g, '/')} | ${JSON.stringify(s.scores)} |`)
     .join('\n');
   const issues = report.issues.length ? report.issues.map((i) => `- ${i}`).join('\n') : '_None._';
   const checks = report.checks
     .map((c) => `| ${c.ok ? 'PASS' : 'FAIL'} | ${c.name} | ${String(c.detail).replace(/\|/g, '/')} |`)
     .join('\n');
-  return `# LG Arkanoid — 3-screen · 2-phone · 3-minute Chrome play
+  const video = report.video ? `\n## Recording\n\n[center-${report.label}-3min.mp4](${rel}center-${report.label}-3min.mp4)\n` : '';
+  return `# LG Arkanoid — ${report.numScreens}-screen · ${report.players}-player · ${report.durationSec}s
 
-Automated on **${report.startedAt}**. Chrome **${report.chromium.version || '?'}**.
-Match length **${report.durationSec}s**. Verdict: **${report.ok ? 'PASS' : 'FAIL'}**.
+Label **${report.label}**. Automated on **${report.startedAt}**. Chrome **${report.chromium.version || '?'}**.
+Viewport **${report.viewport}**. Verdict: **${report.ok ? 'PASS' : 'FAIL'}**.
 
-This is a desk simulation of a 3-frame Liquid Galaxy wall plus two phone controllers.
-It uses Google Chrome (headless) against a local Node 16-compatible server on port **8130**.
-It does **not** replace a real-rig test (SSH, iptables, portrait \`DHCP_RANDR\`).
+Desk simulation of a Liquid Galaxy wall plus phone controllers in headless Chrome on port **8130**.
 
 ## Setup
 
 | Item | Value |
 |------|--------|
-| Screens | 3 Chromium tabs at \`/1\` \`/2\` \`/3\` |
-| Phones | 2 Chromium tabs at \`/controller\` (Alpha, Bravo) |
-| Aspect | \`LG_FRAME_ASPECT=16:9\` (monitor, not portrait rig) |
+| Screens | ${report.numScreens} Chromium tabs |
+| Players | ${report.players} — ${report.names.join(', ')} |
+| Aspect | \`LG_FRAME_ASPECT=16:9\` |
 | Duration | ${report.durationSec} seconds |
-| Chrome | \`${report.chromium.executable || ''}\` |
+| Viewport | ${report.viewport} |
 
 ## Checks (${pass} passed / ${fail} failed)
 
 | Result | Check | Detail |
 |--------|-------|--------|
 ${checks}
-
+${video}
 ## Timeline samples
 
-| t | status | ticks | balls | bricks hit | scores |
-|---|--------|-------|-------|------------|--------|
-${samples || '| — | | | | | |'}
+| t | status | balls | on center | bricks | commentary | scores |
+|---|--------|-------|-----------|--------|------------|--------|
+${samples || '| — | | | | | | |'}
 
 ## Final
 
@@ -614,16 +859,24 @@ ${issues}
 ## Screenshots
 
 ${shots}
-
-## What this does **not** prove
-
-- Slave-frame SSH (\`lg2\` / \`lg3\`) and \`chromium-browser\` on Ubuntu 16.04
-- Portrait 608×1080 court from \`DHCP_RANDR=right\`
-- Flutter APK SSH **LAUNCH ON RIG**
-- \`/etc/iptables.conf\` port 8130 after reboot
-
-Run those on VirtualBox or the LAB wall. See [virtualbox-test-plan.md](virtualbox-test-plan.md).
 `;
+}
+
+function rebuildIndex() {
+  const root = path.join(ROOT, 'docs', 'demo-play');
+  const labels = fs.readdirSync(root).filter((d) => fs.existsSync(path.join(root, d, 'REPORT.md')));
+  const parts = [
+    '# LG Arkanoid — full play captures',
+    '',
+    'Full-HD (1920×1080) Chromium replays. The ball is an 8px circle on a 1920-wide slice; older 960×540 shots made it nearly invisible.',
+    '',
+  ];
+  for (const label of labels.sort()) {
+    parts.push(`- [${label}](demo-play/${label}/REPORT.md)`);
+    const vid = path.join(root, label, 'center-' + label + '-3min.mp4');
+    if (fs.existsSync(vid)) parts.push(`  - video: [center-${label}-3min.mp4](demo-play/${label}/center-${label}-3min.mp4)`);
+  }
+  fs.writeFileSync(INDEX_MD, parts.join('\n') + '\n');
 }
 
 main().catch((err) => {

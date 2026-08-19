@@ -43,7 +43,9 @@ Frame width follows the rig's own rotation (`DHCP_RANDR` / `LG_FRAME_ASPECT`): s
 - SSH launch / close from the phone (same fields as sister LG apps)
 - Optional **ARKANOID AI** (Gemini): ten-model cascade, then spoken arcade lines when the key is empty or all models fail
 - Host **Create game**: match time, ball speed, players (= wall screens, max 5)
-- Match HUD: logos hide when the whistle blows; live standings + lives on the **rightmost** screen; ARKANOID AI commentary slides in **below the bricks** on the center screen; Ludo-style final ranking on the center screen
+- **TIME LEFT** countdown on **every** wall slice (not only the center)
+- Match HUD: logos hide when the whistle blows; live standings + lives on the **rightmost** screen; ARKANOID AI commentary slides in **below the bricks** on the center screen
+- After the match: **CONGRATULATIONS**, one-line message, and **FINAL LEADERBOARD** on the wall + phones
 - Screen counts **1–12** (typical LG: 3 / 5 / 7 / 9 / 12)
 - Registers with **lg-retro-gaming** when that launcher is present
 
@@ -51,17 +53,74 @@ Frame width follows the rig's own rotation (`DHCP_RANDR` / `LG_FRAME_ASPECT`): s
 
 ## Table of contents
 
-1. [Supported versions](#supported-versions)
-2. [Before running (Liquid Galaxy)](#before-running-liquid-galaxy)
-3. [Install and launch on the rig](#install-and-launch-on-the-rig)
-4. [Connect players](#connect-players)
-5. [Run locally (no rig)](#run-locally-no-rig)
-6. [How it works](#how-it-works)
-7. [Repository layout](#repository-layout)
-8. [Environment](#environment)
-9. [Documentation](#documentation)
-10. [Contributors](#contributors)
-11. [License](#license)
+1. [Commands before you open the game](#commands-before-you-open-the-game)
+2. [Supported versions](#supported-versions)
+3. [Before running (Liquid Galaxy)](#before-running-liquid-galaxy)
+4. [Install and launch on the rig](#install-and-launch-on-the-rig)
+5. [How a match starts](#how-a-match-starts)
+6. [Connect players](#connect-players)
+7. [Run locally (no rig)](#run-locally-no-rig)
+8. [How it works](#how-it-works)
+9. [Repository layout](#repository-layout)
+10. [Environment](#environment)
+11. [Documentation](#documentation)
+12. [Contributors](#contributors)
+13. [License](#license)
+
+---
+
+## Commands before you open the game
+
+Paste these **before** Chromium or `npm start`. Nothing on the wall will show a QR until the server is up.
+
+### Laptop / virtual rig (Windows, macOS, Linux)
+
+```bash
+node -v                          # 16, 18, or 20  (rig itself must be 16)
+npm install
+cp server/.env.example server/.env
+```
+
+Put this in `server/.env`:
+
+```
+PORT=8130
+NUM_SCREENS=3
+LG_PASSWORD=lq
+GEMINI_API_KEY=
+LG_FRAME_ASPECT=16:9
+```
+
+Then:
+
+```bash
+npm run build                    # Express serves dist/ if it exists — always rebuild after JS/CSS edits
+npm start                        # Node server 8130 + Vite 5173
+```
+
+Open **four** browser windows:
+
+```
+http://localhost:8130/1          # left slice
+http://localhost:8130/2          # CENTER — QR + 4-letter code (3-screen wall)
+http://localhost:8130/3          # right slice
+http://localhost:8130/controller # phone stand-in
+```
+
+First `/controller` tab to join is **HOST** → **CREATE & START**.
+
+### Liquid Galaxy master (`lg1`, user `lg`)
+
+```bash
+node -v                          # must be v16.x
+cd ~/projects
+git clone https://github.com/AnirudhPratapSinghYadav/LG-Arkanoid.git LG-Arkanoid
+cd LG-Arkanoid
+bash install.sh lq               # Node 16, pm2, npm install, npm run build, iptables 8130
+bash scripts/open-arkanoid.sh 3  # or 5 / 12 / omit to use DHCP_LG_FRAMES_MAX
+```
+
+The phone app **LAUNCH ON RIG** runs that last script over SSH. You do not click Start on the wall.
 
 ---
 
@@ -215,6 +274,34 @@ That kills only this game's Chromium profiles (`/tmp/lg-arkanoid-chrome-*`) and 
 
 ---
 
+## How a match starts
+
+The wall never starts the match. Each Chromium is only a camera onto one slice. The **phone** is the paddle and the start button.
+
+```mermaid
+flowchart TD
+  A[1. Launch the game on the rig] --> B[2. Every screen opens its slice URL]
+  B --> C[3. CENTER screen shows QR + 4-letter code]
+  C --> D[4. Phones scan QR or type the code]
+  D --> E[5. First phone to join is HOST]
+  E --> F[6. Host taps CREATE and START]
+  F --> G[7. Wall does 3-2-1 then play]
+```
+
+| Step | Who | What happens |
+|------|-----|----------------|
+| 1 | You or the Flutter **LAUNCH ON RIG** button | `open-arkanoid.sh` starts Node on **8130** (pm2) and opens kiosk Chromium |
+| 2 | Each frame | `lg1` opens `http://localhost:8130/1…N`. Slaves open `http://lg1:8130/<slice>`. **`/1` = leftmost physical screen** |
+| 3 | Center slice only | Odd walls: one QR (`/2` on 3 screens, `/3` on 5, `/6` on 12). Even walls: QR on the two center bezels |
+| 4 | Players | Same Wi-Fi as `lg1`. Scan the QR (`LGARK` + IP + 8130 + code) or type IP, port **8130**, and the 4 letters. Code is **not** on `/health` |
+| 5 | Server | Slot 0 = host. Everyone else sees waiting |
+| 6 | Host only | Time (1 / 3 / 5 min / endless), speed, players **1–5** (not 12 paddles on a 12-screen wall), then **CREATE & START** |
+| 7 | Wall | 3-2-1 whistle → **TIME LEFT** on every slice → live standings on the rightmost screen → congratulations + final leaderboard when the match ends |
+
+Pacman also puts a QR on the glass. Settings stay on the phone because kiosk Chromium has no keyboard.
+
+---
+
 ## Connect players
 
 Once Chromium is open on the wall:
@@ -333,6 +420,16 @@ flowchart LR
 ```
 
 ### Match flow
+
+```mermaid
+flowchart TD
+  A[1. Launch the game on the rig] --> B[2. Every screen opens its slice URL]
+  B --> C[3. CENTER screen shows QR + 4-letter code]
+  C --> D[4. Phones scan QR or type the code]
+  D --> E[5. First phone to join is HOST]
+  E --> F[6. Host taps CREATE and START]
+  F --> G[7. Wall does 3-2-1 then play]
+```
 
 ```mermaid
 sequenceDiagram

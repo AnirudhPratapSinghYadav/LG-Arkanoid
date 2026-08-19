@@ -34,7 +34,7 @@ android {
         // Pinned rather than inherited: the GO Web Store entry has to declare a
         // concrete "android_OS" value, and mobile_scanner's ML Kit barcode
         // reader requires API 21. 21 = Android 5.0.
-        minSdk = flutter.minSdkVersion
+        minSdk = 21
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName

@@ -389,6 +389,20 @@ body.is-leftmost-screen .brand-mark {
     color: #66707a;
 }
 
+.lobby-card__steps {
+    position: relative;
+    margin: 12px 0 0;
+    padding: 0 0 0 18px;
+    text-align: left;
+    color: #c5d0da;
+    font-size: 0.72rem;
+    line-height: 1.45;
+    font-family: 'Space Grotesk', sans-serif;
+}
+.lobby-card__steps li { margin: 0 0 6px; }
+.lobby-card__steps code { color: #20c5ff; font-size: 0.7rem; }
+.lobby-card__steps strong { color: #ffc300; }
+
 .lobby-card__hint,
 #qr-instructions {
     position: relative;

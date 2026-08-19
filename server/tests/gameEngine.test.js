@@ -51,6 +51,11 @@ function test(name, fn) {
 
 console.log('gameEngine tests');
 
+test('new GameState starts in lobby', () => {
+  const state = new gameEngine.GameState();
+  assert.strictEqual(state.gameStatus, 'lobby');
+});
+
 test('loadLevel creates destructible bricks for N screens', () => {
   for (const n of [3, 5, 7, 9, 12]) {
     const bricks = gameEngine.loadLevel(1, null, n);

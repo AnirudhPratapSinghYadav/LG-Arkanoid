@@ -485,7 +485,7 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
       ipJoinAttempts.delete(ip);
 
       const status = worldState.gameStatus || 'lobby';
-      if (status === 'playing' || status === 'countdown') {
+      if (status === 'playing' || status === 'countdown' || status === 'time_up' || status === 'win' || status === 'game_over') {
         socket.emit('join_rejected', {
           errorCode: 1010,
           message: 'Match already in progress. Wait for the next lobby.',
@@ -558,6 +558,7 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
 
       const { player } = found;
       if (player.lives <= 0) return;
+      if (worldState.gameStatus !== 'playing') return;
       let { deltaX, timestamp, nonce } = data || {};
 
       if(typeof deltaX!=='number' || isNaN(deltaX) || !isFinite(deltaX)){

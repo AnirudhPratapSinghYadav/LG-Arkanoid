@@ -209,7 +209,20 @@ function joinGame() {
             if (status === 'win') title = 'VICTORY!';
 
             document.getElementById('geTitle').innerText = title;
-            document.getElementById('geSubtitle').innerText = winnerName + ' wins!';
+            document.getElementById('geSubtitle').innerText = 'Congratulations — ' + winnerName + ' wins!';
+            const geMsg = document.getElementById('geMessage');
+            if (geMsg) {
+                geMsg.innerText = (state.lastCommentary || (
+                    winnerName + ' takes the Liquid Galaxy wall. That is the champion — match over.'
+                ));
+            }
+            const geBoard = document.getElementById('geBoard');
+            if (geBoard) {
+                geBoard.innerHTML = sorted.slice(0, 5).map((p, i) => {
+                    const n = (p.name || ('P' + (p.playerNumber || i + 1)));
+                    return '<div>#' + (i + 1) + '  ' + n + '  ' + String(p.score || 0).padStart(5, '0') + '</div>';
+                }).join('');
+            }
             document.getElementById('geScore').innerText = 'Your Score: ' + myScore;
             document.getElementById('geRank').innerText = 'Final Rank: #' + myRank;
             document.getElementById('gameEndOverlay').classList.add('active');

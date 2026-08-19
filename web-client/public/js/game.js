@@ -87,13 +87,19 @@ class GameScene extends Phaser.Scene {
         });
         if (screenId !== 1) this.hudText.setVisible(false);
 
-        this.timerPanelGraphics = this.add.graphics();
-        this.timerText = this.add.text(CENTER_X, 40, '00:00', {
+        this.timerPanelGraphics = this.add.graphics().setDepth(69);
+        this.timerLabel = this.add.text(CENTER_X, 10, 'TIME LEFT', {
+            fontFamily: FONTS.mono,
+            fontSize: '16px',
+            color: HEX.accent,
+        }).setOrigin(0.5, 0).setDepth(70);
+        this.timerText = this.add.text(CENTER_X, 30, '03:00', {
             fontFamily: FONTS.heading,
-            fontSize: '48px',
+            fontSize: '56px',
             color: HEX.white,
-        }).setOrigin(0.5, 0);
-        if (!isCenterScreen) this.timerText.setVisible(false);
+            stroke: '#05070c',
+            strokeThickness: 8,
+        }).setOrigin(0.5, 0).setDepth(70);
 
         this.leaderboardPanelGraphics = this.add.graphics();
         this.leaderboardTexts = [];
@@ -347,6 +353,7 @@ class GameScene extends Phaser.Scene {
     playWhistle(kind) {
         try {
             if (!this.audioCtx) this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (this.audioCtx.state === 'suspended') this.audioCtx.resume();
             const ctx = this.audioCtx;
             const osc = ctx.createOscillator();
             const gain = ctx.createGain();
@@ -597,7 +604,7 @@ class GameScene extends Phaser.Scene {
             this.ambientLeftText.setText('LG ARKANOID');
             this.ambientLeftText.setVisible(true).setAlpha(0.98);
             this.ambientLeftSub.setText(
-                'Phone is the controller\nScan the center QR · enter the 4-letter code\nHost starts the match from the lobby'
+                '1  Look at the CENTER screen for the QR\n2  Phone = paddle (app or /controller)\n3  First player is HOST — they press CREATE & START'
             );
             this.ambientLeftSub.setVisible(true).setAlpha(0.92);
             for (let i = 0; i < maxP; i++) {
@@ -723,7 +730,7 @@ class GameScene extends Phaser.Scene {
             }
             if (this.ambientLeftSub) {
                 this.ambientLeftSub.setText(
-                    `Screen ${screenId} of ${n}\nScan the QR on the middle display\nPhone is the paddle`
+                    `Screen ${screenId} of ${n}\nQR is on the CENTER display\nPhone is the paddle — host starts`
                 );
                 this.ambientLeftSub.setVisible(true).setAlpha(0.9);
             }
@@ -826,26 +833,35 @@ class GameScene extends Phaser.Scene {
 
     drawWinMode() {
         if (!this.winTitle) {
-            this.winTitle = this.add.text(CENTER_X, 88, 'MATCH OVER', {
-                fontFamily: FONTS.heading, fontSize: '52px', color: HEX.game, fontWeight: 'bold'
-            }).setOrigin(0.5, 0.5).setDepth(90);
-            
-            this.winName = this.add.text(CENTER_X, 168, '', {
-                fontFamily: FONTS.heading, fontSize: '58px', color: HEX.textPrimary, fontWeight: 'bold'
+            this.winCongrats = this.add.text(CENTER_X, 118, 'CONGRATULATIONS', {
+                fontFamily: FONTS.heading, fontSize: '26px', color: HEX.game, fontWeight: 'bold', letterSpacing: 6
             }).setOrigin(0.5, 0.5).setDepth(90);
 
-            this.winRatingLabel = this.add.text(CENTER_X, 228, 'FINAL RANKING', {
-                fontFamily: FONTS.heading, fontSize: '20px', color: HEX.accent, letterSpacing: 4
+            this.winTitle = this.add.text(CENTER_X, 164, 'MATCH OVER', {
+                fontFamily: FONTS.heading, fontSize: '40px', color: HEX.accent, fontWeight: 'bold'
             }).setOrigin(0.5, 0.5).setDepth(90);
-            
-            this.winStatsText = this.add.text(CENTER_X, 262, '', {
-                fontFamily: FONTS.body, fontSize: '20px', color: HEX.textSecondary, align: 'center', lineSpacing: 8
+
+            this.winName = this.add.text(CENTER_X, 226, '', {
+                fontFamily: FONTS.heading, fontSize: '52px', color: HEX.textPrimary, fontWeight: 'bold'
+            }).setOrigin(0.5, 0.5).setDepth(90);
+
+            this.winMessage = this.add.text(CENTER_X, 286, '', {
+                fontFamily: FONTS.body, fontSize: '22px', color: HEX.white, align: 'center',
+                wordWrap: { width: SCREEN_W - 120, useAdvancedWrap: true }
+            }).setOrigin(0.5, 0.5).setDepth(90);
+
+            this.winRatingLabel = this.add.text(CENTER_X, 338, 'FINAL LEADERBOARD', {
+                fontFamily: FONTS.heading, fontSize: '22px', color: HEX.accent, letterSpacing: 4
+            }).setOrigin(0.5, 0.5).setDepth(90);
+
+            this.winStatsText = this.add.text(CENTER_X, 368, '', {
+                fontFamily: FONTS.body, fontSize: '18px', color: HEX.textSecondary, align: 'center', lineSpacing: 8
             }).setOrigin(0.5, 0).setDepth(90);
 
             this.winRankTexts = [];
             for (let i = 0; i < 5; i++) {
-                this.winRankTexts.push(this.add.text(CENTER_X, 330 + i * 92, '', {
-                    fontFamily: FONTS.mono, fontSize: '32px', color: HEX.textPrimary, align: 'center'
+                this.winRankTexts.push(this.add.text(CENTER_X, 410 + i * 86, '', {
+                    fontFamily: FONTS.mono, fontSize: '30px', color: HEX.textPrimary, align: 'center'
                 }).setOrigin(0.5, 0).setDepth(90).setVisible(false));
             }
 
@@ -860,32 +876,44 @@ class GameScene extends Phaser.Scene {
             });
             this.winConfettiEmitted = false;
         }
-        
-        if (isCenterScreen) {
-            this.winTitle.setVisible(true);
-            this.winName.setVisible(true);
+
+        const status = this.currentState.gameStatus;
+        const ranked = [...(this.currentState.players || [])]
+            .filter((p) => p && (p.connected || (p.score || 0) > 0 || p.name))
+            .sort((a, b) => (b.score || 0) - (a.score || 0));
+        const winner = ranked[0];
+        const winnerName = (winner && (winner.name || ('P' + (winner.playerNumber || 1)))) || 'PLAYER';
+        const comment = (this.currentState.lastCommentary || '').trim();
+        let oneLiner = comment;
+        if (!oneLiner || oneLiner.length < 8) {
+            if (status === 'time_up') oneLiner = 'Congratulations ' + winnerName + ' — the clock hit zero and you own the wall.';
+            else if (status === 'game_over') oneLiner = 'Congratulations ' + winnerName + ' — last paddle standing.';
+            else oneLiner = 'Congratulations ' + winnerName + ' — you cleared the Liquid Galaxy wall.';
+        }
+
+        if (status === 'time_up') this.winTitle.setText('TIME UP');
+        else if (status === 'game_over') this.winTitle.setText('GAME OVER');
+        else this.winTitle.setText('YOU WIN');
+
+        this.winName.setText(winnerName.toUpperCase() + ' WINS');
+        this.winMessage.setText(oneLiner);
+
+        const onRight = isRightmostScreen(this.currentState);
+        const showFullBoard = isCenterScreen;
+
+        if (this.winCongrats) this.winCongrats.setVisible(true);
+        this.winTitle.setVisible(true);
+        this.winName.setVisible(true);
+        if (this.winMessage) this.winMessage.setVisible(true);
+
+        if (showFullBoard) {
             if (this.winRatingLabel) this.winRatingLabel.setVisible(true);
             this.winStatsText.setVisible(true);
-            
-            const status = this.currentState.gameStatus;
-            if (status === 'time_up') this.winTitle.setText('TIME UP');
-            else if (status === 'game_over') this.winTitle.setText('GAME OVER');
-            else this.winTitle.setText('YOU WIN');
-
-            const ranked = [...(this.currentState.players || [])]
-                .filter((p) => p && (p.connected || (p.score || 0) > 0))
-                .sort((a, b) => (b.score || 0) - (a.score || 0));
-            const winner = ranked[0];
-            if (winner) {
-                this.winName.setText(`${(winner.name || 'PLAYER').toUpperCase()} WINS`);
-            } else {
-                this.winName.setText('NO WINNER');
-            }
-            
             this.winStatsText.setText(
-                `RALLY ${this.currentState.longestRally || 0}   ·   POWER-UPS ${this.currentState.powerupsCollected || 0}   ·   COMBO ${this.currentState.highestCombo || 0}`
+                'RALLY ' + (this.currentState.longestRally || 0) +
+                '   ·   POWER-UPS ' + (this.currentState.powerupsCollected || 0) +
+                '   ·   COMBO ' + (this.currentState.highestCombo || 0)
             );
-
             const medals = ['1ST', '2ND', '3RD', '4TH', '5TH'];
             for (let i = 0; i < this.winRankTexts.length; i++) {
                 const row = this.winRankTexts[i];
@@ -895,7 +923,9 @@ class GameScene extends Phaser.Scene {
                     const starStr = '★'.repeat(stars) + '☆'.repeat(5 - stars);
                     const lives = Math.max(0, p.lives || 0);
                     row.setText(
-                        `${medals[i]}  ${(p.name || ('P' + (p.playerNumber || i + 1))).toUpperCase()}   ${String(p.score).padStart(5, '0')}   ${starStr}   ${lives}♥`
+                        medals[i] + '  ' + (p.name || ('P' + (p.playerNumber || i + 1))).toUpperCase() +
+                        '   ' + String(p.score || 0).padStart(5, '0') +
+                        '   ' + starStr + '   ' + lives + '♥'
                     );
                     row.setColor(PLAYER_HEX[(Math.max(1, p.playerNumber) - 1) % PLAYER_HEX.length]);
                     row.setVisible(true);
@@ -903,17 +933,37 @@ class GameScene extends Phaser.Scene {
                     row.setVisible(false);
                 }
             }
-            
-            if (!this.winConfettiEmitted && winner) {
-                this.winConfettiEmitted = true;
+        } else {
+            if (this.winRatingLabel) this.winRatingLabel.setVisible(false);
+            this.winStatsText.setVisible(false);
+            if (this.winRankTexts) this.winRankTexts.forEach((t) => t.setVisible(false));
+            if (onRight) {
+                this.winCongrats.setY(120);
+                this.winTitle.setY(168);
+                this.winName.setY(230);
+                this.winMessage.setY(300);
+            } else if (!isCenterScreen) {
+                this.winCongrats.setY(200);
+                this.winTitle.setY(268);
+                this.winName.setY(350);
+                this.winMessage.setY(430);
+            }
+        }
+
+        if (isCenterScreen && !this.winConfettiEmitted && winner) {
+            this.winConfettiEmitted = true;
+            if (this.winConfetti && typeof this.winConfetti.explode === 'function') {
+                this.winConfetti.explode(48);
             }
         }
     }
-    
+
     hideWinMode() {
         if (this.winTitle) {
             this.winTitle.setVisible(false);
             this.winName.setVisible(false);
+            if (this.winCongrats) this.winCongrats.setVisible(false);
+            if (this.winMessage) this.winMessage.setVisible(false);
             if (this.winRatingLabel) this.winRatingLabel.setVisible(false);
             if (this.winStatsText) this.winStatsText.setVisible(false);
             if (this.winRankTexts) this.winRankTexts.forEach((t) => t.setVisible(false));
@@ -937,6 +987,7 @@ class GameScene extends Phaser.Scene {
         if (!isGameActive) {
             this.hudText.setVisible(false);
             this.timerText.setVisible(false);
+            if (this.timerLabel) this.timerLabel.setVisible(false);
             this.leaderboardTexts.forEach((t) => { if (t) t.setVisible(false); });
             this.leaderboardTitle.setVisible(false);
             this.geminiText.setVisible(false);
@@ -959,10 +1010,11 @@ class GameScene extends Phaser.Scene {
 
         const liveScreens = liveNumScreens(this.currentState);
         const onRight = screenId === liveScreens;
-
-        const showStandings = onRight && (status === 'playing' || status === 'countdown');
+        const matchEnded = status === 'win' || status === 'time_up' || status === 'game_over';
+        const showStandings = onRight && (status === 'playing' || status === 'countdown' || matchEnded);
         if (screenId === 1) this.hudText.setVisible(true);
-        if (isCenterScreen) this.timerText.setVisible(true);
+        this.timerText.setVisible(true);
+        if (this.timerLabel) this.timerLabel.setVisible(true);
         if (showStandings) {
             this.leaderboardTexts.forEach((t) => { if (t) t.setVisible(true); });
             this.leaderboardTitle.setVisible(true);
@@ -972,7 +1024,7 @@ class GameScene extends Phaser.Scene {
         }
 
         const line = this.currentState.lastCommentary || '';
-        if (isCenterScreen && line) {
+        if (isCenterScreen && line && !matchEnded) {
             this.centerCommentaryTitle.setVisible(true);
             this.centerCommentaryTitle.setText(
                 this.currentState.lastCommentarySource === 'gemini' ? 'ARKANOID AI' : 'ARKANOID AI · LOCAL'
@@ -1014,37 +1066,67 @@ class GameScene extends Phaser.Scene {
         this.hudText.setText(hudStr);
         this.hudText.setColor(HEX.textPrimary);
 
+        let remainingForPill = null;
         if (this.currentState.gameStartedAt && status === 'playing') {
             const elapsed = Math.floor((Date.now() - this.currentState.gameStartedAt) / 1000);
             const duration = this.currentState.gameDurationSeconds ?? 180;
             if (duration > 0) {
                 const remaining = Math.max(0, duration - elapsed);
+                remainingForPill = remaining;
                 const m = String(Math.floor(remaining / 60)).padStart(2, '0');
                 const s = String(remaining % 60).padStart(2, '0');
                 this.timerText.setText(m + ':' + s);
                 this.timerText.setColor(remaining <= 30 ? HEX.error : HEX.white);
+                if (this.timerLabel) {
+                    this.timerLabel.setText('TIME LEFT');
+                    this.timerLabel.setColor(remaining <= 30 ? HEX.error : HEX.accent);
+                }
             } else {
                 const m = String(Math.floor(elapsed / 60)).padStart(2, '0');
                 const s = String(elapsed % 60).padStart(2, '0');
                 this.timerText.setText(m + ':' + s);
                 this.timerText.setColor(HEX.game);
+                if (this.timerLabel) {
+                    this.timerLabel.setText('ELAPSED');
+                    this.timerLabel.setColor(HEX.game);
+                }
             }
         } else if (status === 'countdown') {
             this.timerText.setText('READY');
             this.timerText.setColor(HEX.white);
-        } else if (status === 'time_up' || status === 'game_over' || status === 'win') {
+            if (this.timerLabel) {
+                this.timerLabel.setText('MATCH STARTS');
+                this.timerLabel.setColor(HEX.accent);
+            }
+        } else if (matchEnded) {
             this.timerText.setText(status === 'time_up' ? '00:00' : 'DONE');
             this.timerText.setColor(HEX.error);
+            if (this.timerLabel) {
+                this.timerLabel.setText(status === 'time_up' ? 'TIME UP' : 'MATCH OVER');
+                this.timerLabel.setColor(HEX.error);
+            }
         }
 
-        const activePlayers = players.filter((p) => p && p.connected).sort((a, b) => {
+        const pillW = 280;
+        const pillH = 88;
+        const pillX = CENTER_X - pillW / 2;
+        const pillColor = (remainingForPill != null && remainingForPill <= 30) || matchEnded ? 0xe63946 : 0x20c5ff;
+        this.timerPanelGraphics.fillStyle(0x05070c, 0.88);
+        this.timerPanelGraphics.fillRoundedRect(pillX, 4, pillW, pillH, 16);
+        this.timerPanelGraphics.lineStyle(2, pillColor, 0.85);
+        this.timerPanelGraphics.strokeRoundedRect(pillX, 4, pillW, pillH, 16);
+
+        const boardPlayers = ((status === 'playing' || status === 'countdown')
+            ? players.filter((p) => p && p.connected)
+            : players.filter((p) => p && (p.connected || (p.score || 0) > 0 || p.name))
+        ).sort((a, b) => {
             const scoreDelta = (b.score || 0) - (a.score || 0);
             if (scoreDelta !== 0) return scoreDelta;
             return (a.rank || 99) - (b.rank || 99);
         });
         for (let i = 0; i < this.leaderboardTexts.length; i++) {
-            if (showStandings && i < activePlayers.length) {
-                const p = activePlayers[i];
+            if (showStandings && i < boardPlayers.length) {
+                const p = boardPlayers[i];
                 const colorHex = PLAYER_HEX[(Math.max(1, p.playerNumber) - 1) % PLAYER_HEX.length];
                 const name = (p.name || ('P' + p.playerNumber)).toUpperCase();
                 const rank = p.rank || (i + 1);
@@ -1058,14 +1140,14 @@ class GameScene extends Phaser.Scene {
             }
         }
 
-        if (showStandings && activePlayers.length > 0) {
+        if (showStandings && boardPlayers.length > 0) {
             this.leaderboardTitle.setVisible(true).setDepth(55);
-            this.leaderboardTitle.setText('LIVE STANDINGS');
+            this.leaderboardTitle.setText(matchEnded ? 'FINAL LEADERBOARD' : 'LIVE STANDINGS');
             const panelY = 468;
-            const panelH = 72 + activePlayers.length * 88;
+            const panelH = 72 + boardPlayers.length * 88;
             this.leaderboardPanelGraphics.fillStyle(0x0c1219, 0.78);
             this.leaderboardPanelGraphics.fillRoundedRect(36, panelY, SCREEN_W - 72, panelH, 18);
-            this.leaderboardPanelGraphics.lineStyle(2, 0x20c5ff, 0.5);
+            this.leaderboardPanelGraphics.lineStyle(2, matchEnded ? 0xffc300 : 0x20c5ff, 0.5);
             this.leaderboardPanelGraphics.strokeRoundedRect(36, panelY, SCREEN_W - 72, panelH, 18);
         }
 

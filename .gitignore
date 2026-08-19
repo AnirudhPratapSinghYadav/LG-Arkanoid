@@ -45,6 +45,8 @@ server/tests/e2e-browser-report.json
 server/tests/e2e-screenshots/
 server/tests/live-3min-report.json
 server/tests/manual-screenshots/
+server/tests/demo-*-report.json
+docs/demo-play/**/film/
 
 # Audit dumps
 .agents/
