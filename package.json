@@ -20,5 +20,9 @@
   "devDependencies": {
     "concurrently": "^8.2.2",
     "vite": "^4.5.14"
+  },
+  "overrides": {
+    "ws": "8.21.3",
+    "tar-fs": "3.1.3"
   }
 }

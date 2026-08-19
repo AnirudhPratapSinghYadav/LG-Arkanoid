@@ -20,7 +20,7 @@ This is what you can verify on a laptop. It is **not** a substitute for LAB Llei
 - Node: **16.x** via nvm on lg1.
 - Chromium / `chromium-browser` on all three.
 - `pm2`, `sshpass` (if using password SSH).
-- Game port: **8130** (pong 8112, snake 8114, pacman 8128, asteroids 8129 are taken).
+- Game port: **8130**.
 
 ## SSH
 

@@ -1,7 +1,7 @@
 # Networking
 
 ## Ports
-- **Node.js Server:** TCP `8130` (HTTP assets + Socket.IO). Next free slot in the LG game family: pong 8112, snake 8114, pacman 8128, asteroids 8129; LGRG holds 3123.
+- **Node.js Server:** TCP `8130` (HTTP assets + Socket.IO).
 - **SSH:** TCP `22` (phone app runs `open-arkanoid.sh` / `close-arkanoid.sh` on the master).
 - **Vite (Dev):** TCP `5173` (laptop development only — not used on the rig).
 

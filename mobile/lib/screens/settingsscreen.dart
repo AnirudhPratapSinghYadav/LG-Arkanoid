@@ -548,7 +548,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'LG Arkanoid',
+                    'AI Arkanoid LG',
                     style: AppFonts.spaceGrotesk(
                       fontSize: 15,
                       fontWeight: FontWeight.w700,

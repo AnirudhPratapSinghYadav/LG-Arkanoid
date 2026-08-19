@@ -241,7 +241,7 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
                                 const DualBrand(height: 36),
                                 const SizedBox(height: 12),
                                 Text(
-                                  'LG ARKANOID',
+                                  'AI ARKANOID LG',
                                   style: AppFonts.vt323(
                                     fontSize: 32,
                                     color: accentSystem,

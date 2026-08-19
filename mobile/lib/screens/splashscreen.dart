@@ -115,7 +115,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                               child: FittedBox(
                                 fit: BoxFit.scaleDown,
                                 child: Text(
-                                  'LG ARKANOID',
+                                  'AI ARKANOID LG',
                                   style: AppFonts.pressStart2P(
                                     fontSize: 14,
                                     color: textPrimary,
@@ -163,7 +163,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
-                      'LG Arkanoid',
+                      'AI Arkanoid LG',
                       style: AppFonts.inter(
                         fontSize: 11,
                         color: Colors.white,

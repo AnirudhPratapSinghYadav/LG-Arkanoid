@@ -53,7 +53,7 @@ class _JoinChoiceScreenState extends State<JoinChoiceScreen> {
                         const DualBrand(height: 36),
                         const SizedBox(height: 16),
                         Text(
-                          'LG ARKANOID',
+                          'AI ARKANOID LG',
                           style: AppFonts.spaceGrotesk(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,

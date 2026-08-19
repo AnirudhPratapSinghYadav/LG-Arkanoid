@@ -4,7 +4,7 @@
 - On the LG rig, use Node.js **16** (via nvm). On a modern laptop, Node 16+ is fine.
 - Ensure `.env` is created and `LG_PASSWORD` is configured.
 - Run `npm run server` and check for syntax errors.
-- Phone controller must use port **8130** (Pacman is 8128, Asteroids 8129).
+- Phone controller must use port **8130**.
 
 ## Screens Won't Open on Slaves
 - Ensure the master node has passwordless SSH access to the slave nodes (or the correct password in the scripts).
@@ -40,17 +40,4 @@ Verify in a fresh terminal:
 node -v   # must show v16.x.x
 ```
 
-**Why the project's minimum supported Node version is 16:** Ubuntu 16.04 / glibc 2.23 cannot run Node 18+. Sister LG games historically mention Node 14; this project targets **Node >=16** (see `package.json` `engines` and `.nvmrc`). CI verifies Node 16/18/20. Do not upgrade Vite past 4.x on the rig — Vite 5+ needs newer Node.
-
-### Why jsdom and a newer Vite were removed
-
-`jsdom` was an unused dependency (never imported anywhere in the codebase)
-that required Node ^22/^24/^26 and blocked rig deployment for no actual
-benefit. It has been removed entirely.
-
-`vite` was downgraded from ^8.1.5 to 4.5.14, the newest 4.x release that
-still supports Node 16 (confirmed via its published `engines` field).
-If you need to upgrade Vite again in the future, check the new version's
-`engines.node` requirement against the rig's actual Node ceiling (currently
-16, due to Ubuntu 16.04 / glibc 2.23 — see the GLIBC entry above) before
-upgrading, or you will silently re-break rig compatibility.
+Keep **Node 16** on the rig (see `package.json` `engines` and `.nvmrc`). CI also checks 18 and 20. Stay on **Vite 4.x** — Vite 5 needs a newer Node than Ubuntu 16.04 can run.

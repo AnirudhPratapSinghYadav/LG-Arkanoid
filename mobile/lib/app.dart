@@ -19,7 +19,7 @@ class ArkanoidApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'LG Arkanoid',
+      title: 'AI Arkanoid LG',
       theme: ThemeData.dark().copyWith(
         scaffoldBackgroundColor: bgDark,
         primaryColor: accentPrimary,
