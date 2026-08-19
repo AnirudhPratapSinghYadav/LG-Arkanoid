@@ -9,6 +9,7 @@ import '../utils/constants.dart';
 import '../widgets/lgpanel.dart';
 import '../widgets/connectionstatus.dart';
 import '../widgets/dual_brand.dart';
+import '../widgets/settings_labeled_field.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -186,69 +187,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  Widget _buildTextField({
-    required String label,
-    required String hint,
-    required TextEditingController controller,
-    bool obscure = false,
-    TextInputType keyboardType = TextInputType.text,
-    Widget? suffixIcon,
-    String? Function(String?)? validator,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: AppFonts.jetBrainsMono(
-            fontSize: 12,
-            fontWeight: FontWeight.bold,
-            color: accentSystem,
-            letterSpacing: 1.5,
-          ),
-        ),
-        const SizedBox(height: 8),
-        TextFormField(
-          controller: controller,
-          obscureText: obscure,
-          keyboardType: keyboardType,
-          style: AppFonts.jetBrainsMono(color: textPrimary, fontSize: 15),
-          cursorColor: accentSystem,
-          validator: validator ?? (value) {
-            if (value == null || value.trim().isEmpty) {
-              return 'This field is required';
-            }
-            return null;
-          },
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: AppFonts.jetBrainsMono(color: textSecondary.withOpacity(0.5)),
-            suffixIcon: suffixIcon,
-            filled: true,
-            fillColor: cardSecondary,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: borderLight),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: borderLight),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: accentSystem, width: 1.5),
-            ),
-            errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: accentError, width: 1.5),
-            ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          ),
-        ),
-      ],
-    );
-  }
-
   @override
   void dispose() {
     _usernameController.dispose();
@@ -348,13 +286,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                     ),
                     const SizedBox(height: 20),
-                    _buildTextField(
+                    SettingsLabeledField(
                       label: 'USERNAME',
                       hint: 'lg',
                       controller: _usernameController,
                     ),
                     const SizedBox(height: 16),
-                    _buildTextField(
+                    SettingsLabeledField(
                       label: 'PASSWORD',
                       hint: 'lq',
                       controller: _passwordController,
@@ -371,13 +309,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    _buildTextField(
+                    SettingsLabeledField(
                       label: 'IP ADDRESS',
                       hint: '192.168.1.42',
                       controller: _hostController,
                     ),
                     const SizedBox(height: 16),
-                    _buildTextField(
+                    SettingsLabeledField(
                       label: 'PORT',
                       hint: '22',
                       controller: _portController,
@@ -389,7 +327,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       }
                     ),
                     const SizedBox(height: 16),
-                    _buildTextField(
+                    SettingsLabeledField(
                       label: 'NUMBER OF SCREENS',
                       hint: '3',
                       controller: _screensController,

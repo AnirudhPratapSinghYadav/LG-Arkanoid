@@ -6,11 +6,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/constants.dart';
 import '../services/gameservice.dart';
 import '../widgets/lgpanel.dart';
-import '../widgets/lgbutton.dart';
 import '../widgets/connectionstatus.dart';
 import '../services/ssh_service.dart';
 import '../widgets/mission_background.dart';
 import '../widgets/dual_brand.dart';
+import '../widgets/lobby_player_row.dart';
+import '../widgets/lobby_host_panel.dart';
 
 class LobbyScreen extends StatefulWidget {
   const LobbyScreen({super.key});
@@ -159,36 +160,6 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
     });
   }
 
-  Widget _buildScreenChip(int n) {
-    final selected = _selectedScreens == n;
-    return GestureDetector(
-        onTap: () {
-          setState(() {
-            _selectedScreens = n;
-            _selectedMaxPlayers = n > 5 ? 5 : (n < 1 ? 1 : n);
-          });
-          _gameService.setMaxPlayers(_selectedMaxPlayers);
-          _persistAndPushSettings();
-        },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: selected ? accentSystem.withOpacity(0.2) : cardFill,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: selected ? accentSystem : borderLight),
-        ),
-        child: Text(
-          '$n',
-          style: AppFonts.spaceGrotesk(
-            fontSize: 13,
-            fontWeight: FontWeight.bold,
-            color: selected ? textPrimary : textSecondary,
-          ),
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final service = context.watch<GameService>();
@@ -202,8 +173,6 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
     // Check if current player is the host (master)
     final masterIndex = gameState?['masterPlayerIndex'] as int? ?? 0;
     final isHost = (service.playerNumber ?? 0) - 1 == masterIndex;
-
-    const playerColors = playerSlotColors;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -301,10 +270,9 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
                               const SizedBox(height: 12),
                               
                               for (int i = 0; i < maxPlayers; i++) ...[
-                                _buildPlayerRow(
+                                LobbyPlayerRow(
                                   index: i,
                                   playersList: players,
-                                  color: playerColors[i % playerColors.length],
                                   masterIndex: masterIndex,
                                 ),
                                 if (i < maxPlayers - 1) const SizedBox(height: 16),
@@ -314,174 +282,45 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
                         ),
                         const SizedBox(height: 48),
 
-                        if (isHost) ...[
-                          const SizedBox(height: 8),
-                          Text(
-                            'CREATE GAME',
-                            style: AppFonts.spaceGrotesk(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: accentSystem,
-                              letterSpacing: 2,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            'You are the host. Players default to the wall screen count (max 5).',
-                            style: AppFonts.inter(fontSize: 12, color: textSecondary, height: 1.35),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'PLAYERS (= SCREENS)',
-                            style: AppFonts.spaceGrotesk(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: textSecondary,
-                              letterSpacing: 1,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 8),
-                          Wrap(
-                            alignment: WrapAlignment.center,
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: [
-                              for (int p = 1; p <= 5; p++)
-                                GestureDetector(
-                                  onTap: () {
-                                    setState(() => _selectedMaxPlayers = p);
-                                    _gameService.setMaxPlayers(p);
-                                    _persistAndPushSettings();
-                                  },
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                                    decoration: BoxDecoration(
-                                      color: _selectedMaxPlayers == p ? accentSystem.withOpacity(0.2) : cardFill,
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(
-                                        color: _selectedMaxPlayers == p ? accentSystem : borderLight,
-                                      ),
-                                    ),
-                                    child: Text(
-                                      '$p',
-                                      style: AppFonts.spaceGrotesk(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.bold,
-                                        color: _selectedMaxPlayers == p ? textPrimary : textSecondary,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'SCREENS (RIG)',
-                            style: AppFonts.spaceGrotesk(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: textSecondary,
-                              letterSpacing: 1,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 8),
-                          Wrap(
-                            alignment: WrapAlignment.center,
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: [
-                              for (final n in const [1, 3, 5, 7, 9, 12]) _buildScreenChip(n),
-                            ],
-                          ),
-                          const SizedBox(height: 10),
-                          LgButton(
-                            label: _applyingScreens ? 'APPLYING…' : 'APPLY SCREENS TO RIG',
-                            onPressed: _applyingScreens ? null : _applyScreensToRig,
-                          ),
-                          if (_screenApplyMsg != null) ...[
-                            const SizedBox(height: 8),
-                            Text(
-                              _screenApplyMsg!,
-                              style: AppFonts.inter(fontSize: 11, color: textSecondary, height: 1.35),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
-                          const SizedBox(height: 16),
-
-                          Text(
-                            'BALL SPEED',
-                            style: AppFonts.spaceGrotesk(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: textSecondary,
-                              letterSpacing: 1,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 8),
-                          Wrap(
-                            alignment: WrapAlignment.center,
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: [
-                              _buildSpeedOption('slow', 'SLOW'),
-                              _buildSpeedOption('medium', 'NORM'),
-                              _buildSpeedOption('fast', 'FAST'),
-                              _buildSpeedOption('insane', 'HYPER'),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-
-                          Text(
-                            'MATCH DURATION',
-                            style: AppFonts.spaceGrotesk(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: textSecondary,
-                              letterSpacing: 1,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 8),
-                          Wrap(
-                            alignment: WrapAlignment.center,
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: [
-                              _buildDurationOption(60, '1 MIN'),
-                              _buildDurationOption(180, '3 MIN'),
-                              _buildDurationOption(300, '5 MIN'),
-                              _buildDurationOption(0, 'ENDLESS'),
-                            ],
-                          ),
-                          const SizedBox(height: 28),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: LgButton(
-                                  label: 'QR INVITE',
-                                  onPressed: () {
-                                    final token = _gameService.sessionToken ?? '';
-                                    final payload = 'LGARK|${_gameService.serverAddress}|${_gameService.serverPort}|$token';
-                                    Navigator.pushNamed(context, '/qrinvite', arguments: payload);
-                                  },
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: LgButton(
-                                  label: 'CREATE & START',
-                                  onPressed: connectedCount >= 1 ? _onStartMatch : null,
-                                  isPrimary: true,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ] else
+                        if (isHost)
+                          LobbyHostPanel(
+                            selectedMaxPlayers: _selectedMaxPlayers,
+                            selectedScreens: _selectedScreens,
+                            selectedBallSpeed: _selectedBallSpeed,
+                            selectedDuration: _selectedDuration,
+                            applyingScreens: _applyingScreens,
+                            screenApplyMsg: _screenApplyMsg,
+                            connectedCount: connectedCount,
+                            onMaxPlayers: (p) {
+                              setState(() => _selectedMaxPlayers = p);
+                              _gameService.setMaxPlayers(p);
+                              _persistAndPushSettings();
+                            },
+                            onScreens: (n) {
+                              setState(() {
+                                _selectedScreens = n;
+                                _selectedMaxPlayers = n > 5 ? 5 : (n < 1 ? 1 : n);
+                              });
+                              _gameService.setMaxPlayers(_selectedMaxPlayers);
+                              _persistAndPushSettings();
+                            },
+                            onApplyScreens: _applyScreensToRig,
+                            onBallSpeed: (speed) {
+                              setState(() => _selectedBallSpeed = speed);
+                              _persistAndPushSettings();
+                            },
+                            onDuration: (duration) {
+                              setState(() => _selectedDuration = duration);
+                              _persistAndPushSettings();
+                            },
+                            onQrInvite: () {
+                              final token = _gameService.sessionToken ?? '';
+                              final payload = 'LGARK|${_gameService.serverAddress}|${_gameService.serverPort}|$token';
+                              Navigator.pushNamed(context, '/qrinvite', arguments: payload);
+                            },
+                            onStartMatch: connectedCount >= 1 ? _onStartMatch : null,
+                          )
+                        else
                           AnimatedBuilder(
                             animation: _pulseAnimation,
                             builder: (context, child) {
@@ -539,121 +378,6 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
                 ),
               ),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPlayerRow({
-    required int index,
-    required List<dynamic> playersList,
-    required Color color,
-    required int masterIndex,
-  }) {
-    final bool isSlotConnected = index < playersList.length && playersList[index]['connected'] == true;
-    final bool isPlayerMaster = index == masterIndex;
-    final String displayName = isSlotConnected 
-        ? (playersList[index]['name'] as String? ?? 'Player ${index + 1}')
-        : 'Waiting...';
-
-    return Row(
-      children: [
-        isSlotConnected
-            ? const Icon(Icons.check_rounded, color: accentSuccess, size: 20)
-            : Icon(Icons.radio_button_unchecked_rounded, color: textSecondary.withOpacity(0.2), size: 18),
-        const SizedBox(width: 14),
-        Expanded(
-          child: Text(
-            displayName,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: AppFonts.inter(
-              fontSize: 15,
-              color: isSlotConnected ? textPrimary : textSecondary.withOpacity(0.4),
-              fontWeight: isSlotConnected ? FontWeight.w600 : FontWeight.normal,
-            ),
-          ),
-        ),
-        if (isSlotConnected)
-          Text(
-            isPlayerMaster ? 'HOST' : 'READY',
-            style: AppFonts.spaceGrotesk(
-              fontSize: 11,
-              color: isPlayerMaster ? accentGame : accentSuccess,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1.5,
-            ),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildDurationOption(int duration, String label) {
-    final isSelected = _selectedDuration == duration;
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _selectedDuration = duration;
-        });
-        _persistAndPushSettings();
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: isSelected ? accentSystem.withOpacity(0.15) : cardFill,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: isSelected ? accentSystem : borderLight,
-            width: isSelected ? 1.5 : 1.0,
-          ),
-          boxShadow: isSelected ? [
-            BoxShadow(
-              color: accentSystem.withOpacity(0.3),
-              blurRadius: 10,
-              spreadRadius: -2,
-            )
-          ] : [],
-        ),
-        child: Text(
-          label,
-          style: AppFonts.spaceGrotesk(
-            fontSize: 12,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-            color: isSelected ? accentSystem : textSecondary,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSpeedOption(String speed, String label) {
-    final isSelected = _selectedBallSpeed == speed;
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _selectedBallSpeed = speed;
-        });
-        _persistAndPushSettings();
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: isSelected ? accentSystem.withOpacity(0.15) : cardFill,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: isSelected ? accentSystem : borderLight,
-            width: isSelected ? 1.5 : 1.0,
-          ),
-        ),
-        child: Text(
-          label,
-          style: AppFonts.spaceGrotesk(
-            fontSize: 12,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-            color: isSelected ? accentSystem : textSecondary,
-          ),
         ),
       ),
     );

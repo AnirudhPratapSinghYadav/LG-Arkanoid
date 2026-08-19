@@ -4,17 +4,7 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// ---------------------------------------------------------------------------
-// Vite development server configuration for LG Arkanoid.
-//
-// This is used only during local development on a laptop/desktop. On the
-// actual Liquid Galaxy rig, Chromium connects directly to the Express
-// server on port 8130 -- Vite is not involved in production at all.
-//
-// The proxy rules forward Socket.IO and health-check requests from the
-// Vite dev server (port 5173) to the Express game server (port 8130).
-// ---------------------------------------------------------------------------
-
+// Dev-only. Production kiosk hits Express on 8130; Vite is not involved.
 export default defineConfig({
   root: 'web-client',
   // Keep Vite 4.x for Node 16 / LG Ubuntu 16.04 glibc ceiling (see CI matrix).

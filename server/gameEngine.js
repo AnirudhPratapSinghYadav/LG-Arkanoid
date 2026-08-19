@@ -1,18 +1,5 @@
-// ---------------------------------------------------------------------------
-// Frame geometry.
-//
-// A Liquid Galaxy frame is a 1920x1080 panel that the rig usually rotates to
-// portrait: /etc/X11/Xsession.d/45x11-custom_xrandr rotates by DHCP_RANDR,
-// which defaults to "right". So the browser viewport is 1080x1920 on a stock
-// rig and 1920x1080 only when the panels are left unrotated.
-//
-// Like every other LG game (galaxy-pacman derives its whole grid from
-// window.innerHeight, galaxy-asteroids from window.innerWidth), we normalise on
-// height: the logical court is always CANVAS_HEIGHT tall and each frame is
-// CANVAS_HEIGHT * aspect wide. Everything vertical therefore stays fixed while
-// horizontal sizes scale, which keeps a level's brick layout identical in both
-// orientations instead of letterboxing the court into a third of the screen.
-// ---------------------------------------------------------------------------
+// Stock LG frames are rotated portrait (DHCP_RANDR=right → 1080x1920 viewport).
+// Court height stays 1080; width follows LG_FRAME_ASPECT / LG_RANDR. See docs/lg-setup.md.
 const CANVAS_HEIGHT = 1080;
 const LANDSCAPE_SCREEN_WIDTH = 1920;
 

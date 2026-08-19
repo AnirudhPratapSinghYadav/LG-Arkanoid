@@ -38,11 +38,7 @@ function createRouter(worldState) {
     res.status(404).send('Controller page not found. Use the Flutter mobile app.');
   });
 
-  // -- Static assets ----------------------------------------------------------
-  // Serve CSS, JS, images, and other static files from the web-client folder.
-  // This must come before the screen route so that requests for /css/style.css,
-  // /js/game.js, etc. are handled as static files and not mistaken for screen
-  // numbers.
+  // Static files first so /js/* is not eaten by the /:screenNum route.
 
   router.use(express.static(web.root));
   if (web.publicDir) {

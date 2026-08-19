@@ -1,26 +1,8 @@
-// ---------------------------------------------------------------------------
-// Screen identification.
-//
-// On a Liquid Galaxy rig, the Express server injects window.SCREEN_ID into
-// the HTML via a script tag (e.g. window.SCREEN_ID = 2). This tells the
-// Phaser client which portion of the panoramic virtual world to render.
-//
-// The number of screens (numScreens) is received from the game server via
-// Socket.IO game_state events, but we initialise with a sensible default
-// here so the scene can set up its boundaries before the first state arrives.
-// ---------------------------------------------------------------------------
 const numScreens = (typeof window.NUM_SCREENS !== 'undefined') ? window.NUM_SCREENS : 3;
 const screenId = (typeof window.SCREEN_ID !== 'undefined') ? window.SCREEN_ID : Math.ceil(numScreens / 2);
 const isCenterScreen = screenId === Math.ceil(numScreens / 2);
 
-// ---------------------------------------------------------------------------
-// Court geometry.
-//
-// The logical court is CANVAS_H tall and SCREEN_W wide per frame, both injected
-// by the server, which derives them from the rig's frame aspect. LG frames are
-// portrait by default (DHCP_RANDR="right"), so SCREEN_W is 608 on a stock rig
-// and 1920 when the panels are unrotated. Never hardcode either number.
-// ---------------------------------------------------------------------------
+// Court size comes from the server (portrait LG frames are 608x1080, not 1920x1080).
 const CANVAS_H = (typeof window.CANVAS_H === 'number' && window.CANVAS_H > 0) ? window.CANVAS_H : 1080;
 const SCREEN_W = (typeof window.SCREEN_W === 'number' && window.SCREEN_W > 0)
     ? window.SCREEN_W
@@ -61,11 +43,6 @@ const screenBoundary = SCREEN_BOUNDARIES.find(s => s.screenId === screenId) || S
 const virtualLeft = screenBoundary.virtualLeft;
 const serverUrl = window.location.origin;
 
-// ---------------------------------------------------------------------------
-// Design tokens — single source of truth for all colors, fonts, spacing.
-// Dual-channel: SYSTEM (cyan) for rig/telemetry, GAME (amber) for score/action.
-// ---------------------------------------------------------------------------
-// Arcade tokens. Player colors stay in lockstep with Flutter + web controller.
 const PLAYER_COLORS = [0x20c5ff, 0xff2d78, 0xffb800, 0x9b59b6, 0x2ecc71];
 const PLAYER_HEX = ['#20c5ff', '#FF2D78', '#FFB800', '#9B59B6', '#2ECC71'];
 
@@ -96,6 +73,5 @@ const FONTS = {
 
 const REDUCED_MOTION = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-// Classic Arkanoid row rainbow (top → bottom). Hard / steel override in drawBricks.
 const ROW_COLORS = [0xc1121f, 0xe85d04, 0xffc300, 0x2a9d8f, 0x00b4d8, 0x277da1, 0x7b2cbf, 0xff4d6d];
 const PADDLE_COLORS = PLAYER_COLORS;

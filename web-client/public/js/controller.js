@@ -1,30 +1,30 @@
-let socket;
-let isConnected = false;
-let myPlayerId = null;
-let myPlayerNumber = null;
-let mySessionId = null;
-let mySessionToken = null;
-let myResumeToken = null;
-let isHost = false;
-let isSpectator = false;
-let myScore = 0;
-let myLives = 3;
-let myRank = 1;
-let myInventory = [];
-let lastPowerUpTime = 0;
-let gameEndShown = false;
-let playerColor = '#20c5ff';
-let pingTimer = null;
-let touchControlsReady = false;
-const PLAYER_COLORS = ['#20c5ff', '#FF2D78', '#FFB800', '#9B59B6', '#2ECC71'];
-const STORAGE_NAME = 'lgark_player_name';
-const STORAGE_HOST = 'lgark_host_settings';
+var socket;
+var isConnected = false;
+var myPlayerId = null;
+var myPlayerNumber = null;
+var mySessionId = null;
+var mySessionToken = null;
+var myResumeToken = null;
+var isHost = false;
+var isSpectator = false;
+var myScore = 0;
+var myLives = 3;
+var myRank = 1;
+var myInventory = [];
+var lastPowerUpTime = 0;
+var gameEndShown = false;
+var playerColor = '#20c5ff';
+var pingTimer = null;
+var touchControlsReady = false;
+var PLAYER_COLORS = ['#20c5ff', '#FF2D78', '#FFB800', '#9B59B6', '#2ECC71'];
+var STORAGE_NAME = 'lgark_player_name';
+var STORAGE_HOST = 'lgark_host_settings';
 
-let hostMaxPlayers = 3;
-let hostBallSpeed = 'medium';
-let hostDuration = 180;
-let worldNumScreens = 3;
-let worldScreenWidth = 1920;
+var hostMaxPlayers = 3;
+var hostBallSpeed = 'medium';
+var hostDuration = 180;
+var worldNumScreens = 3;
+var worldScreenWidth = 1920;
 
 // Swipes are authored for a 3-screen landscape court. Scale by the real court
 // width so a 12-screen wall stays reachable and a portrait wall (608 logical px
@@ -308,82 +308,6 @@ function activatePowerUp(type) {
     if (navigator.vibrate) navigator.vibrate(50);
 }
 
-function startMatch() {
-    if (!socket || !isConnected || !isHost) return;
-    persistHostSettings();
-    socket.emit('set_game_settings', {
-        maxPlayers: hostMaxPlayers,
-        ballSpeed: hostBallSpeed,
-        durationSeconds: hostDuration
-    });
-    socket.emit('start_game', {
-        durationSeconds: hostDuration,
-        maxPlayers: hostMaxPlayers,
-        ballSpeed: hostBallSpeed
-    });
-}
-
-function persistHostSettings() {
-    try {
-        localStorage.setItem(STORAGE_HOST, JSON.stringify({
-            maxPlayers: hostMaxPlayers,
-            ballSpeed: hostBallSpeed,
-            durationSeconds: hostDuration
-        }));
-    } catch (_) {}
-}
-
-function loadHostSettings() {
-    try {
-        const raw = localStorage.getItem(STORAGE_HOST);
-        if (!raw) return;
-        const data = JSON.parse(raw);
-        if (data.maxPlayers >= 1 && data.maxPlayers <= 5) hostMaxPlayers = data.maxPlayers;
-        if (typeof data.ballSpeed === 'string') hostBallSpeed = data.ballSpeed;
-        if (data.durationSeconds === 0 || data.durationSeconds) hostDuration = data.durationSeconds;
-    } catch (_) {}
-}
-
-function syncHostChips() {
-    document.querySelectorAll('[data-max-players]').forEach((el) => {
-        el.classList.toggle('is-on', Number(el.getAttribute('data-max-players')) === hostMaxPlayers);
-    });
-    document.querySelectorAll('[data-ball-speed]').forEach((el) => {
-        el.classList.toggle('is-on', el.getAttribute('data-ball-speed') === hostBallSpeed);
-    });
-    document.querySelectorAll('[data-duration]').forEach((el) => {
-        el.classList.toggle('is-on', Number(el.getAttribute('data-duration')) === hostDuration);
-    });
-}
-
-function emitHostSettings() {
-    if (!socket || !isConnected || !isHost) return;
-    persistHostSettings();
-    socket.emit('set_game_settings', {
-        maxPlayers: hostMaxPlayers,
-        ballSpeed: hostBallSpeed,
-        durationSeconds: hostDuration
-    });
-    syncHostChips();
-}
-
-function prefillJoin() {
-    const params = new URLSearchParams(window.location.search);
-    let code = (params.get('code') || params.get('token') || params.get('session') || '').trim().toUpperCase();
-    if (code.indexOf('|') !== -1) {
-        const parts = code.split('|');
-        code = (parts[parts.length - 1] || '').trim().toUpperCase();
-    }
-    let name = (params.get('name') || '').trim();
-    try {
-        if (!name) name = localStorage.getItem(STORAGE_NAME) || '';
-    } catch (_) {}
-    const tokenInput = document.getElementById('tokenInput');
-    const nameInput = document.getElementById('nameInput');
-    if (tokenInput && code) tokenInput.value = code.slice(0, 4);
-    if (nameInput && name) nameInput.value = name.slice(0, 12);
-}
-
 function clearIdentity() {
     myPlayerId = null;
     myPlayerNumber = null;
@@ -454,20 +378,6 @@ function bindUi() {
     }
 }
 
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-        loadHostSettings();
-        prefillJoin();
-        syncHostChips();
-        bindUi();
-    });
-} else {
-    loadHostSettings();
-    prefillJoin();
-    syncHostChips();
-    bindUi();
-}
-
 function backToJoin() {
     document.getElementById('gameEndOverlay').classList.remove('active');
     document.getElementById('gameArea').style.display = 'none';
@@ -499,132 +409,4 @@ function startPingLoop() {
     }, 3000);
 }
 
-function setupTouchControls() {
-    if (touchControlsReady) return;
-    touchControlsReady = true;
-
-    const pad = document.getElementById('touchPad');
-    const puck = document.getElementById('touchPuck');
-    let activeTouchId = null;
-    let lastX = 0;
-
-    pad.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        if (activeTouchId === null && e.changedTouches.length > 0) {
-            const touch = e.changedTouches[0];
-            activeTouchId = touch.identifier;
-            lastX = touch.clientX;
-        }
-    }, { passive: false });
-
-    pad.addEventListener('touchmove', (e) => {
-        e.preventDefault();
-        if (!isConnected || isSpectator || activeTouchId === null) return;
-
-        let touch = null;
-        for (let i = 0; i < e.changedTouches.length; i++) {
-            if (e.changedTouches[i].identifier === activeTouchId) {
-                touch = e.changedTouches[i];
-                break;
-            }
-        }
-        if (!touch) return;
-
-        const currentX = touch.clientX;
-        const dx = currentX - lastX;
-        const absDx = Math.abs(dx);
-        const acceleration = 1.0 + Math.min(3.0, absDx / 20.0);
-        const rigDeltaX = dx * acceleration * 12 * worldInputScale();
-
-        let currentTransform = puck.style.transform || 'translateX(0px)';
-        let match = currentTransform.match(/translateX\(([^p]+)px\)/);
-        let currentOffset = match ? parseFloat(match[1]) : 0;
-        currentOffset += dx;
-        const maxSlide = pad.clientWidth / 2 - 40;
-        currentOffset = Math.max(-maxSlide, Math.min(maxSlide, currentOffset));
-        puck.style.transform = `translateX(${currentOffset}px)`;
-
-        if (Math.abs(rigDeltaX) > 0) {
-            socket.emit('paddle_move', {
-                deltaX: Math.round(rigDeltaX),
-                timestamp: Date.now(),
-                nonce: Math.random().toString(36).substring(2, 15)
-            });
-        }
-        lastX = currentX;
-    }, { passive: false });
-
-    const handleTouchEnd = (e) => {
-        if (activeTouchId === null) return;
-        for (let i = 0; i < e.changedTouches.length; i++) {
-            if (e.changedTouches[i].identifier === activeTouchId) {
-                activeTouchId = null;
-                puck.style.transform = 'translateX(0px)';
-                break;
-            }
-        }
-    };
-
-    pad.addEventListener('touchend', handleTouchEnd);
-    pad.addEventListener('touchcancel', handleTouchEnd);
-
-    let mouseDown = false;
-    let mouseLastX = 0;
-
-    pad.addEventListener('mousedown', (e) => {
-        mouseDown = true;
-        mouseLastX = e.clientX;
-    });
-
-    window.addEventListener('mousemove', (e) => {
-        if (!mouseDown || !isConnected || isSpectator) return;
-        const dx = e.clientX - mouseLastX;
-        const absDx = Math.abs(dx);
-        const acceleration = 1.0 + Math.min(3.0, absDx / 20.0);
-        const rigDeltaX = dx * acceleration * 12 * worldInputScale();
-
-        let currentTransform = puck.style.transform || 'translateX(0px)';
-        let match = currentTransform.match(/translateX\(([^p]+)px\)/);
-        let currentOffset = match ? parseFloat(match[1]) : 0;
-        currentOffset += dx;
-        const maxSlide = pad.clientWidth / 2 - 40;
-        currentOffset = Math.max(-maxSlide, Math.min(maxSlide, currentOffset));
-        puck.style.transform = `translateX(${currentOffset}px)`;
-
-        if (Math.abs(rigDeltaX) > 0) {
-            socket.emit('paddle_move', {
-                deltaX: Math.round(rigDeltaX),
-                timestamp: Date.now(),
-                nonce: Math.random().toString(36).substring(2, 15)
-            });
-        }
-        mouseLastX = e.clientX;
-    });
-
-    window.addEventListener('mouseup', () => {
-        mouseDown = false;
-        puck.style.transform = 'translateX(0px)';
-    });
-}
-
-window.__lgPaddleDelta = function (dx) {
-    if (!socket || !socket.connected || isSpectator) return false;
-    const n = Number(dx);
-    if (!Number.isFinite(n) || n === 0) return false;
-    socket.emit('paddle_move', {
-        deltaX: Math.round(n),
-        timestamp: Date.now(),
-        nonce: Math.random().toString(36).substring(2, 15)
-    });
-    return true;
-};
-window.__lgStartMatch = startMatch;
-window.__lgControllerMeta = function () {
-    return {
-        host: isHost,
-        connected: isConnected,
-        playerNumber: myPlayerNumber,
-        spectator: isSpectator,
-    };
-};
 
