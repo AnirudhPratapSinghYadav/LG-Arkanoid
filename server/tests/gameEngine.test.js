@@ -102,6 +102,23 @@ test('power-up catch stores inventory (non-bomb)', () => {
   assert.strictEqual(state.powerupsCollected, 1);
 });
 
+test('wide paddle is 2x default width, not landscape 600', () => {
+  const { applyPowerUpEffect } = require('../handlers/powerups.js');
+  const state = makePlayingState(3);
+  const player = state.players[0];
+  player.paddleX = (3 * FRAME_W) - 10;
+  applyPowerUpEffect(player, 'wide_paddle', state, { emit() {} }, () => ({}));
+  assert.strictEqual(player.paddleWidth, PADDLE_W * 2);
+  assert.ok(player.paddleX + player.paddleWidth <= 3 * FRAME_W + 0.5, 'wide paddle stays in court');
+  if (PADDLE_W !== 300) {
+    assert.notStrictEqual(player.paddleWidth, 600);
+  }
+  if (player.widePaddleTimer) {
+    clearTimeout(player.widePaddleTimer);
+    player.widePaddleTimer = null;
+  }
+});
+
 test('bomb power-up auto-applies on catch', () => {
   const state = makePlayingState(3);
   const player = state.players[0];

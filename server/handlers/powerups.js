@@ -19,6 +19,13 @@ function clearAllPowerUpTimers(worldState) {
   }
 }
 
+function clampPaddleX(player, worldState) {
+  const frameW = worldState.screenWidth || gameEngine.SCREEN_WIDTH;
+  const world = (worldState.numScreens || 3) * frameW;
+  const pw = player.paddleWidth || gameEngine.DEFAULT_PADDLE_WIDTH;
+  player.paddleX = Math.max(0, Math.min(world - pw, player.paddleX));
+}
+
 function applyBombPowerUp(worldState, player, px, py) {
   if (!worldState.bricks) return;
 
@@ -32,7 +39,8 @@ function applyBombPowerUp(worldState, player, px, py) {
     epicenterY = activeBall.y;
   }
 
-  const blastRadius = 350;
+  const frameW = worldState.screenWidth || gameEngine.SCREEN_WIDTH;
+  const blastRadius = Math.round(350 * (frameW / gameEngine.LANDSCAPE_SCREEN_WIDTH));
   for (let r = 0; r < worldState.bricks.length; r++) {
     const row = worldState.bricks[r];
     if (!row) continue;
@@ -57,10 +65,13 @@ function applyBombPowerUp(worldState, player, px, py) {
 
 function applyPowerUpEffect(player, powerUpType, worldState, io, getWorldSnapshot, px, py) {
   if (powerUpType === 'wide_paddle') {
-    player.paddleWidth = 600;
+    const normalW = gameEngine.DEFAULT_PADDLE_WIDTH;
+    player.paddleWidth = normalW * 2;
+    clampPaddleX(player, worldState);
     if (player.widePaddleTimer) clearTimeout(player.widePaddleTimer);
     player.widePaddleTimer = setTimeout(() => {
-      player.paddleWidth = 300;
+      player.paddleWidth = normalW;
+      clampPaddleX(player, worldState);
       player.widePaddleTimer = null;
     }, 8000);
   } else if (powerUpType === 'slow_ball') {
