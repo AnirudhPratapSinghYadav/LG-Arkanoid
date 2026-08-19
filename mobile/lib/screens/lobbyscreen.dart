@@ -203,7 +203,7 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
     final masterIndex = gameState?['masterPlayerIndex'] as int? ?? 0;
     final isHost = (service.playerNumber ?? 0) - 1 == masterIndex;
 
-    final List<Color> playerColors = playerSlotColors;
+    const playerColors = playerSlotColors;
 
     return Scaffold(
       backgroundColor: Colors.transparent,

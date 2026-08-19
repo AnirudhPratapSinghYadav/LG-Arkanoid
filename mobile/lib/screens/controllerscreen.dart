@@ -109,7 +109,7 @@ class _ControllerScreenState extends State<ControllerScreen>
     final service = context.watch<GameService>();
     final gameState = service.latestGameState;
 
-    final List<Color> playerColors = playerSlotColors;
+    const playerColors = playerSlotColors;
     final playerColor =
         playerColors[((service.playerNumber ?? 1) - 1) % playerColors.length];
 
