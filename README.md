@@ -9,8 +9,6 @@ Built for **Gemini Summer of Code (GESOC / Gemini SoC) 2026** by **Liquid Galaxy
 **Contributor:** [Anirudh Pratap Singh Yadav](https://github.com/AnirudhPratapSinghYadav)  
 **Mentor:** [Sidharth Mudgil](https://github.com/SidharthMudgil)
 
-Repo: https://github.com/AnirudhPratapSinghYadav/LG-Arkanoid
-
 Game port: **8130**. On the rig, use **Node 16**.
 
 ---
