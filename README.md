@@ -139,7 +139,7 @@ flutter pub get
 flutter build apk --release
 ```
 
-CI pins Flutter **3.24.3**. Store / APK notes: [docs/GO_WEB_STORE.md](docs/GO_WEB_STORE.md).
+CI pins Flutter **3.24.3**.
 
 ---
 
@@ -173,13 +173,7 @@ node server/tests/e2e-multi-client.test.js
 
 ## More docs
 
-- [Liquid Galaxy setup](docs/lg-setup.md)
-- [VirtualBox test plan](docs/virtualbox-test-plan.md)
-- [Mobile controller](docs/mobile-setup.md) · [mobile/README.md](mobile/README.md)
-- [GO Store](docs/GO_WEB_STORE.md)
-- [Troubleshooting](docs/troubleshooting.md)
-- [Networking](docs/networking.md)
-- [Architecture](docs/architecture.md)
+Setup, play, and store notes are all in this README. Phone controller extras: [mobile/README.md](mobile/README.md).
 
 ---
 
