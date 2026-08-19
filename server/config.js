@@ -36,14 +36,32 @@ function parseScreenCount(value, fallback = 3) {
 const NUM_SCREENS = parseScreenCount(process.env.NUM_SCREENS, 3);
 
 const FALLBACK_COMMENTARY = [
-  'Nice hit',
-  'Keep going',
-  'Watch the ball',
-  'Good save',
-  'Level clear',
-  'Multi-ball',
-  'Close one',
+  'Save it — that ball is hunting the gap.',
+  'Stay on the line. The wall is still yours.',
+  'Clean brick. Keep the rally alive.',
+  'Do not blink. The next drop decides the rank.',
 ];
+
+/** Event-specific arcade announcer lines when Gemini is offline or the key fails. */
+const FALLBACK_BY_EVENT = {
+  life_lost: ({ lead }) => [
+    `${lead} just dropped a life. Stay on the line — the wall is still live.`,
+    `Ball through the gap. ${lead}, cover the floor before the next drop.`,
+    `Life down for ${lead}. Two paddles, one court — nobody blinks.`,
+  ][Math.floor(Math.random() * 3)],
+  score_milestone: ({ lead }) => [
+    `${lead} just punched a new high. The standings on the right just moved.`,
+    `Score surge — ${lead} is running away with this wall.`,
+  ][Math.floor(Math.random() * 2)],
+  level_cleared: ({ lead }) => `${lead} wiped the row. Fresh bricks incoming across every screen.`,
+  multi_ball: () => 'Multi-ball on a panoramic court. Cover both edges — now.',
+  rank_takeover: ({ lead, second }) => second
+    ? `${lead} stole first from ${second}. The live board just flipped.`
+    : `${lead} stole first. The live board just flipped.`,
+  victory: ({ winner }) => `${winner} takes the Liquid Galaxy wall. That is the champion — match over.`,
+  countdown: () => 'Whistle up. Three. Two. One. Break those bricks.',
+  game_master: ({ lead }) => `ARKANOID AI is watching ${lead}. Hang on — the next bounce decides it.`,
+};
 
 const COMMENTARY_COOLDOWNS = {
   level_cleared: 0,
@@ -52,6 +70,7 @@ const COMMENTARY_COOLDOWNS = {
   score_milestone: 30000,
   victory: 0,
   rank_takeover: 9000,
+  countdown: 0,
 };
 
 const PLAYER_SLOT_IDS = ['player1', 'player2', 'player3', 'player4', 'player5'];
@@ -150,9 +169,13 @@ function generateToken(){
 
 function createInitialWorldState(maxPlayers){
   const state = new gameEngine.GameState();
-  
-  state.maxPlayers = maxPlayers || 3;
+  // Host "players" default to the wall width, capped at 5 paddles.
+  const defaultPlayers = Math.max(1, Math.min(5, NUM_SCREENS));
+  state.maxPlayers = maxPlayers || defaultPlayers;
   state.numScreens = NUM_SCREENS;
+  state.lastCommentary = '';
+  state.lastCommentarySource = '';
+  state.victoryAnnounced = false;
   // Broadcast the court geometry so controllers and wall clients agree with the
   // physics without having to guess the rig's orientation.
   state.screenWidth = SCREEN_WIDTH;
@@ -207,6 +230,7 @@ module.exports = {
   NUM_SCREENS,
   MAX_SCREENS,
   FALLBACK_COMMENTARY,
+  FALLBACK_BY_EVENT,
   COMMENTARY_COOLDOWNS,
   PLAYER_SLOT_IDS,
   getScreenBoundaries,

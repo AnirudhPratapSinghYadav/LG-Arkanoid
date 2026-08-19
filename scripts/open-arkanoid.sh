@@ -233,26 +233,47 @@ fi
 
 sleep 2
 
-# --autoplay-policy is required or Chromium mutes the game until someone clicks
-# the wall, which never happens on a rig. Window geometry is left to kiosk so
-# portrait frames (DHCP_RANDR defaults to "right") are filled correctly.
-CHROME_FLAGS="--kiosk --start-fullscreen --no-first-run --noerrdialogs --disable-infobars --incognito --disable-session-crashed-bubble --disable-pinch --overscroll-history-navigation=0 --autoplay-policy=no-user-gesture-required"
+# Chromium kiosk flags — compared against galaxy-pacman / galaxy-asteroids:
+#   * Pacman uses --start-fullscreen only and can still show the address bar.
+#     --kiosk is what mentors expect on the wall.
+#   * Pacman sets --autoplay-policy only on lg1 and also passes /dev/null as a
+#     second URL (Chromium opens a junk tab). We set autoplay on every frame
+#     and never pass a dummy path.
+#   * Do not use --incognito: the "you are incognito" banner sits on the glass.
+#     A throwaway --user-data-dir per frame avoids the restore-session bubble
+#     without that banner.
+#   * Ubuntu 16.04 LG images ship `chromium-browser`. Newer images / VMs ship
+#     `chromium` or `google-chrome`. Resolve instead of hard-coding.
+# Window geometry is left to kiosk so portrait frames (DHCP_RANDR=right) fill.
+resolve_chrome() {
+  command -v chromium-browser 2>/dev/null \
+    || command -v chromium 2>/dev/null \
+    || command -v google-chrome 2>/dev/null \
+    || command -v google-chrome-stable 2>/dev/null \
+    || echo chromium-browser
+}
+CHROME_BIN="$(resolve_chrome)"
+CHROME_FLAGS="--kiosk --start-fullscreen --no-first-run --noerrdialogs --disable-translate --disable-infobars --disable-session-crashed-bubble --disable-pinch --overscroll-history-navigation=0 --autoplay-policy=no-user-gesture-required"
 
 screenNumber=0
 for frame in "${FRAMES[@]:0:$NUM_SCREENS}"; do
   screenNumber=$((screenNumber + 1))
+  PROFILE="/tmp/lg-arkanoid-chrome-${frame}"
   if [ "$frame" = "lg1" ]; then
-    echo "Opening Chromium on master ($frame → /$screenNumber)..."
-    pkill -f "chromium-browser.*:${port}/${screenNumber}" 2>/dev/null || true
-    DISPLAY=:0 nohup chromium-browser $CHROME_FLAGS \
+    echo "Opening ${CHROME_BIN} on master ($frame → /$screenNumber)..."
+    pkill -f "lg-arkanoid-chrome-${frame}" 2>/dev/null || true
+    DISPLAY=:0 nohup "$CHROME_BIN" $CHROME_FLAGS \
+      --user-data-dir="$PROFILE" \
       "http://localhost:${port}/${screenNumber}" \
       >/tmp/lg-arkanoid-chrome-lg1.log 2>&1 &
     disown || true
   else
     echo "Opening Chromium on $frame → /$screenNumber..."
-    REMOTE_CMD="pkill -f 'chromium-browser.*lg1:${port}/${screenNumber}' 2>/dev/null || true; DISPLAY=:0 nohup chromium-browser ${CHROME_FLAGS} 'http://lg1:${port}/${screenNumber}' >/tmp/lg-arkanoid-chrome.log 2>&1 &"
+    REMOTE_CMD="CHROME=\$(command -v chromium-browser || command -v chromium || command -v google-chrome || echo chromium-browser); pkill -f 'lg-arkanoid-chrome-${frame}' 2>/dev/null || true; DISPLAY=:0 nohup \$CHROME ${CHROME_FLAGS} --user-data-dir=${PROFILE} 'http://lg1:${port}/${screenNumber}' >/tmp/lg-arkanoid-chrome.log 2>&1 &"
     $SSH_CMD lg@"$frame" "$REMOTE_CMD" || echo "Warning: failed to open Chromium on $frame"
   fi
+  # Pacman sleeps 1s per frame so old CPUs are not hit with N Chromiums at once.
+  sleep 1
 done
 
 echo "Launched $NUM_SCREENS screens on port $port."

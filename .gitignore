@@ -24,6 +24,7 @@ mobile/.flutter-plugins
 mobile/.flutter-plugins-dependencies
 mobile/.packages
 **/coverage/
+GO_STORE_UPLOAD/
 
 # Local noise
 **/local.properties

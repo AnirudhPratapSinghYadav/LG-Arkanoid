@@ -12,6 +12,7 @@ html, body {
 .stage-vignette { display: none; }
 
 .brand-mark {
+    display: none !important;
     position: fixed;
     top: 20px;
     right: 28px;
@@ -39,6 +40,8 @@ html, body {
 
 body.is-playing .brand-mark,
 body.is-playing .lg-corner,
+body.is-match .brand-mark,
+body.is-match .lg-corner,
 body.is-playing .boot-overlay,
 body.is-playing .lobby-card,
 body.is-playing #qrcode {

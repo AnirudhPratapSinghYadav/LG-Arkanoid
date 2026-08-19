@@ -63,10 +63,11 @@ for frame in "${FRAMES[@]}"; do
     continue
   fi
   echo "Killing Arkanoid Chromium on $frame (port $port)..."
-  $SSH_CMD "lg@$frame" "pkill -f 'chromium-browser.*lg1:${port}/' 2>/dev/null || true" 2>/dev/null || true
+  $SSH_CMD "lg@$frame" "pkill -f 'lg-arkanoid-chrome' 2>/dev/null || pkill -f 'chromium-browser.*lg1:${port}/' 2>/dev/null || true" 2>/dev/null || true
 done
 
 echo "Killing Arkanoid Chromium on master (port $port)..."
+pkill -f "lg-arkanoid-chrome" 2>/dev/null || true
 pkill -f "chromium-browser.*localhost:${port}/" 2>/dev/null || true
 pkill -f "chromium-browser.*lg1:${port}/" 2>/dev/null || true
 

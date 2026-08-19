@@ -162,7 +162,14 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
   Widget _buildScreenChip(int n) {
     final selected = _selectedScreens == n;
     return GestureDetector(
-      onTap: () => setState(() => _selectedScreens = n),
+        onTap: () {
+          setState(() {
+            _selectedScreens = n;
+            _selectedMaxPlayers = n > 5 ? 5 : (n < 1 ? 1 : n);
+          });
+          _gameService.setMaxPlayers(_selectedMaxPlayers);
+          _persistAndPushSettings();
+        },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
@@ -308,9 +315,26 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
                         const SizedBox(height: 48),
 
                         if (isHost) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            'CREATE GAME',
+                            style: AppFonts.spaceGrotesk(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: accentSystem,
+                              letterSpacing: 2,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'You are the host. Players default to the wall screen count (max 5).',
+                            style: AppFonts.inter(fontSize: 12, color: textSecondary, height: 1.35),
+                            textAlign: TextAlign.center,
+                          ),
                           const SizedBox(height: 16),
                           Text(
-                            'MAX PLAYERS',
+                            'PLAYERS (= SCREENS)',
                             style: AppFonts.spaceGrotesk(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
@@ -450,7 +474,7 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
                               const SizedBox(width: 16),
                               Expanded(
                                 child: LgButton(
-                                  label: 'START MATCH',
+                                  label: 'CREATE & START',
                                   onPressed: connectedCount >= 1 ? _onStartMatch : null,
                                   isPrimary: true,
                                 ),

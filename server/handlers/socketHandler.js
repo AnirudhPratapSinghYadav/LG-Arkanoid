@@ -198,7 +198,7 @@ function applyPowerUpEffect(player, powerUpType, worldState, io, getWorldSnapsho
       targetBall.vy = sourceBall.vy;
       targetBall.active = true;
       targetBall.lastTouchedByPlayerId = player.id;
-      triggerCommentary('multi_ball', getWorldSnapshot(), io, worldState.commentaryRateLimiter);
+      triggerCommentary('multi_ball', getWorldSnapshot(), io, worldState.commentaryRateLimiter, worldState);
     }
   }else if(powerUpType==='bomb'){
     applyBombPowerUp(worldState, player, px, py);
@@ -333,6 +333,8 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
       worldState.slowBallTimer = null;
       worldState.powerUps = [];
       worldState.nextLevelBricks = null;
+      worldState.victoryAnnounced = false;
+      worldState.lastCommentary = '';
       worldState.level = 1;
       worldState.currentLevel = 1;
       worldState.bricks = gameEngine.loadLevel(1, null, worldState.numScreens);
@@ -377,6 +379,7 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
       );
       
       io.emit('countdown_started', { countdown: 3 });
+      triggerCommentary('countdown', getWorldSnapshot(), io, worldState.commentaryRateLimiter, worldState);
       broadcastGameState();
       
       setTimeout(() => {

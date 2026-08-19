@@ -32,6 +32,7 @@
                 <input class="join-input" type="text" id="nameInput" placeholder="Your name" maxlength="12" autocomplete="nickname" />
             </label>
             <button class="join-btn" type="button" id="joinBtn">Join game</button>
+            <p id="joinError" class="host-hint" role="alert"></p>
         </div>
     </div>
 
@@ -78,7 +79,11 @@
 
         <div id="hostControls" class="host-controls">
             <div class="host-block">
-                <div class="host-label">Players</div>
+                <div class="host-label">Create game</div>
+                <p class="host-hint">Host only. Players default to the wall screen count (max 5).</p>
+            </div>
+            <div class="host-block">
+                <div class="host-label">Players (= screens, max 5)</div>
                 <div class="chip-row" id="maxPlayersRow">
                     <button type="button" class="chip" data-max-players="1">1</button>
                     <button type="button" class="chip" data-max-players="2">2</button>
@@ -106,7 +111,7 @@
                 </div>
             </div>
             <p class="host-hint">Screen count is launched from the phone app (SSH), same as Pacman.</p>
-            <button class="join-btn host-start" type="button" id="startMatchBtn">Start match</button>
+            <button class="join-btn host-start" type="button" id="startMatchBtn">Create &amp; start</button>
         </div>
 
         <div class="powerups-row" id="powerupsRow">

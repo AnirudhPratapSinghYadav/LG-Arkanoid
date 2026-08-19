@@ -13,6 +13,10 @@
 -keep class io.flutter.** { *; }
 -keep class io.flutter.plugins.** { *; }
 -dontwarn io.flutter.embedding.**
+# Play Core split-install is not used; R8 still sees Flutter's optional
+# FlutterPlayStoreSplitApplication reference and fails minify without this.
+-dontwarn com.google.android.play.core.splitcompat.SplitCompatApplication
+-dontwarn com.google.android.play.core.**
 
 # --- mobile_scanner (ML Kit barcode) -----------------------------------------
 # ML Kit loads its detector implementations reflectively at runtime. Without

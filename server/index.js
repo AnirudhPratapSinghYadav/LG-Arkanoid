@@ -132,6 +132,8 @@ function getWorldSnapshot(){
     longestRally: worldState.longestRally || 0,
     powerupsCollected: worldState.powerupsCollected || 0,
     highestCombo: worldState.highestCombo || 0,
+    lastCommentary: worldState.lastCommentary || '',
+    lastCommentarySource: worldState.lastCommentarySource || '',
     lanIp: getLanIp(),
     port: PORT,
     masterPlayerIndex: worldState.masterPlayerIndex,
@@ -188,6 +190,9 @@ function broadcastGameState(){
     longestRally: worldState.longestRally || 0,
     powerupsCollected: worldState.powerupsCollected || 0,
     highestCombo: worldState.highestCombo || 0,
+    lastCommentary: worldState.lastCommentary || '',
+    lastCommentarySource: worldState.lastCommentarySource || '',
+    lastCommentaryModel: worldState.lastCommentaryModel || '',
     lanIp: getLanIp(),
     port: PORT,
   };
@@ -251,7 +256,8 @@ function returnToLobby() {
   worldState.slowBallTimer = null;
   worldState.powerUps = [];
   worldState.nextLevelBricks = null;
-  worldState.gameStatus = 'lobby';
+  worldState.victoryAnnounced = false;
+  worldState.lastCommentary = '';
   worldState.gameActive = false;
   worldState.gameStartedAt = null;
   worldState.countdownStartedAt = null;
@@ -333,6 +339,10 @@ function gameLoop() {
     if (Date.now() - worldState.gameStartedAt > worldState.gameDurationSeconds * 1000) {
       worldState.gameStatus = 'time_up';
       worldState.gameActive = false;
+      if (!worldState.victoryAnnounced) {
+        worldState.victoryAnnounced = true;
+        triggerCommentary('victory', getWorldSnapshot(), io, worldState.commentaryRateLimiter, worldState);
+      }
       broadcastGameState();
       scheduleReturnToLobby();
       setTimeout(gameLoop, TICK_MS);
@@ -358,12 +368,12 @@ function gameLoop() {
     if(p.score > 0 && Math.floor(beforeScores[i] / 5000) < Math.floor(p.score / 5000)){
       const snap = getWorldSnapshot();
       snap.playerId = p.id;
-      triggerCommentary('score_milestone', snap, io, worldState.commentaryRateLimiter);
+      triggerCommentary('score_milestone', snap, io, worldState.commentaryRateLimiter, worldState);
     }
     if(p.lives < beforeLives[i]){
       const snap = getWorldSnapshot();
       snap.playerId = p.id;
-      triggerCommentary('life_lost', snap, io, worldState.commentaryRateLimiter);
+      triggerCommentary('life_lost', snap, io, worldState.commentaryRateLimiter, worldState);
       pollGameMasterAsync(worldState, io);
       if(p.lives === 0){
         io.emit('player_eliminated', { playerId: p.id, playerNumber: i + 1 });
@@ -373,11 +383,15 @@ function gameLoop() {
 
   if(worldState.level > beforeLevel){
     worldState.currentLevel = worldState.level;
-    triggerCommentary('level_cleared', getWorldSnapshot(), io, worldState.commentaryRateLimiter);
+    triggerCommentary('level_cleared', getWorldSnapshot(), io, worldState.commentaryRateLimiter, worldState);
     pollGameMasterAsync(worldState, io);
   }
 
-  if (worldState.gameStatus === 'game_over' || worldState.gameStatus === 'win') {
+  if (worldState.gameStatus === 'game_over' || worldState.gameStatus === 'win' || worldState.gameStatus === 'time_up') {
+    if (!worldState.victoryAnnounced) {
+      worldState.victoryAnnounced = true;
+      triggerCommentary('victory', getWorldSnapshot(), io, worldState.commentaryRateLimiter, worldState);
+    }
     scheduleReturnToLobby();
   }
 
@@ -386,7 +400,7 @@ function gameLoop() {
     if (previousRanks[playerId] && currentRanks[playerId] === 1 && previousRanks[playerId] > 1) {
       const snap = getWorldSnapshot();
       snap.playerId = playerId;
-      triggerCommentary('rank_takeover', snap, io, worldState.commentaryRateLimiter);
+      triggerCommentary('rank_takeover', snap, io, worldState.commentaryRateLimiter, worldState);
     }
   }
   previousRanks = currentRanks;

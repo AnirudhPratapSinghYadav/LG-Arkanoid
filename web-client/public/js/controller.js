@@ -37,7 +37,12 @@ function worldInputScale() {
 function joinGame() {
     const token = document.getElementById('tokenInput').value.trim().toUpperCase();
     const playerName = document.getElementById('nameInput').value.trim() || 'Web Player';
-    if (!token || token.length !== 4) return alert('Enter a 4-letter session code');
+    if (!token || token.length !== 4) {
+        const err = document.getElementById('joinError');
+        if (err) err.textContent = 'Enter the 4-letter session code from the wall';
+        else console.warn('Enter a 4-letter session code');
+        return;
+    }
 
     mySessionToken = token;
     try { localStorage.setItem(STORAGE_NAME, playerName); } catch (_) {}
@@ -119,7 +124,10 @@ function joinGame() {
     });
 
     socket.on('join_rejected', (data) => {
-        alert('Join failed: ' + (data && data.message ? data.message : 'unknown error'));
+        const msg = 'Join failed: ' + (data && data.message ? data.message : 'unknown error');
+        const err = document.getElementById('joinError');
+        if (err) err.textContent = msg;
+        else console.warn(msg);
         clearIdentity();
         if (socket) socket.disconnect();
     });
@@ -230,7 +238,15 @@ function joinGame() {
                 try {
                     window.speechSynthesis.cancel();
                     const u = new SpeechSynthesisUtterance(data.text);
-                    u.rate = 1.05;
+                    u.lang = 'en-US';
+                    u.rate = 0.88;
+                    u.pitch = 0.9;
+                    u.volume = 1;
+                    const voices = window.speechSynthesis.getVoices() || [];
+                    const pick = voices.find((v) => /en-US|en_US/.test(v.lang) && /Google|Natural|Premium|Neural|Samantha|David/i.test(v.name))
+                        || voices.find((v) => /en-US|en_US/.test(v.lang))
+                        || voices.find((v) => /^en/i.test(v.lang));
+                    if (pick) u.voice = pick;
                     window.speechSynthesis.speak(u);
                 } catch (_) {}
             }
@@ -577,3 +593,25 @@ function setupTouchControls() {
         puck.style.transform = 'translateX(0px)';
     });
 }
+
+window.__lgPaddleDelta = function (dx) {
+    if (!socket || !socket.connected || isSpectator) return false;
+    const n = Number(dx);
+    if (!Number.isFinite(n) || n === 0) return false;
+    socket.emit('paddle_move', {
+        deltaX: Math.round(n),
+        timestamp: Date.now(),
+        nonce: Math.random().toString(36).substring(2, 15)
+    });
+    return true;
+};
+window.__lgStartMatch = startMatch;
+window.__lgControllerMeta = function () {
+    return {
+        host: isHost,
+        connected: isConnected,
+        playerNumber: myPlayerNumber,
+        spectator: isSpectator,
+    };
+};
+

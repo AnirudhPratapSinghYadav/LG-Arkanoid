@@ -48,12 +48,12 @@ class GameScene extends Phaser.Scene {
         this.robotStates = {}; // playerId -> idle|talking|alert|excited
         this.ensureRobotSlots(5);
 
-        this.centerCommentaryTitle = this.add.text(CENTER_X, 120, 'COMMENTARY', {
+        this.centerCommentaryTitle = this.add.text(CENTER_X, 448, 'ARKANOID AI', {
             fontFamily: FONTS.heading, fontSize: '18px', color: HEX.system, fontWeight: 'bold', letterSpacing: 3
         }).setOrigin(0.5, 0).setVisible(false).setDepth(60);
-        this.centerCommentaryText = this.add.text(CENTER_X, 148, '', {
-            fontFamily: FONTS.body, fontSize: '26px', color: HEX.textLight, align: 'center',
-            wordWrap: { width: Math.min(900, SCREEN_W - 80) }
+        this.centerCommentaryText = this.add.text(CENTER_X, 476, '', {
+            fontFamily: FONTS.body, fontSize: '30px', color: HEX.textLight, align: 'center',
+            wordWrap: { width: Math.min(1000, SCREEN_W - 64) }
         }).setOrigin(0.5, 0).setVisible(false).setDepth(60);
 
         this.screenLabel = this.add.text(20, 20, 'SCREEN ' + screenId, {
@@ -98,20 +98,20 @@ class GameScene extends Phaser.Scene {
         this.leaderboardPanelGraphics = this.add.graphics();
         this.leaderboardTexts = [];
         for(let i = 0; i < 5; i++) {
-            let txt = this.add.text(SCREEN_W - 40, 80 + (i * 36), '', {
+            let txt = this.add.text(CENTER_X, 548 + (i * 88), '', {
                 fontFamily: FONTS.mono,
-                fontSize: '22px'
-            }).setOrigin(1, 0);
+                fontSize: '36px'
+            }).setOrigin(0.5, 0).setDepth(55);
             if (screenId !== numScreens) txt.setVisible(false);
             this.leaderboardTexts.push(txt);
         }
 
-        this.leaderboardTitle = this.add.text(SCREEN_W - 40, 40, 'SCORES', {
+        this.leaderboardTitle = this.add.text(CENTER_X, 488, 'LIVE STANDINGS', {
             fontFamily: FONTS.heading,
-            fontSize: '20px',
+            fontSize: '40px',
             color: HEX.accent,
             fontWeight: 'bold'
-        }).setOrigin(1, 0);
+        }).setOrigin(0.5, 0).setDepth(55);
         if (screenId !== numScreens) this.leaderboardTitle.setVisible(false);
 
         this.geminiCardGraphics = this.add.graphics();
@@ -165,9 +165,21 @@ class GameScene extends Phaser.Scene {
 
     setStageMode(mode) {
         if (typeof document === 'undefined' || !document.body) return;
-        document.body.classList.toggle('is-playing', mode === 'playing');
+        const inMatch = mode === 'playing';
+        document.body.classList.toggle('is-playing', inMatch);
+        document.body.classList.toggle('is-match', inMatch);
         document.body.classList.toggle('is-lobby', mode === 'lobby');
         document.body.classList.toggle('is-idle', mode === 'idle');
+        const brand = document.querySelector('.brand-mark');
+        const corner = document.getElementById('lgCorner');
+        if (brand) brand.style.display = 'none';
+        if (inMatch) {
+            if (corner) { corner.hidden = true; corner.classList.remove('is-visible'); }
+        } else if (mode === 'lobby' && screenId === 1 && corner) {
+            corner.hidden = false;
+            corner.classList.add('is-visible');
+        }
+        if (typeof window !== 'undefined') window.__lgStage = mode;
     }
 
     update() {
@@ -308,14 +320,57 @@ class GameScene extends Phaser.Scene {
         }, ms);
     }
 
+    pickArcadeVoice() {
+        if (typeof window === 'undefined' || !window.speechSynthesis) return null;
+        const voices = window.speechSynthesis.getVoices() || [];
+        return voices.find((v) => /en-US|en_US/.test(v.lang) && /Google|Natural|Premium|Neural|Samantha|David/i.test(v.name))
+            || voices.find((v) => /en-US|en_US/.test(v.lang))
+            || voices.find((v) => /^en/i.test(v.lang))
+            || null;
+    }
+
     speakCommentary(text) {
         if (!text || typeof window === 'undefined' || !window.speechSynthesis) return;
         try {
             window.speechSynthesis.cancel();
             const u = new SpeechSynthesisUtterance(text);
-            u.rate = 1.05;
+            u.lang = 'en-US';
+            u.rate = 0.88;
             u.pitch = 0.9;
+            u.volume = 1;
+            const pick = this.pickArcadeVoice();
+            if (pick) u.voice = pick;
             window.speechSynthesis.speak(u);
+        } catch (_) {}
+    }
+
+    playWhistle(kind) {
+        try {
+            if (!this.audioCtx) this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const ctx = this.audioCtx;
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            const now = ctx.currentTime;
+            if (kind === 'go') {
+                osc.frequency.setValueAtTime(1800, now);
+                osc.frequency.exponentialRampToValueAtTime(700, now + 0.55);
+                gain.gain.setValueAtTime(0.0001, now);
+                gain.gain.exponentialRampToValueAtTime(0.22, now + 0.04);
+                gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.7);
+                osc.start(now);
+                osc.stop(now + 0.72);
+            } else {
+                osc.frequency.setValueAtTime(1400, now);
+                osc.frequency.exponentialRampToValueAtTime(900, now + 0.18);
+                gain.gain.setValueAtTime(0.0001, now);
+                gain.gain.exponentialRampToValueAtTime(0.16, now + 0.02);
+                gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.22);
+                osc.start(now);
+                osc.stop(now + 0.24);
+            }
+            osc.connect(gain);
+            gain.connect(ctx.destination);
         } catch (_) {}
     }
 
@@ -737,13 +792,18 @@ class GameScene extends Phaser.Scene {
         if (!this.countdownText) {
             this.countdownText = this.add.text(CENTER_X, 540, '', {
                 fontFamily: FONTS.display, fontSize: '240px', color: HEX.accent, fontWeight: 'bold'
-            }).setOrigin(0.5, 0.5);
+            }).setOrigin(0.5, 0.5).setDepth(80);
         }
         
         if (isCenterScreen) {
             this.countdownText.setVisible(true);
             let elapsed = Date.now() - (this.currentState.countdownStartedAt || Date.now());
             let remain = 3 - Math.floor(elapsed / 1000);
+            if (remain !== this._lastCountRemain) {
+                this._lastCountRemain = remain;
+                if (remain >= 1 && remain <= 3) this.playWhistle('tick');
+                else if (remain <= 0) this.playWhistle('go');
+            }
             if (remain > 0) {
                 this.countdownText.setText(remain.toString());
                 let scale = 1 + (elapsed % 1000) / 1000 * 0.3;
@@ -761,21 +821,33 @@ class GameScene extends Phaser.Scene {
     
     hideCountdownMode() {
         if (this.countdownText) this.countdownText.setVisible(false);
+        this._lastCountRemain = undefined;
     }
 
     drawWinMode() {
         if (!this.winTitle) {
-            this.winTitle = this.add.text(CENTER_X, 200, 'MATCH OVER', {
-                fontFamily: FONTS.heading, fontSize: '72px', color: HEX.game, fontWeight: 'bold'
-            }).setOrigin(0.5, 0.5);
+            this.winTitle = this.add.text(CENTER_X, 88, 'MATCH OVER', {
+                fontFamily: FONTS.heading, fontSize: '52px', color: HEX.game, fontWeight: 'bold'
+            }).setOrigin(0.5, 0.5).setDepth(90);
             
-            this.winName = this.add.text(CENTER_X, 320, '', {
-                fontFamily: FONTS.heading, fontSize: '110px', color: HEX.textPrimary, fontWeight: 'bold'
-            }).setOrigin(0.5, 0.5);
+            this.winName = this.add.text(CENTER_X, 168, '', {
+                fontFamily: FONTS.heading, fontSize: '58px', color: HEX.textPrimary, fontWeight: 'bold'
+            }).setOrigin(0.5, 0.5).setDepth(90);
+
+            this.winRatingLabel = this.add.text(CENTER_X, 228, 'FINAL RANKING', {
+                fontFamily: FONTS.heading, fontSize: '20px', color: HEX.accent, letterSpacing: 4
+            }).setOrigin(0.5, 0.5).setDepth(90);
             
-            this.winStatsText = this.add.text(CENTER_X, 540, '', {
-                fontFamily: FONTS.body, fontSize: '28px', color: HEX.textSecondary, align: 'center', lineSpacing: 20
-            }).setOrigin(0.5, 0.5);
+            this.winStatsText = this.add.text(CENTER_X, 262, '', {
+                fontFamily: FONTS.body, fontSize: '20px', color: HEX.textSecondary, align: 'center', lineSpacing: 8
+            }).setOrigin(0.5, 0).setDepth(90);
+
+            this.winRankTexts = [];
+            for (let i = 0; i < 5; i++) {
+                this.winRankTexts.push(this.add.text(CENTER_X, 330 + i * 92, '', {
+                    fontFamily: FONTS.mono, fontSize: '32px', color: HEX.textPrimary, align: 'center'
+                }).setOrigin(0.5, 0).setDepth(90).setVisible(false));
+            }
 
             this.winConfetti = this.add.particles(0, 0, 'particle', {
                 x: CENTER_X, y: -50,
@@ -792,6 +864,7 @@ class GameScene extends Phaser.Scene {
         if (isCenterScreen) {
             this.winTitle.setVisible(true);
             this.winName.setVisible(true);
+            if (this.winRatingLabel) this.winRatingLabel.setVisible(true);
             this.winStatsText.setVisible(true);
             
             const status = this.currentState.gameStatus;
@@ -799,19 +872,39 @@ class GameScene extends Phaser.Scene {
             else if (status === 'game_over') this.winTitle.setText('GAME OVER');
             else this.winTitle.setText('YOU WIN');
 
-            let winner = [...(this.currentState.players || [])].sort((a,b) => b.score - a.score)[0];
-            if (winner && (winner.connected || winner.score > 0)) {
+            const ranked = [...(this.currentState.players || [])]
+                .filter((p) => p && (p.connected || (p.score || 0) > 0))
+                .sort((a, b) => (b.score || 0) - (a.score || 0));
+            const winner = ranked[0];
+            if (winner) {
                 this.winName.setText(`${(winner.name || 'PLAYER').toUpperCase()} WINS`);
             } else {
                 this.winName.setText('NO WINNER');
             }
             
-            let statsStr = `LONGEST RALLY: ${this.currentState.longestRally || 0}\n` +
-                           `POWER-UPS COLLECTED: ${this.currentState.powerupsCollected || 0}\n` +
-                           `HIGHEST COMBO: ${this.currentState.highestCombo || 0}`;
-            this.winStatsText.setText(statsStr);
+            this.winStatsText.setText(
+                `RALLY ${this.currentState.longestRally || 0}   ·   POWER-UPS ${this.currentState.powerupsCollected || 0}   ·   COMBO ${this.currentState.highestCombo || 0}`
+            );
+
+            const medals = ['1ST', '2ND', '3RD', '4TH', '5TH'];
+            for (let i = 0; i < this.winRankTexts.length; i++) {
+                const row = this.winRankTexts[i];
+                if (i < ranked.length) {
+                    const p = ranked[i];
+                    const stars = i === 0 ? 5 : i === 1 ? 4 : i === 2 ? 3 : 2;
+                    const starStr = '★'.repeat(stars) + '☆'.repeat(5 - stars);
+                    const lives = Math.max(0, p.lives || 0);
+                    row.setText(
+                        `${medals[i]}  ${(p.name || ('P' + (p.playerNumber || i + 1))).toUpperCase()}   ${String(p.score).padStart(5, '0')}   ${starStr}   ${lives}♥`
+                    );
+                    row.setColor(PLAYER_HEX[(Math.max(1, p.playerNumber) - 1) % PLAYER_HEX.length]);
+                    row.setVisible(true);
+                } else {
+                    row.setVisible(false);
+                }
+            }
             
-            if (!this.winConfettiEmitted && winner && winner.connected) {
+            if (!this.winConfettiEmitted && winner) {
                 this.winConfettiEmitted = true;
             }
         }
@@ -821,7 +914,9 @@ class GameScene extends Phaser.Scene {
         if (this.winTitle) {
             this.winTitle.setVisible(false);
             this.winName.setVisible(false);
+            if (this.winRatingLabel) this.winRatingLabel.setVisible(false);
             if (this.winStatsText) this.winStatsText.setVisible(false);
+            if (this.winRankTexts) this.winRankTexts.forEach((t) => t.setVisible(false));
             if (this.winConfetti) this.winConfetti.stop();
             this.winConfettiEmitted = false;
             if (this.cameras && this.cameras.main) {
@@ -862,18 +957,41 @@ class GameScene extends Phaser.Scene {
         if (this.screenLabel) this.screenLabel.setVisible(!isGameActive);
         if (this.rigStatusText) this.rigStatusText.setVisible(false);
 
+        const liveScreens = liveNumScreens(this.currentState);
+        const onRight = screenId === liveScreens;
+
+        const showStandings = onRight && (status === 'playing' || status === 'countdown');
         if (screenId === 1) this.hudText.setVisible(true);
         if (isCenterScreen) this.timerText.setVisible(true);
-        if (screenId === numScreens) {
+        if (showStandings) {
             this.leaderboardTexts.forEach((t) => { if (t) t.setVisible(true); });
             this.leaderboardTitle.setVisible(true);
+        } else {
+            this.leaderboardTexts.forEach((t) => { if (t) t.setVisible(false); });
+            this.leaderboardTitle.setVisible(false);
         }
 
-        if (isCenterScreen && this.currentState.lastCommentary) {
-            this.centerCommentaryTitle.setVisible(false);
-            this.centerCommentaryText.setText(this.currentState.lastCommentary);
+        const line = this.currentState.lastCommentary || '';
+        if (isCenterScreen && line) {
+            this.centerCommentaryTitle.setVisible(true);
+            this.centerCommentaryTitle.setText(
+                this.currentState.lastCommentarySource === 'gemini' ? 'ARKANOID AI' : 'ARKANOID AI · LOCAL'
+            );
             this.centerCommentaryText.setVisible(true);
-            this.centerCommentaryText.setPosition(CENTER_X, 96);
+            if (this._shownCommentary !== line) {
+                this._shownCommentary = line;
+                this.centerCommentaryText.setText(line);
+                this.centerCommentaryText.setY(530);
+                this.centerCommentaryText.setAlpha(0);
+                this.tweens.killTweensOf(this.centerCommentaryText);
+                this.tweens.add({
+                    targets: this.centerCommentaryText,
+                    y: 476,
+                    alpha: 1,
+                    duration: 420,
+                    ease: 'Cubic.Out',
+                });
+            }
         } else if (this.centerCommentaryTitle) {
             this.centerCommentaryTitle.setVisible(false);
             this.centerCommentaryText.setVisible(false);
@@ -914,29 +1032,53 @@ class GameScene extends Phaser.Scene {
         } else if (status === 'countdown') {
             this.timerText.setText('READY');
             this.timerText.setColor(HEX.white);
+        } else if (status === 'time_up' || status === 'game_over' || status === 'win') {
+            this.timerText.setText(status === 'time_up' ? '00:00' : 'DONE');
+            this.timerText.setColor(HEX.error);
         }
 
-        const activePlayers = players.filter((p) => p.connected).sort((a, b) => (a.rank || 99) - (b.rank || 99));
-        let lbW = 0;
-        let lbLines = 0;
+        const activePlayers = players.filter((p) => p && p.connected).sort((a, b) => {
+            const scoreDelta = (b.score || 0) - (a.score || 0);
+            if (scoreDelta !== 0) return scoreDelta;
+            return (a.rank || 99) - (b.rank || 99);
+        });
         for (let i = 0; i < this.leaderboardTexts.length; i++) {
-            if (i < activePlayers.length) {
+            if (showStandings && i < activePlayers.length) {
                 const p = activePlayers[i];
                 const colorHex = PLAYER_HEX[(Math.max(1, p.playerNumber) - 1) % PLAYER_HEX.length];
-                const name = p.name || ('P' + p.playerNumber);
+                const name = (p.name || ('P' + p.playerNumber)).toUpperCase();
                 const rank = p.rank || (i + 1);
-                this.leaderboardTexts[i].setText('#' + rank + '  ' + name + '  ' + String(p.score).padStart(5, '0'));
+                const hearts = '♥'.repeat(Math.max(0, Math.min(p.lives, 5))) || '—';
+                this.leaderboardTexts[i].setText(
+                    '#' + rank + '   ' + name + '   ' + String(p.score).padStart(5, '0') + '   ' + hearts
+                );
                 this.leaderboardTexts[i].setColor(colorHex);
-                lbW = Math.max(lbW, this.leaderboardTexts[i].width);
-                lbLines++;
             } else {
                 this.leaderboardTexts[i].setText('');
             }
         }
 
-        if (screenId === numScreens && lbLines > 0) {
-            this.leaderboardTitle.setVisible(true).setDepth(2);
-            this.leaderboardTitle.setText('SCORES');
+        if (showStandings && activePlayers.length > 0) {
+            this.leaderboardTitle.setVisible(true).setDepth(55);
+            this.leaderboardTitle.setText('LIVE STANDINGS');
+            const panelY = 468;
+            const panelH = 72 + activePlayers.length * 88;
+            this.leaderboardPanelGraphics.fillStyle(0x0c1219, 0.78);
+            this.leaderboardPanelGraphics.fillRoundedRect(36, panelY, SCREEN_W - 72, panelH, 18);
+            this.leaderboardPanelGraphics.lineStyle(2, 0x20c5ff, 0.5);
+            this.leaderboardPanelGraphics.strokeRoundedRect(36, panelY, SCREEN_W - 72, panelH, 18);
+        }
+
+        if (typeof window !== 'undefined') {
+            window.__lgHud = {
+                stage: window.__lgStage || '',
+                status: status || '',
+                standings: showStandings,
+                commentary: line,
+                lives: players.filter((p) => p && p.connected).map((p) => ({
+                    name: p.name, score: p.score, lives: p.lives, rank: p.rank
+                })),
+            };
         }
     }
 

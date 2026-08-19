@@ -28,10 +28,10 @@ class TTSService extends ChangeNotifier {
 
   Future<void> _setup() async {
     await _tts.awaitSpeakCompletion(false);
-    await _tts.setLanguage("en-IN");
+    await _tts.setLanguage("en-US");
     await _tts.setVolume(1.0);
-    await _tts.setSpeechRate(0.48);
-    await _tts.setPitch(0.65);
+    await _tts.setSpeechRate(0.42);
+    await _tts.setPitch(0.88);
 
     if (!kIsWeb && (defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.macOS)) {
       await _tts.setSharedInstance(true);

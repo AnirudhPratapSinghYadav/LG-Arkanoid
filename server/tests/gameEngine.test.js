@@ -285,4 +285,17 @@ test('normalizeDurationSeconds keeps endless (0)', () => {
   assert.strictEqual(normalizeDurationSeconds(undefined, 120), 120);
 });
 
+test('ARKANOID AI lists ten Gemini fallback models', () => {
+  const { GEMINI_MODELS, pickFallbackCommentary } = require('../services/geminiService.js');
+  assert.strictEqual(GEMINI_MODELS.length, 10);
+  const win = pickFallbackCommentary('victory', {
+    players: [{ name: 'Alpha', score: 40, lives: 2, connected: true }],
+  });
+  assert.ok(/Alpha/i.test(win), win);
+  const life = pickFallbackCommentary('life_lost', {
+    players: [{ name: 'Bravo', score: 0, lives: 1, connected: true }],
+  });
+  assert.ok(/Bravo/i.test(life), life);
+});
+
 console.log('All gameEngine tests passed.');
