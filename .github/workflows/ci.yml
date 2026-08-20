@@ -83,8 +83,15 @@ jobs:
         working-directory: ./mobile
 
       - name: Build split-per-ABI release APKs
-        # Matches the GO Web Store size target (<50 MB). R8 minify + resource
-        # shrinking are enabled in android/app/build.gradle.kts. arm64-v8a is
-        # the APK that goes to the store; the others exist for emulators.
-        run: flutter build apk --release --split-per-abi
+        # Maven Central sometimes returns 429 on GitHub-hosted runners.
+        # Retry a few times so a rate-limit does not fail a green tree.
         working-directory: ./mobile
+        run: |
+          for i in 1 2 3 4 5; do
+            if flutter build apk --release --split-per-abi; then
+              exit 0
+            fi
+            echo "APK build failed (try $i). Waiting before retry..."
+            sleep $((i * 20))
+          done
+          exit 1

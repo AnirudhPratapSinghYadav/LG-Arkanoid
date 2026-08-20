@@ -13,15 +13,50 @@ Game port: **8130**. On the rig, use **Node 16**.
 
 ---
 
-## How a match works
+## How it is built
 
-1. Start the Node server. On a real rig, Chromium opens each screen automatically.
-2. The **center** screen shows a QR and a 4-letter join code. (`/health` never includes that code.)
-3. Players join from the Flutter app, or from a browser at `/controller`.
-4. The first phone in is the **host**. The host sets match time, player count (max 5), and ball speed, then starts.
-5. The wall counts 3-2-1 and play begins.
+Three pieces. The phone is not the wall. The wall is not an APK.
 
-The wall is 1–12 screens (typical Liquid Galaxy: 3, 5, 7, 9, 12). You can have at most **5** paddles, even on a 12-screen wall. Slice `/1` is always the **leftmost** physical screen.
+```mermaid
+flowchart LR
+  P["Phone<br/>AI Arkanoid LG<br/>Flutter paddle"]
+  S["lg1 master<br/>Node 16 + pm2<br/>port 8130"]
+  W["Chromium on each frame<br/>/1 left … /N right<br/>Phaser court"]
+
+  P -->|"SSH 22<br/>CONNECT / LAUNCH / SHUT DOWN"| S
+  P -->|"Socket.IO<br/>join, paddle, start"| S
+  S -->|"HTTP slices"| W
+```
+
+Optional: if `GEMINI_API_KEY` is set, the server asks Gemini for spoken lines. If it is empty, the match still runs with offline lines.
+
+---
+
+## How a match runs
+
+```mermaid
+flowchart TD
+  A[Clone repo on lg1<br/>bash install.sh lq] --> B[LAUNCH ON RIG<br/>or open-arkanoid.sh]
+  B --> C[Chromium opens every screen<br/>center shows QR + 4-letter code]
+  C --> D[Phone: CONNECT LG]
+  D --> E[Scan QR or type the code]
+  E --> F{First player?}
+  F -->|yes| G[Host sets time, players 1-5, speed]
+  F -->|no| H[Wait in lobby]
+  G --> I[Host starts]
+  H --> I
+  I --> J[Wall: 3-2-1]
+  J --> K[Playing<br/>move paddle, break bricks, power-ups]
+  K --> L{Time up / no lives / bricks gone?}
+  L -->|no| K
+  L -->|yes| M[Leaderboard + congratulations]
+  M --> N[Back to lobby<br/>new join code]
+  N --> E
+```
+
+`/health` never has the join code. You cannot join during a match. After about 12 seconds the wall returns to lobby so the next game can start.
+
+The wall is 1–12 screens (typical Liquid Galaxy: 3, 5, 7, 9, 12). At most **5** paddles. Slice `/1` is the **leftmost** physical screen.
 
 ---
 
