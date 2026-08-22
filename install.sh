@@ -18,7 +18,23 @@ echo "Updating package lists..."
 sudo apt-get update -y
 
 echo "Installing system packages..."
-sudo apt-get install -y curl chromium-browser sshpass build-essential
+# speech-dispatcher + espeak-ng: Chromium speechSynthesis on Ubuntu LG masters.
+# Without them the wall commentary panel updates but no audio leaves HDMI.
+sudo apt-get install -y curl chromium-browser sshpass build-essential speech-dispatcher espeak-ng
+
+# Unmute the default ALSA/Pulse path when present. Stock LG images often leave
+# system audio muted because no other game uses TTS.
+if command -v amixer >/dev/null 2>&1; then
+  amixer -q set Master unmute 80% 2>/dev/null || true
+  amixer -q set PCM unmute 80% 2>/dev/null || true
+fi
+if command -v pactl >/dev/null 2>&1; then
+  pactl set-sink-mute @DEFAULT_SINK@ 0 2>/dev/null || true
+  pactl set-sink-volume @DEFAULT_SINK@ 80% 2>/dev/null || true
+fi
+if command -v spd-conf >/dev/null 2>&1 || command -v speech-dispatcher >/dev/null 2>&1; then
+  echo "speech-dispatcher present — wall TTS can use espeak-ng."
+fi
 
 # Prefer nvm + Node 16 (glibc-safe on Ubuntu 16.04 LG images). Fall back to apt nodejs.
 if ! command -v node >/dev/null 2>&1 || [[ "$(node -v | sed 's/v//;s/\..*//')" -lt 16 ]]; then

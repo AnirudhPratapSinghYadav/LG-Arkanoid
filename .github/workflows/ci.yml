@@ -52,6 +52,10 @@ jobs:
           curl -sf http://127.0.0.1:8130/health
           node server/tests/e2e-multi-client.test.js
           STATUS=$?
+          if [ "$STATUS" -eq 0 ]; then
+            node server/tests/reconnect-grace.test.js
+            STATUS=$?
+          fi
           kill "$SERVER_PID" 2>/dev/null || true
           exit $STATUS
 

@@ -3,12 +3,22 @@ const { PORT, TICK_MS, SCREEN_WIDTH, CANVAS_HEIGHT, BALL_RADIUS, getLanIp, gener
 const { triggerCommentary, pollGameMasterAsync, generateNextLevelAsync } = require('./services/geminiService.js');
 const { resolveMatchResult } = require('./matchResult.js');
 
-function createMatchController({ worldState, io, pendingHandoffs, applyPowerUpEffect, clearAllPowerUpTimers }) {
+function createMatchController({ worldState, io, pendingHandoffs, applyPowerUpEffect, clearAllPowerUpTimers, disconnectTimers }) {
   let previousRanks = {};
   let lobbyReturnTimer = null;
   let lastControllerEmitAt = 0;
   let lastEmittedStatus = '';
   let cachedLan = { ip: '', at: 0 };
+  const pendingReconnects = disconnectTimers || new Map();
+
+  function lobbyDiag(trigger) {
+    return {
+      trigger: String(trigger || 'unknown'),
+      connectedCount: worldState.players.filter((p) => p.connected).length,
+      pendingReconnects: pendingReconnects.size,
+      gameStatus: worldState.gameStatus,
+    };
+  }
 
   function lanForPayload() {
     if (cachedLan.ip && Date.now() - cachedLan.at < 5000) return cachedLan.ip;
@@ -230,6 +240,8 @@ function createMatchController({ worldState, io, pendingHandoffs, applyPowerUpEf
 
   function returnToLobby(options = {}) {
     const force = options && options.force === true;
+    const trigger = (options && options.trigger) || (force ? 'force' : 'manual');
+    console.log('[lobby] returnToLobby', JSON.stringify(lobbyDiag(trigger)));
     cancelReturnToLobby();
     // Normal path: only after a finished match. Force path: empty court mid-match
     // (last phone left) so a ghost "playing" lobby cannot block every new join.
@@ -309,12 +321,15 @@ function createMatchController({ worldState, io, pendingHandoffs, applyPowerUpEf
     broadcastGameState();
   }
 
-  function scheduleReturnToLobby(delayMs = 12000) {
+  /** Booth failsafe: if the host never taps EXIT/Rematch, clear the end screen. */
+  function scheduleReturnToLobby(delayMs = 75000) {
     if (lobbyReturnTimer) return;
+    const wait = Math.max(30000, Number(delayMs) || 75000);
     lobbyReturnTimer = setTimeout(() => {
       lobbyReturnTimer = null;
-      returnToLobby();
-    }, delayMs);
+      if (!['time_up', 'game_over', 'win'].includes(worldState.gameStatus)) return;
+      returnToLobby({ trigger: 'booth_failsafe_' + wait + 'ms' });
+    }, wait);
   }
 
   function emitBallHandoffs(beforeBallScreens) {
@@ -394,6 +409,7 @@ function createMatchController({ worldState, io, pendingHandoffs, applyPowerUpEf
           triggerCommentary('victory', getWorldSnapshot(), io, worldState.commentaryRateLimiter, worldState);
         }
         broadcastGameState({ forceControllers: true });
+        scheduleReturnToLobby(75000);
         setTimeout(gameLoop, TICK_MS);
         return;
       }
@@ -442,6 +458,7 @@ function createMatchController({ worldState, io, pendingHandoffs, applyPowerUpEf
         triggerCommentary('victory', getWorldSnapshot(), io, worldState.commentaryRateLimiter, worldState);
       }
       broadcastGameState({ forceControllers: true });
+      scheduleReturnToLobby(75000);
       setTimeout(gameLoop, TICK_MS);
       return;
     }
@@ -464,12 +481,13 @@ function createMatchController({ worldState, io, pendingHandoffs, applyPowerUpEf
     setTimeout(gameLoop, delay);
   }
 
-  function abortMatchIfEmpty() {
+  function abortMatchIfEmpty(trigger) {
     const status = worldState.gameStatus;
     if (status !== 'playing' && status !== 'countdown') return false;
     const connected = worldState.players.filter((p) => p.connected).length;
+    console.log('[lobby] abortMatchIfEmpty', JSON.stringify(lobbyDiag(trigger || 'check')));
     if (connected > 0) return false;
-    returnToLobby({ force: true });
+    returnToLobby({ force: true, trigger: trigger || 'abort_empty_court' });
     return true;
   }
 
@@ -478,6 +496,7 @@ function createMatchController({ worldState, io, pendingHandoffs, applyPowerUpEf
     emitFullStateTo,
     getWorldSnapshot,
     cancelReturnToLobby,
+    scheduleReturnToLobby,
     returnToLobby,
     abortMatchIfEmpty,
     startGameLoop: gameLoop,

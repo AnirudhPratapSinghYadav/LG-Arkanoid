@@ -1,3 +1,32 @@
+// Chromium loads voices asynchronously. Cold SSH launch often has getVoices()=[]
+// until 'voiceschanged' — the first commentary (countdown / life_lost) was
+// silently dropped. Gate speak on that event and replay one buffered line.
+
+GameScene.prototype._ensureVoicesReady = function() {
+    if (typeof window === 'undefined' || !window.speechSynthesis) return;
+    if (this._voicesHooked) return;
+    this._voicesHooked = true;
+    this._voicesReady = (window.speechSynthesis.getVoices() || []).length > 0;
+    this._pendingCommentary = null;
+
+    const markReady = () => {
+        this._voicesReady = true;
+        if (this._pendingCommentary) {
+            const line = this._pendingCommentary;
+            this._pendingCommentary = null;
+            this.speakCommentary(line);
+        }
+    };
+
+    window.speechSynthesis.addEventListener('voiceschanged', markReady);
+    // Some builds never fire voiceschanged if the list was already cached.
+    setTimeout(() => {
+        if (!this._voicesReady && (window.speechSynthesis.getVoices() || []).length > 0) {
+            markReady();
+        }
+    }, 800);
+};
+
 GameScene.prototype.pickArcadeVoice = function() {
     if (typeof window === 'undefined' || !window.speechSynthesis) return null;
     const voices = window.speechSynthesis.getVoices() || [];
@@ -9,6 +38,11 @@ GameScene.prototype.pickArcadeVoice = function() {
 
 GameScene.prototype.speakCommentary = function(text) {
     if (!text || typeof window === 'undefined' || !window.speechSynthesis) return;
+    this._ensureVoicesReady();
+    if (!this._voicesReady) {
+        this._pendingCommentary = text;
+        return;
+    }
     try {
         window.speechSynthesis.cancel();
         const u = new SpeechSynthesisUtterance(text);

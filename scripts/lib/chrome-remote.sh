@@ -23,7 +23,12 @@ pacman_chrome_cmd() {
 
 asteroids_chrome_cmd() {
   local url="$1"
-  printf 'export DISPLAY=:0 ; chromium-browser %s --start-fullscreen &' "$url"
+  local extra="${2:-}"
+  if [ -n "$extra" ]; then
+    printf 'export DISPLAY=:0 ; chromium-browser %s --start-fullscreen %s &' "$url" "$extra"
+  else
+    printf 'export DISPLAY=:0 ; chromium-browser %s --start-fullscreen &' "$url"
+  fi
 }
 
 # close-arkanoid: wait for pkill (no -f on ssh itself).

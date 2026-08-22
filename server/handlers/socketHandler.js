@@ -13,6 +13,7 @@ const { clearAllPowerUpTimers, applyPowerUpEffect } = require('./powerups.js');
 const { registerPlayerHandlers } = require('./players.js');
 
 const socketToPlayerIndex = new Map();
+/** Grace-period reconnect timers keyed by playerId. Shared with match for lobby diagnostics. */
 const disconnectTimers = new Map();
 const ipJoinAttempts = new Map();
 
@@ -207,7 +208,7 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
         socket.emit('error', { errorCode: 1010, message: 'Match is still running' });
         return;
       }
-      if (typeof returnToLobby === 'function') returnToLobby({ force: true });
+      if (typeof returnToLobby === 'function') returnToLobby({ force: true, trigger: 'host_return_to_lobby' });
     });
 
     socket.on('rematch', () => {
@@ -244,7 +245,7 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
         socket.emit('error', settingsErr);
         return;
       }
-      broadcastGameState();
+      broadcastGameState({ forceControllers: true });
     });
 
     socket.on('set_max_players', (data) => {
@@ -274,7 +275,7 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
           worldState.masterPlayerIndex = Math.max(0, worldState.players.findIndex((p) => p.connected));
           if (worldState.masterPlayerIndex < 0) worldState.masterPlayerIndex = 0;
         }
-        broadcastGameState();
+        broadcastGameState({ forceControllers: true });
       }
     });
 
@@ -308,4 +309,5 @@ module.exports = {
   registerSocketHandlers,
   applyPowerUpEffect,
   clearAllPowerUpTimers,
+  disconnectTimers,
 };

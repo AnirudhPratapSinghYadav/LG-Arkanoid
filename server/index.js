@@ -10,7 +10,7 @@ const crypto = require('crypto');
 const helmet = require('helmet');
 
 const { PORT, GEMINI_API_KEY, isAllowedCorsOrigin, resolveWebRoot, createInitialWorldState } = require('./config.js');
-const { registerSocketHandlers } = require('./handlers/socketHandler.js');
+const { registerSocketHandlers, disconnectTimers } = require('./handlers/socketHandler.js');
 const { applyPowerUpEffect, clearAllPowerUpTimers } = require('./handlers/powerups.js');
 const createRouter = require('./routes.js');
 const { createMatchController } = require('./match.js');
@@ -95,6 +95,7 @@ const match = createMatchController({
   pendingHandoffs,
   applyPowerUpEffect,
   clearAllPowerUpTimers,
+  disconnectTimers,
 });
 
 registerSocketHandlers(

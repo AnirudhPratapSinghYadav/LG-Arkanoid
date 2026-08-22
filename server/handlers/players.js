@@ -97,10 +97,7 @@ function registerPlayerHandlers(socket, ctx) {
         return;
       }
 
-      let slotIndex = worldState.players.findIndex((p) => !p.connected && p.name === playerName);
-      if (slotIndex === -1) {
-        slotIndex = worldState.players.findIndex((p) => !p.connected && !p.name);
-      }
+      let slotIndex = worldState.players.findIndex((p) => !p.connected && !p.name);
       if (slotIndex === -1) {
         slotIndex = worldState.players.findIndex((p) => !p.connected);
       }
@@ -337,7 +334,9 @@ function registerPlayerHandlers(socket, ctx) {
         message: 'Player left the game',
       });
       broadcastGameState();
-      if (typeof abortMatchIfEmpty === 'function') abortMatchIfEmpty();
+      if (typeof abortMatchIfEmpty === 'function') {
+        abortMatchIfEmpty('leave_game');
+      }
     });
 
     socket.on('disconnect', ()=>{
@@ -379,9 +378,9 @@ function registerPlayerHandlers(socket, ctx) {
         message: 'Connection lost, waiting to reconnect...',
       });
       broadcastGameState();
-      // Empty court during a live match must not stay "playing" — that blocks
-      // every new phone with "Match already in progress".
-      if (typeof abortMatchIfEmpty === 'function') abortMatchIfEmpty();
+      // Do NOT abortMatchIfEmpty here. connectedCount is 0 during a Wi-Fi blip
+      // grace window; aborting would wipe score/session before resume_request.
+      // leave_game (explicit quit) and the 30s timer below still abort when empty.
 
       const timer = setTimeout(()=>{
         if(playerId) disconnectTimers.delete(playerId);
@@ -408,7 +407,9 @@ function registerPlayerHandlers(socket, ctx) {
           message: 'Player left the game',
         });
         broadcastGameState();
-        if (typeof abortMatchIfEmpty === 'function') abortMatchIfEmpty();
+        if (typeof abortMatchIfEmpty === 'function') {
+          abortMatchIfEmpty('disconnect_grace_expired');
+        }
       }, 30000);
 
       if(playerId){

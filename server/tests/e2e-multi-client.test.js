@@ -364,8 +364,18 @@ async function main() {
   const sTick = await once(screens[1], 'game_state', 3000).catch((e) => ({ __err: e.message }));
   record('Center screen still receiving ticks', sTick && !sTick.__err && Array.isArray(sTick.balls), sTick.__err || `balls=${(sTick.balls || []).length}`);
 
-  // Cleanup sockets
-  [p1b, p2, ...screens].forEach((s) => s.disconnect());
+  // Cleanup: explicit leave so the court does not stay "playing" for 30s grace
+  // (Wi-Fi blip window). leave_game aborts an empty match immediately.
+  try {
+    if (p1b && p1b.connected) p1b.emit('leave_game');
+  } catch (_) {}
+  try {
+    if (p2 && p2.connected) p2.emit('leave_game');
+  } catch (_) {}
+  await new Promise((r) => setTimeout(r, 300));
+  [p1b, p2, ...screens].forEach((s) => {
+    try { s.disconnect(); } catch (_) {}
+  });
 
   // Summary
   const passed = results.filter((r) => r.ok).length;

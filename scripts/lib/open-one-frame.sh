@@ -10,11 +10,12 @@ open_one_frame() {
 
   if [ "$frame" = "lg1" ]; then
     url="http://localhost:${port}/${screen_number}"
-    extra="--autoplay-policy=no-user-gesture-required"
   else
     url="http://lg1:${port}/${screen_number}"
-    extra=""
   fi
+  # Autoplay on every frame: center-screen TTS uses speechSynthesis; slaves that
+  # become the center slice (odd walls) need the same Chromium flag as lg1.
+  extra="--autoplay-policy=no-user-gesture-required"
 
   remote="$(pacman_chrome_cmd "$url" "$extra")"
   echo "Opening $frame → /$screen_number  (ssh -Xnf lg@$frame)"
@@ -31,7 +32,7 @@ open_one_frame() {
     return 0
   fi
 
-  remote="$(asteroids_chrome_cmd "$url")"
+  remote="$(asteroids_chrome_cmd "$url" "$extra")"
   if ssh_asteroids "$frame" "$remote" "${LG_PASSWORD:-}"; then
     echo "  Pacman ssh failed — Asteroids sshpass used (ssh -tXn $frame)."
     return 0

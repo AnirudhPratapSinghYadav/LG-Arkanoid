@@ -112,6 +112,8 @@ GameScene.prototype.setupSocket = function() {
     this.socket.on('commentary_thinking', () => {});
 
     this.socket.on('commentary', (data) => {
+        if (typeof this._ensureVoicesReady === 'function') this._ensureVoicesReady();
+
         if (data.eventType === 'life_lost') {
             if (!REDUCED_MOTION) this.cameras.main.shake(200, 0.01);
         }
