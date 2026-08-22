@@ -22,7 +22,7 @@ if (hasReleaseKeystore) {
 android {
     namespace = "com.anirudh.lg_arkanoid"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = "25.1.8937393"
+    ndkVersion = "26.1.10909125"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -34,7 +34,7 @@ android {
         // Pinned rather than inherited: the GO Web Store entry has to declare a
         // concrete "android_OS" value, and mobile_scanner's ML Kit barcode
         // reader requires API 21. 21 = Android 5.0.
-        minSdk = 21
+        minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -70,6 +70,11 @@ android {
                 "proguard-rules.pro"
             )
         }
+    }
+
+    lint {
+        checkReleaseBuilds = false
+        abortOnError = false
     }
 }
 

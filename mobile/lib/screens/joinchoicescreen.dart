@@ -6,6 +6,7 @@ import '../widgets/mission_background.dart';
 
 import '../services/ssh_service.dart';
 import '../widgets/dual_brand.dart';
+import '../utils/join_target.dart';
 
 class JoinChoiceScreen extends StatefulWidget {
   const JoinChoiceScreen({super.key});
@@ -91,21 +92,33 @@ class _JoinChoiceScreenState extends State<JoinChoiceScreen> {
                     _buildChoiceCard(
                       context: context,
                       title: 'SCAN QR CODE',
-                      description: 'Same Wi-Fi as the Liquid Galaxy master',
+                      description:
+                          'Best: same Wi-Fi as lg1, then scan the wall QR with this APK',
                       icon: Icons.qr_code_scanner_rounded,
                       onTap: () async {
                         final result = await Navigator.pushNamed(context, '/qrscan', arguments: 'session');
                         if (result != null && result is String) {
-                          final parts = result.split('|');
-                          if (parts.length >= 4) {
+                          final parsed = parseJoinInput(result);
+                          if (parsed != null && parsed.ip.isNotEmpty) {
                             if (context.mounted) {
+                              if (parsed.warning != null) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text(parsed.warning!)),
+                                );
+                                return;
+                              }
+                              if (parsed.hint != null) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text(parsed.hint!)),
+                                );
+                              }
                               Navigator.pushNamed(
                                 context,
                                 '/nameentry',
                                 arguments: {
-                                  'ip': parts[1],
-                                  'port': parts[2],
-                                  'token': parts[3],
+                                  'ip': parsed.ip,
+                                  'port': parsed.port,
+                                  'token': parsed.token,
                                 },
                               );
                             }
@@ -117,7 +130,8 @@ class _JoinChoiceScreenState extends State<JoinChoiceScreen> {
                     _buildChoiceCard(
                       context: context,
                       title: 'ENTER MANUALLY',
-                      description: 'Type master IP, port, and session code',
+                      description:
+                          'Same Wi-Fi as lg1. Paste the wall URL, or type master IPv4 + port 8130 + 4-letter code',
                       icon: Icons.keyboard_rounded,
                       onTap: () {
                         Navigator.pushNamed(context, '/manualentry');

@@ -6,15 +6,10 @@ import 'lobby_choice_chip.dart';
 
 class LobbyHostPanel extends StatelessWidget {
   final int selectedMaxPlayers;
-  final int selectedScreens;
   final String selectedBallSpeed;
   final int selectedDuration;
-  final bool applyingScreens;
-  final String? screenApplyMsg;
   final int connectedCount;
   final ValueChanged<int> onMaxPlayers;
-  final ValueChanged<int> onScreens;
-  final VoidCallback onApplyScreens;
   final ValueChanged<String> onBallSpeed;
   final ValueChanged<int> onDuration;
   final VoidCallback onQrInvite;
@@ -23,15 +18,10 @@ class LobbyHostPanel extends StatelessWidget {
   const LobbyHostPanel({
     super.key,
     required this.selectedMaxPlayers,
-    required this.selectedScreens,
     required this.selectedBallSpeed,
     required this.selectedDuration,
-    required this.applyingScreens,
-    required this.screenApplyMsg,
     required this.connectedCount,
     required this.onMaxPlayers,
-    required this.onScreens,
-    required this.onApplyScreens,
     required this.onBallSpeed,
     required this.onDuration,
     required this.onQrInvite,
@@ -40,6 +30,8 @@ class LobbyHostPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final need = selectedMaxPlayers;
+    final ready = connectedCount >= need;
     return Column(
       children: [
         const SizedBox(height: 8),
@@ -55,13 +47,13 @@ class LobbyHostPanel extends StatelessWidget {
         ),
         const SizedBox(height: 6),
         Text(
-          'You are the host. Players default to the wall screen count (max 5).',
+          'Pick how many paddles. Start unlocks only when that many phones have joined.',
           style: AppFonts.inter(fontSize: 12, color: textSecondary, height: 1.35),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 16),
         Text(
-          'PLAYERS (= SCREENS)',
+          'PLAYERS',
           style: AppFonts.spaceGrotesk(
             fontSize: 12,
             fontWeight: FontWeight.bold,
@@ -84,44 +76,18 @@ class LobbyHostPanel extends StatelessWidget {
               ),
           ],
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 10),
         Text(
-          'SCREENS (RIG)',
-          style: AppFonts.spaceGrotesk(
+          ready
+              ? 'Ready — $connectedCount / $need joined'
+              : 'Waiting for players — $connectedCount / $need joined',
+          style: AppFonts.inter(
             fontSize: 12,
-            fontWeight: FontWeight.bold,
-            color: textSecondary,
-            letterSpacing: 1,
+            color: ready ? accentGame : textSecondary,
+            height: 1.35,
           ),
           textAlign: TextAlign.center,
         ),
-        const SizedBox(height: 8),
-        Wrap(
-          alignment: WrapAlignment.center,
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            for (final n in const [1, 3, 5, 7, 9, 12])
-              LobbyChoiceChip(
-                label: '$n',
-                selected: selectedScreens == n,
-                onTap: () => onScreens(n),
-              ),
-          ],
-        ),
-        const SizedBox(height: 10),
-        LgButton(
-          label: applyingScreens ? 'APPLYING…' : 'APPLY SCREENS TO RIG',
-          onPressed: applyingScreens ? null : onApplyScreens,
-        ),
-        if (screenApplyMsg != null) ...[
-          const SizedBox(height: 8),
-          Text(
-            screenApplyMsg!,
-            style: AppFonts.inter(fontSize: 11, color: textSecondary, height: 1.35),
-            textAlign: TextAlign.center,
-          ),
-        ],
         const SizedBox(height: 16),
         Text(
           'BALL SPEED',
@@ -177,8 +143,8 @@ class LobbyHostPanel extends StatelessWidget {
             const SizedBox(width: 16),
             Expanded(
               child: LgButton(
-                label: 'CREATE & START',
-                onPressed: connectedCount >= 1 ? onStartMatch : null,
+                label: ready ? 'START MATCH' : 'NEED $need',
+                onPressed: ready ? onStartMatch : null,
                 isPrimary: true,
               ),
             ),

@@ -25,7 +25,10 @@ class _ConnectionStatusState extends State<ConnectionStatus> with SingleTickerPr
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 1),
-    )..repeat(reverse: true);
+    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _controller.repeat(reverse: true);
+    });
   }
 
   @override

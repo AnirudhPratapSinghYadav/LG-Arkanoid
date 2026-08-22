@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import '../utils/app_fonts.dart';
 import '../utils/constants.dart';
+import 'lgbutton.dart';
 
 class GameEndOverlay extends StatelessWidget {
+  final String kicker;
   final String title;
   final String subtitle;
   final String message;
@@ -10,24 +12,31 @@ class GameEndOverlay extends StatelessWidget {
   final int rank;
   final Color playerColor;
   final List<Map<String, dynamic>> rankings;
-  final VoidCallback onBackToLobby;
+  final bool isHost;
+  final VoidCallback onExit;
+  final VoidCallback? onNewGame;
+  final VoidCallback? onRematch;
 
   const GameEndOverlay({
     super.key,
+    required this.kicker,
     required this.title,
     required this.subtitle,
     required this.score,
     required this.rank,
     required this.playerColor,
-    required this.onBackToLobby,
+    required this.onExit,
     this.message = '',
     this.rankings = const <Map<String, dynamic>>[],
+    this.isHost = false,
+    this.onNewGame,
+    this.onRematch,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Colors.black.withOpacity(0.9),
+      color: Colors.black.withOpacity(0.92),
       child: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -35,14 +44,16 @@ class GameEndOverlay extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(
-                  Icons.emoji_events_rounded,
+                Icon(
+                  kicker.contains('LUCK')
+                      ? Icons.sports_esports_rounded
+                      : Icons.emoji_events_rounded,
                   color: accentWarning,
-                  size: 72,
+                  size: 64,
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'CONGRATULATIONS',
+                  kicker,
                   textAlign: TextAlign.center,
                   style: AppFonts.spaceGrotesk(
                     fontSize: 14,
@@ -77,7 +88,7 @@ class GameEndOverlay extends StatelessWidget {
                     subtitle,
                     textAlign: TextAlign.center,
                     style: AppFonts.inter(
-                      fontSize: 20,
+                      fontSize: 18,
                       color: textPrimary,
                       fontWeight: FontWeight.w600,
                     ),
@@ -138,42 +149,34 @@ class GameEndOverlay extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  'Final Rank: #$rank',
+                  rank > 0 ? 'Final Rank: #$rank' : '',
                   style: AppFonts.jetBrainsMono(
                     fontSize: 16,
                     color: textSecondary,
                   ),
                 ),
-                const SizedBox(height: 12),
-                Text(
-                  'The wall returns to the lobby automatically.',
-                  style: AppFonts.inter(
-                    fontSize: 13,
-                    color: textSecondary,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
                 const SizedBox(height: 28),
+                if (isHost) ...[
+                  LgButton(
+                    label: 'PLAY AGAIN',
+                    onPressed: onRematch,
+                    isPrimary: true,
+                  ),
+                  const SizedBox(height: 10),
+                  LgButton(
+                    label: 'NEW GAME',
+                    onPressed: onNewGame,
+                    isPrimary: false,
+                  ),
+                  const SizedBox(height: 10),
+                ],
                 SizedBox(
                   width: 240,
                   height: 56,
-                  child: ElevatedButton(
-                    onPressed: onBackToLobby,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: accentSystem,
-                      foregroundColor: bgDark,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                    child: Text(
-                      'NEXT LOBBY',
-                      style: AppFonts.spaceGrotesk(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1,
-                      ),
-                    ),
+                  child: LgButton(
+                    label: 'EXIT',
+                    onPressed: onExit,
+                    isPrimary: !isHost,
                   ),
                 ),
               ],

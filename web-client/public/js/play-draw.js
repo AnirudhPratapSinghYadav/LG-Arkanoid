@@ -45,19 +45,10 @@ GameScene.prototype.setupLeftmostBrand = function() {
     if (this.rigStatusText) {
         this.rigStatusText.setPosition(22, 194);
     }
-    const maxLogoW = Math.min(160, SCREEN_W * 0.28);
-    const place = (img, x) => {
-        if (!img) return;
-        const w = img.width || 640;
-        const scale = Math.min(0.42, maxLogoW / w);
-        img.setOrigin(0, 0)
-            .setPosition(x, 18)
-            .setScale(scale)
-            .setAlpha(0)
-            .setDepth(70);
-    };
-    place(this.logo, 18);
-    place(this.gesocLogo, 18 + maxLogoW + 10);
+    // HTML #lgCorner is the only LG/GESOC brand on /1. Never also draw the
+    // Phaser copies — that stacked the same two marks on top of each other.
+    if (this.logo) this.logo.setVisible(false).setAlpha(0);
+    if (this.gesocLogo) this.gesocLogo.setVisible(false).setAlpha(0);
 };
 
 GameScene.prototype.setRobotState = function(playerId, state, ms = 2800) {

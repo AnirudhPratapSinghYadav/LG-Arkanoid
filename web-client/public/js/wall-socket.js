@@ -58,6 +58,8 @@ GameScene.prototype.setupSocket = function() {
             state.lastCommentary = this.currentState.lastCommentary;
         }
         this.currentState = state;
+        if (typeof this.hideBootOverlay === 'function') this.hideBootOverlay();
+        this.syncMatchEndBar(state);
     });
 
     this.socket.on('boundary_enter', (data) => {
@@ -244,4 +246,26 @@ GameScene.prototype.setupSocket = function() {
         setTimeout(() => this.playBeep(1320, 'sine', 0.15, 0.12), 100);
         setTimeout(() => this.playBeep(1760, 'sine', 0.2, 0.12), 200);
     });
+};
+
+GameScene.prototype.syncMatchEndBar = function(state) {
+    const bar = document.getElementById('matchEndBar');
+    if (!bar) return;
+    const ended = state && (state.gameStatus === 'win' || state.gameStatus === 'time_up' || state.gameStatus === 'game_over');
+    bar.hidden = !(isCenterScreen && ended);
+    if (!this._matchEndBarBound) {
+        this._matchEndBarBound = true;
+        const newGame = document.getElementById('matchEndNewGame');
+        const rematch = document.getElementById('matchEndRematch');
+        if (newGame) {
+            newGame.addEventListener('click', () => {
+                if (this.socket) this.socket.emit('return_to_lobby');
+            });
+        }
+        if (rematch) {
+            rematch.addEventListener('click', () => {
+                if (this.socket) this.socket.emit('rematch');
+            });
+        }
+    }
 };

@@ -6,6 +6,7 @@ import '../widgets/lgpanel.dart';
 import '../widgets/lgbutton.dart';
 import '../widgets/lgtextfield.dart';
 import '../widgets/mission_background.dart';
+import '../utils/join_target.dart';
 
 class ManualEntryScreen extends StatefulWidget {
   const ManualEntryScreen({super.key});
@@ -41,13 +42,28 @@ class _ManualEntryScreenState extends State<ManualEntryScreen> {
   }
 
   void _onContinue() {
-    final token = _tokenController.text.trim().toUpperCase();
-    final ip = _ipController.text.trim();
-    final port = _portController.text.trim();
+    var token = _tokenController.text.trim().toUpperCase();
+    var ip = _ipController.text.trim();
+    var port = _portController.text.trim();
+
+    // Pacman testers paste http://masterIp:8130/controller — that used to be
+    // treated as a hostname and the socket never connected.
+    final parsedField = parseJoinInput(ip.isEmpty ? token : ip, defaultPort: port.isEmpty ? defaultServerPort : port);
+    if (parsedField != null) {
+      ip = parsedField.ip;
+      if (parsedField.port.isNotEmpty) port = parsedField.port;
+      if (parsedField.token.length == 4) token = parsedField.token;
+    }
+    final parsedToken = parseJoinInput(token, defaultPort: port.isEmpty ? defaultServerPort : port);
+    if (parsedToken != null && parsedToken.token.length == 4) {
+      token = parsedToken.token;
+      if (ip.isEmpty) ip = parsedToken.ip;
+      if (port.isEmpty) port = parsedToken.port;
+    }
 
     if (token.length != 4) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Session Code must be exactly 4 characters')),
+        const SnackBar(content: Text('Session Code must be exactly 4 characters (or paste the wall URL)')),
       );
       return;
     }
@@ -57,6 +73,19 @@ class _ManualEntryScreenState extends State<ManualEntryScreen> {
         const SnackBar(content: Text('IP Address and Port cannot be empty')),
       );
       return;
+    }
+
+    final host = parseJoinInput(ip, defaultPort: port);
+    if (host?.warning != null || parsedField?.warning != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(host?.warning ?? parsedField!.warning!)),
+      );
+      return;
+    }
+    if (host?.hint != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(host!.hint!)),
+      );
     }
 
     Navigator.pushNamed(
@@ -101,7 +130,7 @@ class _ManualEntryScreenState extends State<ManualEntryScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Enter the 4-letter token displayed on the Liquid Galaxy rig',
+                      'Paste the URL under the wall QR (http://IPv4:8130/controller?c=CODE), or type the 4-letter code plus the master IPv4. Same Wi-Fi as lg1 — not lg1, localhost, or cellular.',
                       style: AppFonts.inter(
                         fontSize: 13,
                         color: textSecondary,
@@ -148,7 +177,7 @@ class _ManualEntryScreenState extends State<ManualEntryScreen> {
                           LgTextField(
                             controller: _ipController,
                             label: 'RIG HOST IP ADDRESS',
-                            hint: 'e.g. 192.168.1.42 or 127.0.0.1',
+                            hint: '192.168.1.42 or http://192.168.1.42:8130/controller',
                             keyboardType: TextInputType.text,
                             autocorrect: false,
                             enableSuggestions: false,

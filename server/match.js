@@ -1,10 +1,20 @@
 const gameEngine = require('./gameEngine.js');
 const { PORT, TICK_MS, SCREEN_WIDTH, CANVAS_HEIGHT, BALL_RADIUS, getLanIp, generateToken, generateResumeToken } = require('./config.js');
 const { triggerCommentary, pollGameMasterAsync, generateNextLevelAsync } = require('./services/geminiService.js');
+const { resolveMatchResult } = require('./matchResult.js');
 
 function createMatchController({ worldState, io, pendingHandoffs, applyPowerUpEffect, clearAllPowerUpTimers }) {
   let previousRanks = {};
   let lobbyReturnTimer = null;
+  let lastControllerEmitAt = 0;
+  let lastEmittedStatus = '';
+  let cachedLan = { ip: '', at: 0 };
+
+  function lanForPayload() {
+    if (cachedLan.ip && Date.now() - cachedLan.at < 5000) return cachedLan.ip;
+    cachedLan = { ip: getLanIp(), at: Date.now() };
+    return cachedLan.ip;
+  }
 
   function getScreenIdForX(x) {
     const numScreens = worldState.numScreens || 3;
@@ -55,7 +65,7 @@ function createMatchController({ worldState, io, pendingHandoffs, applyPowerUpEf
       highestCombo: worldState.highestCombo || 0,
       lastCommentary: worldState.lastCommentary || '',
       lastCommentarySource: worldState.lastCommentarySource || '',
-      lanIp: getLanIp(),
+      lanIp: lanForPayload(),
       port: PORT,
       masterPlayerIndex: worldState.masterPlayerIndex,
       maxPlayers: worldState.maxPlayers || 3,
@@ -64,8 +74,15 @@ function createMatchController({ worldState, io, pendingHandoffs, applyPowerUpEf
     };
   }
 
-  function broadcastGameState() {
+  function endedResult() {
+    const status = worldState.gameStatus;
+    if (status !== 'win' && status !== 'time_up' && status !== 'game_over') return null;
+    return resolveMatchResult(worldState.players);
+  }
+
+  function buildGamePayload(includeBricks) {
     const ranks = computePlayerRanks();
+    const result = endedResult();
     const payload = {
       sessionId: worldState.sessionId,
       numScreens: worldState.numScreens || 3,
@@ -114,11 +131,10 @@ function createMatchController({ worldState, io, pendingHandoffs, applyPowerUpEf
       lastCommentary: worldState.lastCommentary || '',
       lastCommentarySource: worldState.lastCommentarySource || '',
       lastCommentaryModel: worldState.lastCommentaryModel || '',
-      lanIp: getLanIp(),
-      port: PORT,
+      matchResult: result,
     };
 
-    if (worldState.bricksDirty) {
+    if (includeBricks) {
       payload.bricks = worldState.bricks.map((row) =>
         row.map((brick) => ({
           row: brick.row,
@@ -131,10 +147,65 @@ function createMatchController({ worldState, io, pendingHandoffs, applyPowerUpEf
           type: brick.type,
         }))
       );
-      worldState.bricksDirty = false;
+    }
+    return payload;
+  }
+
+  function slimControllerPayload(full) {
+    return {
+      sessionId: full.sessionId,
+      numScreens: full.numScreens,
+      screenWidth: full.screenWidth,
+      canvasHeight: full.canvasHeight,
+      players: full.players,
+      currentLevel: full.currentLevel,
+      gameStatus: full.gameStatus,
+      gameStartedAt: full.gameStartedAt,
+      lobbyStartedAt: full.lobbyStartedAt,
+      countdownStartedAt: full.countdownStartedAt,
+      masterPlayerIndex: full.masterPlayerIndex,
+      maxPlayers: full.maxPlayers,
+      gameDurationSeconds: full.gameDurationSeconds,
+      ballSpeed: full.ballSpeed,
+      longestRally: full.longestRally,
+      powerupsCollected: full.powerupsCollected,
+      highestCombo: full.highestCombo,
+      lastCommentary: full.lastCommentary,
+      lastCommentarySource: full.lastCommentarySource,
+      matchResult: full.matchResult,
+    };
+  }
+
+  function roomSize(name) {
+    const room = io.sockets.adapter.rooms.get(name);
+    return room ? room.size : 0;
+  }
+
+  function broadcastGameState(opts = {}) {
+    const includeBricks = worldState.bricksDirty || opts.forceBricks === true;
+    const payload = buildGamePayload(includeBricks);
+    if (includeBricks) worldState.bricksDirty = false;
+
+    const hasScreens = roomSize('screens') > 0;
+    if (hasScreens) {
+      io.to('screens').emit('game_state', payload);
+    } else {
+      io.emit('game_state', payload);
     }
 
-    io.emit('game_state', payload);
+    const now = Date.now();
+    const statusChanged = lastEmittedStatus !== worldState.gameStatus;
+    lastEmittedStatus = worldState.gameStatus;
+    const controllerDue = opts.forceControllers === true || statusChanged || now - lastControllerEmitAt >= 100;
+    if (controllerDue && roomSize('controllers') > 0) {
+      lastControllerEmitAt = now;
+      io.to('controllers').emit('game_state', slimControllerPayload(payload));
+    }
+  }
+
+  function emitFullStateTo(socket) {
+    const payload = buildGamePayload(true);
+    socket.emit('game_state', payload);
   }
 
   function cancelReturnToLobby() {
@@ -148,7 +219,7 @@ function createMatchController({ worldState, io, pendingHandoffs, applyPowerUpEf
     return {
       sessionToken: worldState.sessionToken,
       sessionId: worldState.sessionId,
-      lanIp: getLanIp(),
+      lanIp: lanForPayload(),
       port: PORT,
       numScreens: worldState.numScreens || 3,
       maxPlayers: worldState.maxPlayers || 3,
@@ -157,9 +228,12 @@ function createMatchController({ worldState, io, pendingHandoffs, applyPowerUpEf
     };
   }
 
-  function returnToLobby() {
+  function returnToLobby(options = {}) {
+    const force = options && options.force === true;
     cancelReturnToLobby();
-    if (!['time_up', 'game_over', 'win'].includes(worldState.gameStatus)) {
+    // Normal path: only after a finished match. Force path: empty court mid-match
+    // (last phone left) so a ghost "playing" lobby cannot block every new join.
+    if (!force && !['time_up', 'game_over', 'win'].includes(worldState.gameStatus)) {
       return;
     }
 
@@ -319,8 +393,7 @@ function createMatchController({ worldState, io, pendingHandoffs, applyPowerUpEf
           worldState.victoryAnnounced = true;
           triggerCommentary('victory', getWorldSnapshot(), io, worldState.commentaryRateLimiter, worldState);
         }
-        broadcastGameState();
-        scheduleReturnToLobby();
+        broadcastGameState({ forceControllers: true });
         setTimeout(gameLoop, TICK_MS);
         return;
       }
@@ -368,7 +441,9 @@ function createMatchController({ worldState, io, pendingHandoffs, applyPowerUpEf
         worldState.victoryAnnounced = true;
         triggerCommentary('victory', getWorldSnapshot(), io, worldState.commentaryRateLimiter, worldState);
       }
-      scheduleReturnToLobby();
+      broadcastGameState({ forceControllers: true });
+      setTimeout(gameLoop, TICK_MS);
+      return;
     }
 
     const currentRanks = computePlayerRanks();
@@ -389,10 +464,22 @@ function createMatchController({ worldState, io, pendingHandoffs, applyPowerUpEf
     setTimeout(gameLoop, delay);
   }
 
+  function abortMatchIfEmpty() {
+    const status = worldState.gameStatus;
+    if (status !== 'playing' && status !== 'countdown') return false;
+    const connected = worldState.players.filter((p) => p.connected).length;
+    if (connected > 0) return false;
+    returnToLobby({ force: true });
+    return true;
+  }
+
   return {
     broadcastGameState,
+    emitFullStateTo,
     getWorldSnapshot,
     cancelReturnToLobby,
+    returnToLobby,
+    abortMatchIfEmpty,
     startGameLoop: gameLoop,
   };
 }

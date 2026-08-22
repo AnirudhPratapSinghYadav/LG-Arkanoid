@@ -6,12 +6,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/constants.dart';
 import '../services/gameservice.dart';
 import '../widgets/lgpanel.dart';
-import '../widgets/connectionstatus.dart';
-import '../services/ssh_service.dart';
 import '../widgets/mission_background.dart';
 import '../widgets/dual_brand.dart';
 import '../widgets/lobby_player_row.dart';
 import '../widgets/lobby_host_panel.dart';
+import '../widgets/lgbutton.dart';
+import '../utils/leave_match.dart';
 
 class LobbyScreen extends StatefulWidget {
   const LobbyScreen({super.key});
@@ -27,12 +27,12 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
   Timer? _countdownTimer;
   bool _countdownStarted = false;
   int _selectedDuration = 180;
-  int _selectedMaxPlayers = 3;
+  int _selectedMaxPlayers = 2;
   String _selectedBallSpeed = 'medium';
-  int _selectedScreens = 3;
-  bool _applyingScreens = false;
-  String? _screenApplyMsg;
   bool _syncedFromServer = false;
+  bool _openedController = false;
+  String _lastHeardStatus = '';
+  int _lastHeardConnected = -1;
 
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
@@ -46,15 +46,17 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1000),
-    )..repeat(reverse: true);
+    );
     _pulseAnimation = Tween<double>(begin: 0.5, end: 1.0).animate(_pulseController);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _pulseController.forward();
+    });
 
     // Restore last host choices, then let the live lobby snapshot win once.
     SharedPreferences.getInstance().then((prefs) {
       if (!mounted) return;
       setState(() {
-        _selectedScreens = prefs.getInt(prefNumScreens) ?? 3;
-        _selectedMaxPlayers = prefs.getInt(prefMaxPlayers) ?? 3;
+        _selectedMaxPlayers = prefs.getInt(prefMaxPlayers) ?? 2;
         _selectedDuration = prefs.getInt(prefMatchDuration) ?? 180;
         _selectedBallSpeed = prefs.getString(prefBallSpeed) ?? 'medium';
       });
@@ -75,6 +77,16 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
     if (gameState == null) return;
 
     final status = gameState['gameStatus'] as String? ?? 'lobby';
+    final players = gameState['players'] as List<dynamic>? ?? [];
+    final connected = players.where((p) => p is Map && p['connected'] == true).length;
+    if (status == _lastHeardStatus &&
+        connected == _lastHeardConnected &&
+        _syncedFromServer &&
+        status != 'playing') {
+      return;
+    }
+    _lastHeardStatus = status;
+    _lastHeardConnected = connected;
 
     if (!_syncedFromServer && (status == 'lobby' || status == 'waiting')) {
       _syncedFromServer = true;
@@ -90,7 +102,8 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
 
     if (status == 'countdown' && !_countdownStarted) {
       _startLocalCountdown();
-    } else if (status == 'playing') {
+    } else if (status == 'playing' && !_openedController) {
+      _openedController = true;
       _countdownTimer?.cancel();
       Navigator.pushReplacementNamed(context, '/controller');
     }
@@ -127,37 +140,17 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
   }
 
   void _onStartMatch() {
+    if (_gameService.latestGameState != null) {
+      final players = _gameService.latestGameState!['players'] as List<dynamic>? ?? [];
+      final connected = players.where((p) => p['connected'] == true).length;
+      if (connected < _selectedMaxPlayers) return;
+    }
     _persistAndPushSettings();
     _gameService.startGame(
       durationSeconds: _selectedDuration,
       maxPlayers: _selectedMaxPlayers,
       ballSpeed: _selectedBallSpeed,
     );
-  }
-
-  Future<void> _applyScreensToRig() async {
-    if (_applyingScreens) return;
-    if (!SSHService().isConnected) {
-      setState(() {
-        _screenApplyMsg = 'Connect LG SSH in Settings first, then apply screens.';
-      });
-      return;
-    }
-    setState(() {
-      _applyingScreens = true;
-      _screenApplyMsg = 'Applying $_selectedScreens screens to the rig…';
-    });
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(prefNumScreens, _selectedScreens);
-    final err = await SSHService().relaunchGame(_selectedScreens);
-    if (!mounted) return;
-    setState(() {
-      _applyingScreens = false;
-      final failed = err.startsWith('ERROR');
-      _screenApplyMsg = failed
-          ? 'Rig apply failed: $err'
-          : 'Rig relaunched with $_selectedScreens screens. Rejoin if needed.';
-    });
   }
 
   @override
@@ -174,7 +167,15 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
     final masterIndex = gameState?['masterPlayerIndex'] as int? ?? 0;
     final isHost = (service.playerNumber ?? 0) - 1 == masterIndex;
 
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        final ok = await confirmLeave(context, title: 'LEAVE LOBBY?');
+        if (!ok || !context.mounted) return;
+        leaveToStart(context);
+      },
+      child: Scaffold(
       backgroundColor: Colors.transparent,
       body: MissionControlBackground(
         child: Stack(
@@ -193,16 +194,10 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
                           children: [
                             Align(
                               alignment: Alignment.topRight,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  IconButton(
-                                    icon: const Icon(Icons.settings, color: accentSystem, size: 28),
-                                    tooltip: 'Settings & Rig',
-                                    onPressed: () => Navigator.pushNamed(context, '/settings'),
-                                  ),
-                                  ConnectionStatus(isConnected: SSHService().isConnected, label: 'LG LINK'),
-                                ],
+                              child: IconButton(
+                                icon: const Icon(Icons.settings, color: accentSystem, size: 28),
+                                tooltip: 'Settings',
+                                onPressed: () => Navigator.pushNamed(context, '/settings'),
                               ),
                             ),
                             Column(
@@ -285,26 +280,14 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
                         if (isHost)
                           LobbyHostPanel(
                             selectedMaxPlayers: _selectedMaxPlayers,
-                            selectedScreens: _selectedScreens,
                             selectedBallSpeed: _selectedBallSpeed,
                             selectedDuration: _selectedDuration,
-                            applyingScreens: _applyingScreens,
-                            screenApplyMsg: _screenApplyMsg,
                             connectedCount: connectedCount,
                             onMaxPlayers: (p) {
                               setState(() => _selectedMaxPlayers = p);
                               _gameService.setMaxPlayers(p);
                               _persistAndPushSettings();
                             },
-                            onScreens: (n) {
-                              setState(() {
-                                _selectedScreens = n;
-                                _selectedMaxPlayers = n > 5 ? 5 : (n < 1 ? 1 : n);
-                              });
-                              _gameService.setMaxPlayers(_selectedMaxPlayers);
-                              _persistAndPushSettings();
-                            },
-                            onApplyScreens: _applyScreensToRig,
                             onBallSpeed: (speed) {
                               setState(() => _selectedBallSpeed = speed);
                               _persistAndPushSettings();
@@ -315,10 +298,12 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
                             },
                             onQrInvite: () {
                               final token = _gameService.sessionToken ?? '';
-                              final payload = 'LGARK|${_gameService.serverAddress}|${_gameService.serverPort}|$token';
+                              final payload =
+                                  'http://${_gameService.serverAddress}:${_gameService.serverPort}/controller?c=$token';
                               Navigator.pushNamed(context, '/qrinvite', arguments: payload);
                             },
-                            onStartMatch: connectedCount >= 1 ? _onStartMatch : null,
+                            onStartMatch:
+                                connectedCount >= _selectedMaxPlayers ? _onStartMatch : null,
                           )
                         else
                           AnimatedBuilder(
@@ -341,6 +326,16 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
                               );
                             },
                           ),
+                        const SizedBox(height: 16),
+                        LgButton(
+                          label: 'LEAVE LOBBY',
+                          isPrimary: false,
+                          onPressed: () async {
+                            final ok = await confirmLeave(context, title: 'LEAVE LOBBY?');
+                            if (!ok || !context.mounted) return;
+                            leaveToStart(context);
+                          },
+                        ),
                       ],
                     ),
                   ),
@@ -380,6 +375,7 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
           ],
         ),
       ),
+    ),
     );
   }
 }

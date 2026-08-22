@@ -47,6 +47,7 @@ function registerPlayerHandlers(socket, ctx) {
     ipJoinAttempts,
     broadcastGameState,
     getWorldSnapshot,
+    abortMatchIfEmpty,
   } = ctx;
 
     const handleJoin = (data)=>{
@@ -106,6 +107,7 @@ function registerPlayerHandlers(socket, ctx) {
 
       if(slotIndex===-1){
         socket.join('spectators');
+        socket.join('controllers');
         socket.emit('join_confirmed', {
           playerId: 'spectator_' + socket.id.substring(0, 5),
           playerNumber: 99,
@@ -126,6 +128,7 @@ function registerPlayerHandlers(socket, ctx) {
       if (!Array.isArray(player.inventory)) player.inventory = [];
       player.lastNonces = [];
       socketToPlayerIndex.set(socket.id, slotIndex);
+      socket.join('controllers');
 
       if(disconnectTimers.has(player.id)){
         clearTimeout(disconnectTimers.get(player.id));
@@ -161,7 +164,8 @@ function registerPlayerHandlers(socket, ctx) {
 
       const { player } = found;
       if (player.lives <= 0) return;
-      if (worldState.gameStatus !== 'playing') return;
+      // Allow aiming during countdown so HOLD LEFT/RIGHT is not dead for 3s.
+      if (worldState.gameStatus !== 'playing' && worldState.gameStatus !== 'countdown') return;
       let { deltaX, timestamp, nonce } = data || {};
 
       if(typeof deltaX!=='number' || isNaN(deltaX) || !isFinite(deltaX)){
@@ -169,17 +173,20 @@ function registerPlayerHandlers(socket, ctx) {
         return;
       }
 
-      if (worldState.gameStatus === 'playing') {
-        const now = Date.now();
-        if (!player.lastPaddleTime) player.lastPaddleTime = 0;
-        if (now - player.lastPaddleTime < 16) return;
-        player.lastPaddleTime = now;
-      }
+      const now = Date.now();
+      if (!player.lastPaddleTime) player.lastPaddleTime = 0;
+      if (now - player.lastPaddleTime < 16) return;
+      player.lastPaddleTime = now;
 
       const validation = validateMessage(player, timestamp, nonce);
       if(!validation.valid){
         socket.emit('error', { errorCode: validation.errorCode });
         return;
+      }
+
+      // Minimum 1px so Flutter .round() never silently no-ops tiny steps.
+      if (deltaX !== 0 && Math.abs(deltaX) < 1) {
+        deltaX = deltaX < 0 ? -1 : 1;
       }
 
       const maxStep = Math.round(2500 * gameEngine.inputScaleForWorld(
@@ -188,10 +195,16 @@ function registerPlayerHandlers(socket, ctx) {
       ));
       deltaX = Math.max(-maxStep, Math.min(maxStep, deltaX));
 
-      const maxRight = (worldState.numScreens || 3) * SCREEN_WIDTH;
+      const frameW = worldState.screenWidth || SCREEN_WIDTH;
+      const maxRight = (worldState.numScreens || 3) * frameW;
       player.paddleX += deltaX;
       const pw = player.paddleWidth || 300;
       player.paddleX = Math.max(0, Math.min(maxRight - pw, Math.round(player.paddleX)));
+      // Playing ticks already stream to the wall at 16ms. Countdown has no
+      // physics loop, so push paddle aims immediately or the wall looks frozen.
+      if (worldState.gameStatus === 'countdown') {
+        broadcastGameState({ forceControllers: true });
+      }
     });
 
     socket.on('power_up_activate', (data)=>{
@@ -271,6 +284,7 @@ function registerPlayerHandlers(socket, ctx) {
       // Rotate resume secret after each successful reclaim.
       player.resumeToken = generateResumeToken();
       socketToPlayerIndex.set(socket.id, slotIndex);
+      socket.join('controllers');
 
       if(disconnectTimers.has(playerId)){
         clearTimeout(disconnectTimers.get(playerId));
@@ -323,6 +337,7 @@ function registerPlayerHandlers(socket, ctx) {
         message: 'Player left the game',
       });
       broadcastGameState();
+      if (typeof abortMatchIfEmpty === 'function') abortMatchIfEmpty();
     });
 
     socket.on('disconnect', ()=>{
@@ -364,6 +379,9 @@ function registerPlayerHandlers(socket, ctx) {
         message: 'Connection lost, waiting to reconnect...',
       });
       broadcastGameState();
+      // Empty court during a live match must not stay "playing" — that blocks
+      // every new phone with "Match already in progress".
+      if (typeof abortMatchIfEmpty === 'function') abortMatchIfEmpty();
 
       const timer = setTimeout(()=>{
         if(playerId) disconnectTimers.delete(playerId);
@@ -390,6 +408,7 @@ function registerPlayerHandlers(socket, ctx) {
           message: 'Player left the game',
         });
         broadcastGameState();
+        if (typeof abortMatchIfEmpty === 'function') abortMatchIfEmpty();
       }, 30000);
 
       if(playerId){

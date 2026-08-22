@@ -32,7 +32,7 @@
         <span class="brand-mark__name">LG Arkanoid</span>
     </div>
 
-    <div id="bootOverlay" class="boot-overlay" aria-live="polite">
+    <div id="bootOverlay" class="boot-overlay is-hidden" aria-live="polite">
         <div class="boot-overlay__logos">
             <img class="boot-overlay__logo" src="assets/lg-logo.webp" alt="">
             <img class="boot-overlay__logo" src="assets/gesoc-logo.webp" alt="">
@@ -46,7 +46,12 @@
         </div>
     </div>
 
-    <div id="qrcode" class="lobby-card" aria-live="polite">
+    <div id="matchEndBar" class="match-end-bar" hidden>
+        <button type="button" id="matchEndNewGame" class="match-end-bar__btn">NEW GAME</button>
+        <button type="button" id="matchEndRematch" class="match-end-bar__btn match-end-bar__btn--primary">PLAY AGAIN</button>
+    </div>
+
+    <div id="qrcode" class="lobby-card">
         <header class="lobby-card__head">
             <p class="lobby-card__kicker">Join this match</p>
             <h2 class="lobby-card__brand">LG Arkanoid</h2>
@@ -56,12 +61,14 @@
             <p class="lobby-card__label">Session code</p>
             <div id="qr-session-code" class="lobby-card__code"></div>
         </div>
+        <p class="lobby-card__label">Same Wi-Fi as this wall. Scan with the AI Arkanoid LG app.</p>
+        <p id="qr-controller-url" class="lobby-card__url"></p>
         <div id="qr-match-meta" class="lobby-card__meta"></div>
         <div id="qr-waiting-text" class="lobby-card__wait">Waiting for first player…</div>
         <div id="qr-player-list" class="lobby-card__players"></div>
         <ol id="qr-start-steps" class="lobby-card__steps">
-            <li>Open the LG Arkanoid app (or <code>/controller</code> in a browser)</li>
-            <li>Scan this QR, or type the 4-letter code + this rig’s IP</li>
+            <li>Phone on the <strong>same Wi-Fi</strong> as this rig</li>
+            <li>Scan this QR, or open the URL above, or type the 4-letter code + IPv4</li>
             <li>First phone to join is HOST — only they tap <strong>CREATE &amp; START</strong></li>
         </ol>
         <p id="qr-instructions" class="lobby-card__hint">

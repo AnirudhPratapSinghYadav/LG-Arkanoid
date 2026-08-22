@@ -180,7 +180,8 @@ class GameScene extends Phaser.Scene {
         if (brand) brand.style.display = 'none';
         if (inMatch) {
             if (corner) { corner.hidden = true; corner.classList.remove('is-visible'); }
-        } else if (mode === 'lobby' && screenId === 1 && corner) {
+        } else if (screenId === 1 && corner) {
+            // Connect + lobby: HTML #lgCorner only. Phaser marks stay hidden.
             corner.hidden = false;
             corner.classList.add('is-visible');
         }
@@ -243,6 +244,7 @@ class GameScene extends Phaser.Scene {
         }
         
         this.setStageMode('playing');
+        this.hideBootOverlay();
         this.drawBricks();
         this.drawPowerUps();
         this.drawBalls();

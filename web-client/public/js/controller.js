@@ -20,11 +20,13 @@ var PLAYER_COLORS = ['#20c5ff', '#FF2D78', '#FFB800', '#9B59B6', '#2ECC71'];
 var STORAGE_NAME = 'lgark_player_name';
 var STORAGE_HOST = 'lgark_host_settings';
 
-var hostMaxPlayers = 3;
+var hostMaxPlayers = 2;
 var hostBallSpeed = 'medium';
 var hostDuration = 180;
 var worldNumScreens = 3;
 var worldScreenWidth = 1920;
+var joinInFlight = false;
+var joinTimer = null;
 
 // Swipes are authored for a 3-screen landscape court. Scale by the real court
 // width so a 12-screen wall stays reachable and a portrait wall (608 logical px
@@ -34,7 +36,21 @@ function worldInputScale() {
     return Math.max(0.15, Math.min(5, world / (3 * 1920)));
 }
 
+function setJoinBusy(busy, label) {
+    joinInFlight = !!busy;
+    if (!busy && joinTimer) {
+        clearTimeout(joinTimer);
+        joinTimer = null;
+    }
+    const joinBtn = document.getElementById('joinBtn');
+    if (joinBtn) {
+        joinBtn.disabled = !!busy;
+        joinBtn.textContent = label || (busy ? 'Joining…' : 'Join game');
+    }
+}
+
 function joinGame() {
+    if (joinInFlight || isConnected) return;
     const token = document.getElementById('tokenInput').value.trim().toUpperCase();
     const playerName = document.getElementById('nameInput').value.trim() || 'Web Player';
     if (!token || token.length !== 4) {
@@ -46,6 +62,18 @@ function joinGame() {
 
     mySessionToken = token;
     try { localStorage.setItem(STORAGE_NAME, playerName); } catch (_) {}
+    setJoinBusy(true);
+    if (joinTimer) clearTimeout(joinTimer);
+    joinTimer = setTimeout(function () {
+        if (isConnected) return;
+        const err = document.getElementById('joinError');
+        if (err) err.textContent = 'Reached the wall but the lobby did not accept us. Scan the center QR again.';
+        if (socket) {
+            socket.removeAllListeners();
+            socket.disconnect();
+        }
+        setJoinBusy(false);
+    }, 12000);
 
     let serverOrigin = window.location.origin;
     if (window.location.port === '5173') {
@@ -59,7 +87,19 @@ function joinGame() {
 
     socket = io(serverOrigin, {
         query: { controller: 'true' },
-        transports: ['websocket', 'polling']
+        transports: ['websocket', 'polling'],
+        timeout: 12000
+    });
+
+    socket.on('connect_error', () => {
+        if (isConnected) return;
+        const err = document.getElementById('joinError');
+        if (err) err.textContent = 'Could not reach the wall socket. Same Wi-Fi, port 8130, not 22.';
+        if (socket) {
+            socket.removeAllListeners();
+            socket.disconnect();
+        }
+        setJoinBusy(false);
     });
 
     socket.on('connect', () => {
@@ -78,6 +118,7 @@ function joinGame() {
     });
 
     socket.on('join_confirmed', (data) => {
+        setJoinBusy(false);
         isConnected = true;
         myPlayerId = data.playerId;
         myPlayerNumber = data.playerNumber;
@@ -114,16 +155,25 @@ function joinGame() {
         statusEl.innerHTML = '<span class="hud-status-dot"></span> ONLINE';
 
         const puck = document.getElementById('touchPuck');
-        puck.style.background = `radial-gradient(circle, ${playerColor}, ${playerColor}88, ${playerColor}33)`;
-        puck.style.boxShadow = `0 0 24px ${playerColor}80`;
-        document.getElementById('touchTrack').style.background = `linear-gradient(to right, ${playerColor}0D, ${playerColor}66, ${playerColor}0D)`;
-        document.getElementById('touchPad').style.borderColor = playerColor + '40';
+        if (puck) {
+            puck.style.background = `radial-gradient(circle, ${playerColor}, ${playerColor}88, ${playerColor}33)`;
+            puck.style.boxShadow = `0 0 24px ${playerColor}80`;
+        }
+        const track = document.getElementById('touchTrack');
+        if (track) track.style.background = `linear-gradient(to right, ${playerColor}0D, ${playerColor}66, ${playerColor}0D)`;
+        const pad = document.getElementById('touchPad');
+        if (pad) pad.style.borderColor = playerColor + '40';
+        document.querySelectorAll('.dpad-btn').forEach((btn) => {
+            btn.style.borderColor = playerColor + '59';
+            btn.style.color = playerColor;
+        });
 
         startPingLoop();
         updatePowerUpButtons();
     });
 
     socket.on('join_rejected', (data) => {
+        setJoinBusy(false);
         const msg = 'Join failed: ' + (data && data.message ? data.message : 'unknown error');
         const err = document.getElementById('joinError');
         if (err) err.textContent = msg;
@@ -146,8 +196,15 @@ function joinGame() {
 
         if (typeof state.numScreens === 'number') worldNumScreens = state.numScreens;
         if (typeof state.screenWidth === 'number' && state.screenWidth > 0) worldScreenWidth = state.screenWidth;
-        isHost = !isSpectator && state.masterPlayerIndex === (myPlayerNumber - 1);
+        window.__lastGameState = state;
         const status = state.gameStatus;
+
+        if (gameEndShown && (status === 'countdown' || status === 'playing')) {
+            gameEndShown = false;
+            document.getElementById('gameEndOverlay').classList.remove('active');
+        }
+
+        isHost = !isSpectator && state.masterPlayerIndex === (myPlayerNumber - 1);
         const inLobby = status === 'lobby' || status === 'waiting';
         document.body.classList.toggle('is-lobby', inLobby);
         document.body.classList.toggle('is-playing', status === 'playing' || status === 'countdown');
@@ -155,6 +212,15 @@ function joinGame() {
         if (hostControls) {
             const canStart = isHost && (state.gameStatus === 'lobby' || state.gameStatus === 'waiting');
             hostControls.style.display = canStart ? 'block' : 'none';
+            const startBtn = document.getElementById('startMatchBtn');
+            if (startBtn && canStart) {
+                const need = Number(state.maxPlayers) || hostMaxPlayers;
+                const connected = players.filter((p) => p && p.connected).length;
+                startBtn.disabled = connected < need;
+                startBtn.textContent = connected < need
+                    ? ('Need ' + need + ' players')
+                    : 'Create & start';
+            }
         }
         if (isHost && (state.gameStatus === 'lobby' || state.gameStatus === 'waiting')) {
             if (typeof state.maxPlayers === 'number') hostMaxPlayers = state.maxPlayers;
@@ -194,8 +260,6 @@ function joinGame() {
         } else if (state.gameStatus === 'lobby' || state.gameStatus === 'waiting') {
             const duration = state.gameDurationSeconds;
             document.getElementById('timerVal').innerText = duration === 0 ? '∞' : '--:--';
-            gameEndShown = false;
-            document.getElementById('gameEndOverlay').classList.remove('active');
         }
 
         if ((status === 'game_over' || status === 'time_up' || status === 'win') && !gameEndShown) {
@@ -203,18 +267,34 @@ function joinGame() {
             const sorted = [...players].sort((a, b) => b.score - a.score);
             const winner = sorted[0];
             const winnerName = winner ? (winner.name || 'Player ' + winner.playerNumber) : 'Nobody';
+            const result = state.matchResult;
+            const isDraw = result && result.outcome === 'draw';
+            const iWon = !isDraw && winner && winner.id === myPlayerId;
+            const myPlace = sorted.findIndex((p) => p.id === myPlayerId) + 1;
 
             let title = 'GAME OVER';
-            if (status === 'time_up') title = "TIME'S UP!";
-            if (status === 'win') title = 'VICTORY!';
+            if (isDraw) title = 'DRAW';
+            else if (status === 'time_up') title = iWon ? "TIME'S UP!" : 'TIME\'S UP!';
+            else if (iWon) title = 'YOU WIN';
+            else if (myPlace === 2) title = '2ND PLACE';
+            else if (myPlace > 2) title = 'YOU PLACED #' + myPlace;
+            else if (status === 'win') title = 'VICTORY!';
 
+            const kicker = document.getElementById('geKicker');
+            if (kicker) {
+                kicker.innerText = isDraw
+                    ? 'MATCH OVER'
+                    : (iWon ? 'CONGRATULATIONS' : 'BETTER LUCK NEXT TIME');
+            }
             document.getElementById('geTitle').innerText = title;
-            document.getElementById('geSubtitle').innerText = 'Congratulations — ' + winnerName + ' wins!';
+            document.getElementById('geSubtitle').innerText = isDraw
+                ? 'Same score — nobody wins.'
+                : (iWon ? 'You take the wall.' : (winnerName + ' wins this match.'));
             const geMsg = document.getElementById('geMessage');
             if (geMsg) {
-                geMsg.innerText = (state.lastCommentary || (
-                    winnerName + ' takes the Liquid Galaxy wall. That is the champion — match over.'
-                ));
+                geMsg.innerText = isDraw
+                    ? 'It is a tie. Play again or exit.'
+                    : (iWon ? (winnerName + ' wins.') : 'Stay for a rematch or exit.');
             }
             const geBoard = document.getElementById('geBoard');
             if (geBoard) {
@@ -224,16 +304,16 @@ function joinGame() {
                 }).join('');
             }
             document.getElementById('geScore').innerText = 'Your Score: ' + myScore;
-            document.getElementById('geRank').innerText = 'Final Rank: #' + myRank;
+            document.getElementById('geRank').innerText = 'Final Rank: #' + (myPlace || myRank);
+            const hostActions = document.getElementById('geHostActions');
+            if (hostActions) hostActions.hidden = !isHost;
             document.getElementById('gameEndOverlay').classList.add('active');
 
-            if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+            if (navigator.vibrate) navigator.vibrate(iWon ? [200, 100, 200] : [80]);
         }
     });
 
     socket.on('lobby_ready', (data) => {
-        gameEndShown = false;
-        document.getElementById('gameEndOverlay').classList.remove('active');
         if (data && data.sessionId) mySessionId = data.sessionId;
         if (data && data.sessionToken) {
             mySessionToken = data.sessionToken;
@@ -248,7 +328,10 @@ function joinGame() {
             document.getElementById('commentaryText').innerText = data.text;
             document.getElementById('commentaryBar').classList.add('active');
             if ('speechSynthesis' in window) {
-                try {
+                const eventType = data.eventType || '';
+                if (eventType !== 'life_lost' && eventType !== 'victory') {
+                    /* skip long countdown/commentary TTS — that was the ~10s phone buzz */
+                } else try {
                     window.speechSynthesis.cancel();
                     const u = new SpeechSynthesisUtterance(data.text);
                     u.lang = 'en-US';
@@ -346,8 +429,31 @@ function bindUi() {
         });
     });
 
+    const rematchBtn = document.getElementById('geRematchBtn');
+    if (rematchBtn) {
+        rematchBtn.addEventListener('click', () => {
+            if (socket && socket.connected) socket.emit('rematch');
+        });
+    }
+    const newGameBtn = document.getElementById('geNewGameBtn');
+    if (newGameBtn) {
+        newGameBtn.addEventListener('click', () => {
+            gameEndShown = false;
+            document.getElementById('gameEndOverlay').classList.remove('active');
+            if (socket && socket.connected) socket.emit('return_to_lobby');
+        });
+    }
+
     const backBtn = document.getElementById('backToJoinBtn');
     if (backBtn) backBtn.addEventListener('click', () => backToJoin());
+    const leaveBtn = document.getElementById('leaveMatchBtn');
+    if (leaveBtn) {
+        leaveBtn.addEventListener('click', () => {
+            if (window.confirm('Leave this session? Scan the wall QR again to rejoin.')) {
+                backToJoin();
+            }
+        });
+    }
 
     const closeAbout = document.getElementById('closeAboutBtn');
     if (closeAbout) {
@@ -395,6 +501,7 @@ function backToJoin() {
         pingTimer = null;
     }
     clearIdentity();
+    setJoinBusy(false);
 }
 
 function startPingLoop() {

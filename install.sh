@@ -37,8 +37,10 @@ else
   echo "Using existing Node $(node -v)"
 fi
 
-echo "Installing pm2..."
-npm install -g pm2
+# pm2 6+/7 need Node >=18. Ubuntu 16.04 LG images run Node 16.20.2, so pin
+# the last 5.x line that still supports Node 16 (EBADENGINE otherwise).
+echo "Installing pm2@5.4.3 (Node 16 / Ubuntu 16.04)..."
+npm install -g pm2@5.4.3
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 if [ -f "$SCRIPT_DIR/server/index.js" ]; then
@@ -85,6 +87,7 @@ touch "$ENV_FILE"
 # 8130 = next free port in the LG game family (pong 8112, snake 8114,
 # pacman 8128, asteroids 8129; the lg-retro-gaming launcher holds 3123).
 grep -q '^PORT=' "$ENV_FILE" || echo "PORT=8130" >> "$ENV_FILE"
+grep -q 'LG_HOST_IP' "$ENV_FILE" || echo "# LG_HOST_IP=   # pin lg1 Wi-Fi IPv4 for the wall QR if getLanIp picks the wrong NIC" >> "$ENV_FILE"
 
 # The rig knows how wide it is: DHCP writes DHCP_LG_FRAMES_MAX into
 # /lg/personavars.txt on every frame. Prefer that over asking the installer.
@@ -186,10 +189,14 @@ fi
 
 echo "Setting up pm2 autostart..."
 pm2 startup systemd -u "$USER" --hp "$HOME" | tail -1 | bash || true
-pm2 save || true
+# Empty dump is fine on a fresh install ("PM2 is not managing any process").
+pm2 save --force || true
 
 echo "Installation complete."
 echo "Launch with: bash $PROJECT_DIR/scripts/open-arkanoid.sh <number_of_screens>"
 echo "Phone CONNECT LG / LAUNCH uses: bash $HOME/projects/LG-Arkanoid/scripts/open-arkanoid.sh"
 echo "Supported screen counts: 1..12 (typical: 3,5,7,9,12)"
-echo "Phone controller connects to master IP on port $GAME_PORT with the on-screen session token."
+echo "Before launch, from lg1:  ssh -Xnf lg@lg2 'echo ok'   (must not ask for a password)"
+echo "Phone (same Wi-Fi as lg1): install the APK and scan the wall QR"
+echo "  or open http://<lg1-ipv4>:$GAME_PORT/controller"
+echo "Node must stay v16.x on this OS. Do not npm audit fix --force (that pulls pm2 7 / Node 18)."

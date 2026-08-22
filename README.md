@@ -1,75 +1,225 @@
 # LG Arkanoid
 
-Panoramic multiplayer Arkanoid (brick-breaker) for a [Liquid Galaxy](https://www.liquidgalaxy.eu/) wall.
+Panoramic multiplayer Arkanoid for a [Liquid Galaxy](https://www.liquidgalaxy.eu/) wall.
 
-Phones are the paddles. The wall is the court. A Node.js server on the master (`lg1`) runs the match. Phaser draws one slice of that court in Chromium on each frame.
-
-Built for **Gemini Summer of Code (GESOC / Gemini SoC) 2026** by **Liquid Galaxy**.
+Phones are the paddles. The wall is the court. Node on **lg1** is the match. Chromium on each frame draws one slice.
 
 **Contributor:** [Anirudh Pratap Singh Yadav](https://github.com/AnirudhPratapSinghYadav)  
-**Mentor:** [Sidharth Mudgil](https://github.com/SidharthMudgil)
+**Mentor:** [Sidharth Mudgil](https://github.com/SidharthMudgil)  
+**Org:** Liquid Galaxy · Gemini Summer of Code 2026
 
-Game port: **8130**. On the rig, use **Node 16**.
+---
+
+## Versions (do not mix)
+
+| Piece | Version | Why |
+|---|---|---|
+| Game port | **8130** | Pacman 8128, Asteroids 8129, pong 8112, snake 8114, LGRG 3123 |
+| Node on the **rig** | **16.20.2** (`.nvmrc`) | Ubuntu 16.04 / glibc 2.23. Node 18 will not run there |
+| pm2 on the rig | **5.4.3** | pm2 7 needs Node 18 (`EBADENGINE` on a Lleida log) |
+| Helmet | **7.x** | Helmet 8 needs Node 18 |
+| Vite | **4.x** | Vite 5 needs Node 18 |
+| Flutter (APK / CI) | **3.24.3** | Pinned in GitHub Actions |
+| Phaser | **3.80** vendored | No CDN on an offline rig LAN |
+
+On a **laptop** Node 16, 18, or 20 is fine. On **lg1**, only 16.
+
+Do **not** `npm install -g pm2` (pulls 7). Do **not** `npm audit fix --force` (that was the “1 high severity vulnerability” after pm2 7 installed; force-upgrade breaks Node 16).
 
 ---
 
 ## How it is built
 
-Three pieces. The phone is not the wall. The wall is not an APK.
-
 ```mermaid
 flowchart LR
-  P["Phone<br/>AI Arkanoid LG<br/>Flutter paddle"]
-  S["lg1 master<br/>Node 16 + pm2<br/>port 8130"]
-  W["Chromium on each frame<br/>/1 left … /N right<br/>Phaser court"]
+  P["Phone APK<br/>AI Arkanoid LG"]
+  S["lg1<br/>Node 16 + pm2@5.4.3<br/>port 8130"]
+  W["Chromium each frame<br/>/1 left … /N right"]
 
-  P -->|"SSH 22<br/>CONNECT / LAUNCH / SHUT DOWN"| S
-  P -->|"Socket.IO<br/>join, paddle, start"| S
-  S -->|"HTTP slices"| W
+  P -->|"SSH 22 launch"| S
+  P -->|"Socket.IO join / paddle"| S
+  S -->|"http://lg1:8130/N"| W
 ```
 
-Optional: if `GEMINI_API_KEY` is set, the server asks Gemini for spoken lines. If it is empty, the match still runs with offline lines.
+Optional `GEMINI_API_KEY` in `server/.env`. Empty key = offline lines. Match still runs.
+
+`/health` never contains the join code. `/1` is the **leftmost** physical screen. Max **5** paddles. 1–12 frames.
 
 ---
 
-## How a match runs
+## Liquid Galaxy rig — copy this in order
 
-```mermaid
-flowchart TD
-  A[Clone repo on lg1<br/>bash install.sh lq] --> B[LAUNCH ON RIG<br/>or open-arkanoid.sh]
-  B --> C[Chromium opens every screen<br/>center shows QR + 4-letter code]
-  C --> D[Phone: CONNECT LG]
-  D --> E[Scan QR or type the code]
-  E --> F{First player?}
-  F -->|yes| G[Host sets time, players 1-5, speed]
-  F -->|no| H[Wait in lobby]
-  G --> I[Host starts]
-  H --> I
-  I --> J[Wall: 3-2-1]
-  J --> K[Playing<br/>move paddle, break bricks, power-ups]
-  K --> L{Time up / no lives / bricks gone?}
-  L -->|no| K
-  L -->|yes| M[Leaderboard + congratulations]
-  M --> N[Back to lobby<br/>new join code]
-  N --> E
+SSH as user **`lg`**. Stock password is **`lq`**.
+
+### 0. Prove SSH the way Pacman does
+
+Published Pacman (`galaxy-pacman/Bash/open-pacman.sh`) opens **every** frame, including lg1, with:
+
+```bash
+ssh -Xnf lg@$lg " export DISPLAY=:0 ; chromium-browser <url> --start-fullscreen … &"
 ```
 
-`/health` never has the join code. You cannot join during a match. After about 12 seconds the wall returns to lobby so the next game can start.
+Published Asteroids (`galaxy-asteroids/scripts/open.sh`) opens **slaves** with:
 
-The wall is 1–12 screens (typical Liquid Galaxy: 3, 5, 7, 9, 12). At most **5** paddles. Slice `/1` is the **leftmost** physical screen.
+```bash
+sshpass -p $PW ssh -tXn $lg "export DISPLAY=:0 ; chromium-browser <url> --start-fullscreen &" &
+```
+
+This repo uses those same flags. First Pacman (`ssh -Xnf lg@host`). If that fails on a slave, Asteroids (`sshpass` + `ssh -tXn host`). We wait for the SSH exit code so a dark slave is not reported as launched.
+
+From **lg1**:
+
+```bash
+node -v
+# must print v16.x   (v16.20.2 on a typical Lleida image)
+
+ssh -Xnf lg@lg2 'echo ok'
+ssh -Xnf lg@lg3 'echo ok'
+# If this asks for a password, no LG game can open slaves.
+# Fix liquid-galaxy SSH keys first. Do not invent extra ssh -i flags.
+```
+
+Chromium must exist on **every** frame (`chromium-browser --version`). Pacman assumes that.
+
+### 1. Install
+
+```bash
+cd ~/projects
+git clone https://github.com/AnirudhPratapSinghYadav/LG-Arkanoid.git LG-Arkanoid
+cd LG-Arkanoid
+bash install.sh lq
+```
+
+`install.sh lq` installs Node 16 if needed, **pm2@5.4.3**, npm packages, builds `dist/`, writes `server/.env`, opens **8130** in iptables/ufw when those files exist.
+
+Already cloned from an older install that pulled pm2 7:
+
+```bash
+source ~/.nvm/nvm.sh
+nvm use 16
+npm install -g pm2@5.4.3
+cd ~/projects/LG-Arkanoid
+git pull
+bash scripts/open-arkanoid.sh
+```
+
+### 2. Files that must exist on the rig after install
+
+```
+~/projects/LG-Arkanoid/server/index.js
+~/projects/LG-Arkanoid/server/.env          # created by install.sh — never commit
+~/projects/LG-Arkanoid/scripts/open-arkanoid.sh
+~/projects/LG-Arkanoid/scripts/close-arkanoid.sh
+~/projects/LG-Arkanoid/scripts/lib/*.sh
+~/projects/LG-Arkanoid/dist/index.html      # wall client; rebuilt on each open
+```
+
+`server/.env` (install writes this; pin Wi‑Fi IPv4 if the QR is wrong):
+
+```
+PORT=8130
+NUM_SCREENS=5
+LG_PASSWORD=lq
+GEMINI_API_KEY=
+# LG_HOST_IP=10.11.77.106
+```
+
+Phone **LAUNCH ON RIG** always runs:
+
+```bash
+bash ~/projects/LG-Arkanoid/scripts/open-arkanoid.sh
+```
+
+If the checkout lives somewhere else, `install.sh` symlinks that path.
+
+### 3. Open the wall
+
+```bash
+bash scripts/open-arkanoid.sh 5
+# omit the number to use DHCP_LG_FRAMES_MAX from /lg/personavars.txt
+bash scripts/open-arkanoid.sh --frames 5   # print L→R map, open nothing
+bash scripts/close-arkanoid.sh
+```
+
+What the open script does:
+
+1. Start/restart `lg-arkanoid` with pm2 on **8130**.
+2. Wait until `http://127.0.0.1:8130/health` answers.
+3. For **every** frame, including lg1: Pacman SSH  
+   `ssh -Xnf lg@$frame " export DISPLAY=:0 ; chromium-browser <url> --start-fullscreen … &"`  
+   lg1 URL = `http://localhost:8130/N`  
+   slaves URL = `http://lg1:8130/N`  
+   (`N` is left→right. Pacman uses `${lg:2}` from the hostname. Do not copy that here — this is one court.)
+4. If that SSH fails on a slave: Asteroids `sshpass` + `ssh -tXn $frame`.
+5. If SSH to lg1 itself fails (laptop / VM), Chromium is started locally on `:0`.
+
+If a slave stays dark, the log prints `Warning: failed to open Chromium on lgN` and the exact `ssh -Xnf lg@lgN 'echo ok'` check, then **exit 1**. Chromium is not opened at all if `http://127.0.0.1:8130/health` does not answer (20s wait). `Launched N screens` with **exit 0** means every SSH returned success **and** the match process was healthy.
+
+LGRG (lg-retro-gaming) calls `bash open-arkanoid.sh lq` — the first argument is the rig password, same as Asteroids/Pacman installers.
+
+---
+
+## Phone — connecting screen (practical)
+
+1. Install the **AI Arkanoid LG** APK (not an old build that only understood `LGARK|…` payloads).
+2. Join the **same Wi-Fi as lg1**. Turn off mobile data and VPN.
+3. Open the app → **Scan QR** on the **center** screen (or paste the URL printed under the QR).
+4. Enter a name. The next screen shows the exact wall URL + code before it tries.
+5. **JOINING THE WALL** then does, in order:
+   - `GET http://<ipv4>:8130/health` (several tries — first Wi‑Fi packet is slow)
+   - the body must be this game (`status: ok` + `gameStatus`) — a random HTTP 200 on 8130 is rejected
+   - Socket.IO to the same host:port
+   - send the 4-letter code + name
+   - **CANCEL** drops the attempt immediately (Android back does the same)
+6. First phone in is HOST. They start the match.
+7. Hold **LEFT** / **RIGHT**. There is no touch pad.
+
+The QR is `http://<lg1-ipv4>:8130/controller?c=CODE`. The APK reads it. A camera / Chrome can open the same link (that is how Pacman joins: `masterIp:port/controller`).
+
+`http://<ipv4>:8130/` with no path redirects to `/controller`.
+
+Do not type hostname **`lg1`**. Phones cannot resolve it. The app blocks it.
+
+**127.0.0.1 / localhost** is only for USB debugging:
+
+```bash
+adb reverse tcp:8130 tcp:8130
+```
+
+**CONNECT LG** (settings) is only to launch/stop the wall from the phone. SSH port is **22**. Game join port is **8130**. Mixing them is the usual “correct link did nothing” mistake.
+
+**Leave at any time:** the connecting screen has **CANCEL**. The lobby has **LEAVE LOBBY**. During a match the phone shows a red **LEAVE** label (not a tiny icon) and the web paddle shows a red **LEAVE** in the HUD. Android back asks before dropping the session. After a match, **NEXT LOBBY** waits for the wall; **LEAVE** still exits immediately.
+
+| Settings field | Typical |
+|---|---|
+| Username | `lg` |
+| Password | `lq` |
+| IP | IPv4 of lg1 |
+| SSH port | `22` |
+| Screens | 3 / 5 / 7 / … |
+
+If the printed IPv4 is the wrong NIC, set `LG_HOST_IP=` in `server/.env` and relaunch.
+
+Build the APK (Flutter **3.24.3**):
+
+```bash
+cd mobile
+flutter pub get
+flutter build apk --release --split-per-abi
+```
+
+Install `app-armeabi-v7a-release.apk` on 32-bit phones, `app-arm64-v8a-release.apk` on everything modern. Do not install an older APK that only understood `LGARK|…` payloads.
 
 ---
 
 ## Laptop (no rig)
-
-You do not need Liquid Galaxy to try this. Node 16, 18, or 20 is fine on a laptop. Flutter is optional if you use the browser controller.
 
 ```bash
 npm install
 cp server/.env.example server/.env
 ```
 
-Put this in `server/.env`:
+In `server/.env`:
 
 ```
 PORT=8130
@@ -79,136 +229,61 @@ GEMINI_API_KEY=
 LG_FRAME_ASPECT=16:9
 ```
 
-`LG_FRAME_ASPECT=16:9` is for a normal monitor. Leave it empty on a real rig so the launcher follows the frames.
-
-Then:
-
 ```bash
 npm run build
 npm start
 ```
 
-`npm start` runs the Node server on **8130** and Vite on 5173. Rebuild after JS/CSS edits — Express serves `dist/` when it exists.
-
-Open four tabs:
-
 ```
-http://localhost:8130/1          left slice
-http://localhost:8130/2          center (QR + code on a 3-screen wall)
-http://localhost:8130/3          right slice
-http://localhost:8130/controller paddle stand-in
+http://localhost:8130/1
+http://localhost:8130/2          QR on a 3-screen layout
+http://localhost:8130/3
+http://localhost:8130/controller
 ```
-
-The first `/controller` tab to join is the host. Create the game and start.
-
----
-
-## Liquid Galaxy rig
-
-The master is Ubuntu 16.04. Node **16** is required there (`.nvmrc` is `16.20.2`). Newer Node will not start on that glibc.
-
-SSH as user **`lg`**. The password is whatever you pass to `install.sh` — **`lq`** on a typical stock rig.
-
-On `lg1`:
-
-```bash
-node -v                          # must be v16.x
-cd ~/projects
-git clone https://github.com/AnirudhPratapSinghYadav/LG-Arkanoid.git LG-Arkanoid
-cd LG-Arkanoid
-bash install.sh lq
-bash scripts/open-arkanoid.sh 3  # or 5 / 12, or omit to use the rig's screen count
-```
-
-`install.sh lq` installs Node 16 if needed, pm2, npm packages, builds the wall client, writes `server/.env` (`PORT=8130`, password, screen count from the rig), and opens port **8130**.
-
-`open-arkanoid.sh` starts the Node process with pm2 and opens Chromium on every frame:
-
-- Master (`lg1`) opens `http://localhost:8130/<slice>`
-- Other frames open `http://lg1:8130/<slice>`
-
-`/1` is leftmost. On a 3-screen wall the center is `/2`. On a 5-screen wall the center is `/3`.
-
-Useful extras:
-
-```bash
-bash scripts/open-arkanoid.sh --frames 3   # print the slice map, launch nothing
-bash scripts/close-arkanoid.sh             # stop this game only
-```
-
-The phone **LAUNCH ON RIG** button runs `open-arkanoid.sh` over SSH. You do not start the match from the wall.
-
----
-
-## Phone
-
-Stay on the same Wi-Fi as `lg1`.
-
-The phone launcher is labelled **AI Arkanoid LG**. Settings are:
-
-| Field | Typical value |
-|---|---|
-| Username | `lg` |
-| Password | `lq` (same as `install.sh`) |
-| IP | IPv4 of `lg1` |
-| Port | `22` (SSH, not the game port) |
-| Number of screens | 3 / 5 / 7 / … or what the rig reports |
-
-Then:
-
-1. **CONNECT LG**
-2. **LAUNCH ON RIG**
-3. Scan the wall QR (`LGARK|ip|8130|code`) or type the 4-letter code
-4. Host sets time (1 / 3 / 5 min / endless), players (1–5), speed (slow / medium / fast / insane)
-5. Host starts
-
-**SHUT DOWN ON RIG** runs `close-arkanoid.sh`.
-
-No APK? Open `http://<master-ip>:8130/controller` on the phone.
-
-To build the controller yourself:
-
-```bash
-cd mobile
-flutter pub get
-flutter build apk --release
-```
-
-CI pins Flutter **3.24.3**.
 
 ---
 
 ## How to play
 
-Swipe or drag on the phone to move your paddle. Catch the ball, break bricks, grab power-ups (wide paddle, slow ball, extra balls, bomb).
-
-Each player starts with **3 lives**. Timed matches show **TIME LEFT** on every screen. Live standings sit on the rightmost screen. When time runs out, lives run out, or the bricks are cleared, the wall and phones show the **final leaderboard**.
+Hold LEFT / RIGHT. 3 lives. Power-ups: wide, slow, multi, bomb. Timed matches show TIME LEFT. Standings on the rightmost screen.
 
 ---
 
-## Gemini commentary (optional)
-
-If `GEMINI_API_KEY` is set in `server/.env`, the wall can speak ARKANOID AI lines during play.
-
-Leave the key empty and the game uses its own offline lines. That is the default. A missing or bad key does not break the match.
-
----
-
-## Tests
+## Tests / CI
 
 ```bash
 npm test
 npm run build
-node server/tests/e2e-multi-client.test.js
+node server/tests/e2e-multi-client.test.js   # server already on 8130
 ```
 
-`npm test` is the game-engine unit tests. The e2e script wants the server already listening on 8130.
+GitHub Actions: Node 16 + 18 + 20 (`npm test`, production `npm audit --audit-level=high`, Socket.IO e2e, Vite build) and Flutter 3.24.3 analyze + APK.
+
+Dependabot: weekly npm + Actions + Dart, with Helmet 8+, Vite 5+, and pm2 6+ ignored so the rig stays on Node 16 (`pm2@5.4.3`).
+
+Do not `npm audit fix --force` on the rig.
 
 ---
 
-## More docs
+## Troubleshooting (Lleida / Andreu screenshots)
 
-Setup, play, and store notes are all in this README. Phone controller extras: [mobile/README.md](mobile/README.md).
+**Only lg1 showed the game; slaves stayed dark**  
+`ssh -Xnf lg@lg2 'echo ok'` must work with no password. That is Pacman. Extra `ssh -i` keys without `IdentitiesOnly` hit MaxAuthTries. This launcher uses Pacman’s command first.
+
+**`pm2@7.0.3` / `EBADENGINE` / Node >=18 / “1 high severity vulnerability”**  
+Unpinned `npm i -g pm2` on Node 16.20.2. Fix: `npm i -g pm2@5.4.3`. Never `npm audit fix --force`. `PM2 is not managing any process, skipping save` after install is normal until the first `open-arkanoid.sh`.
+
+**QR / “correct link” on the phone**  
+Same Wi-Fi. Latest APK. URL under the QR (`http://IPv4:8130/controller?c=CODE`). Port **8130**. Not `lg1`. Not port 22. The connecting screen prints the URL it is probing.
+
+**TOUCH pad / vibrating splash**  
+TOUCH is removed. D-PAD only. Splash is ~900 ms.
+
+**Double logos on the leftmost screen**  
+HTML corner mark only; Phaser logos stay hidden on `/1`.
+
+**Lobby overflow on short frames**  
+Lobby card shrinks. Controller D-PAD fills leftover height.
 
 ---
 

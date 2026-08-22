@@ -46,6 +46,8 @@ export default defineConfig({
           const screenMatch = url.pathname.match(/^\/(\d+)$/);
           if (screenMatch) {
             req.url = '/index.html' + url.search;
+          } else if (url.pathname === '/' || url.pathname === '') {
+            req.url = '/controller.html' + url.search;
           } else if (url.pathname === '/controller') {
             req.url = '/controller.html' + url.search;
           }

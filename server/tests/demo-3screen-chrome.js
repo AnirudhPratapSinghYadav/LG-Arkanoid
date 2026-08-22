@@ -392,7 +392,18 @@ async function main() {
     }
 
     async function fillController(page, name, code) {
-      await page.waitForSelector('#joinBtn', { timeout: 8000 });
+      try {
+        await page.waitForSelector('#joinBtn', { timeout: 20000 });
+      } catch (err) {
+        const dump = await pageEval(page, () => ({
+          url: location.href,
+          ids: [...document.querySelectorAll('[id]')].map((el) => el.id),
+          title: document.title,
+          body: (document.body && document.body.innerText || '').slice(0, 400),
+        }), {});
+        console.warn('joinBtn missing', JSON.stringify(dump));
+        throw err;
+      }
       await page.$eval('#tokenInput', (el, v) => { el.value = v; el.dispatchEvent(new Event('input', { bubbles: true })); }, code);
       await page.$eval('#nameInput', (el, v) => { el.value = v; el.dispatchEvent(new Event('input', { bubbles: true })); }, name);
     }

@@ -39,6 +39,13 @@ Thumbs.db
 .cache/
 .vite/
 
+# Local demo / build leftovers
+*.apk
+*.hprof
+.tmp-video-frames/
+mobile/apk-err.txt
+mobile/apk-out.txt
+
 # Local E2E artifacts
 server/tests/e2e-report.json
 server/tests/e2e-browser-report.json

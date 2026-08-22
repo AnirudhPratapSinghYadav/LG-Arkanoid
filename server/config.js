@@ -36,30 +36,29 @@ function parseScreenCount(value, fallback = 3) {
 const NUM_SCREENS = parseScreenCount(process.env.NUM_SCREENS, 3);
 
 const FALLBACK_COMMENTARY = [
-  'Save it — that ball is hunting the gap.',
-  'Stay on the line. The wall is still yours.',
-  'Clean brick. Keep the rally alive.',
-  'Do not blink. The next drop decides the rank.',
+  'Keep the rally alive.',
+  'Cover the gap.',
+  'Stay on the line.',
 ];
 
 /** Event-specific arcade announcer lines when Gemini is offline or the key fails. */
 const FALLBACK_BY_EVENT = {
-  life_lost: ({ lead }) => [
-    `${lead} just dropped a life. Stay on the line — the wall is still live.`,
-    `Ball through the gap. ${lead}, cover the floor before the next drop.`,
-    `Life down for ${lead}. Two paddles, one court — nobody blinks.`,
-  ][Math.floor(Math.random() * 3)],
-  score_milestone: ({ lead }) => [
-    `${lead} just punched a new high. The standings on the right just moved.`,
-    `Score surge — ${lead} is running away with this wall.`,
-  ][Math.floor(Math.random() * 2)],
-  level_cleared: ({ lead }) => `${lead} wiped the row. Fresh bricks incoming across every screen.`,
-  multi_ball: () => 'Multi-ball on a panoramic court. Cover both edges — now.',
+  life_lost: ({ lead }) => `${lead} lost a life. Cover the floor.`,
+  score_milestone: ({ lead }) => `${lead} is pulling ahead.`,
+  level_cleared: ({ lead }) => `${lead} cleared the floor. Next wave.`,
+  multi_ball: () => 'Multi-ball. Cover both edges.',
   rank_takeover: ({ lead, second }) => second
-    ? `${lead} stole first from ${second}. The live board just flipped.`
-    : `${lead} stole first. The live board just flipped.`,
-  victory: ({ winner }) => `${winner} takes the Liquid Galaxy wall. That is the champion — match over.`,
-  countdown: () => 'Whistle up. Three. Two. One. Break those bricks.',
+    ? `${lead} took first from ${second}.`
+    : `${lead} took first.`,
+  victory: ({ winner, draw, names }) => {
+    if (draw) {
+      const a = names && names[0] && names[0].name;
+      const b = names && names[1] && names[1].name;
+      return a && b ? `Dead heat. ${a} and ${b} finish level. Draw.` : 'Dead heat. This match is a draw.';
+    }
+    return `${winner} wins the wall. Champion.`;
+  },
+  countdown: () => 'Three. Two. One. Play.',
   game_master: ({ lead }) => `ARKANOID AI is watching ${lead}. Hang on — the next bounce decides it.`,
 };
 
@@ -112,7 +111,15 @@ function isPreferredNic(name) {
   return /wl|wifi|wlan|eth|enp|ens|eno|lan/.test(n);
 }
 
+let lanIpCache = { value: '', at: 0 };
+
 function getLanIp() {
+  // Pin the IPv4 phones actually reach (the wall QR / /controller URL).
+  // On some rigs the first "real" NIC is the cluster fabric, not the visitor Wi-Fi.
+  const pinned = String(process.env.LG_HOST_IP || process.env.LG_LAN_IP || '').trim();
+  if (/^\d{1,3}(?:\.\d{1,3}){3}$/.test(pinned)) return pinned;
+  if (lanIpCache.value && Date.now() - lanIpCache.at < 5000) return lanIpCache.value;
+
   const nets = os.networkInterfaces();
   let preferred = null;
   let anyReal = null;
@@ -128,7 +135,8 @@ function getLanIp() {
       if (!preferred && isPreferredNic(name)) preferred = net.address;
     }
   }
-  return preferred || anyReal || fallbackIp;
+  lanIpCache = { value: preferred || anyReal || fallbackIp, at: Date.now() };
+  return lanIpCache.value;
 }
 
 /** LAN arcade CORS: empty Origin (Flutter) + localhost + lg1 + RFC1918. */
@@ -152,7 +160,10 @@ function isAllowedCorsOrigin(origin) {
 function resolveWebRoot() {
   const distRoot = path.join(__dirname, '..', 'dist');
   const webRoot = path.join(__dirname, '..', 'web-client');
-  if (fs.existsSync(path.join(distRoot, 'index.html'))) {
+  // Rig launcher sets NODE_ENV=production and rebuilds dist/. A laptop
+  // `node server/index.js` must NOT serve a stale dist from yesterday.
+  const useDist = process.env.NODE_ENV === 'production' || process.env.LG_WEB_ROOT === 'dist';
+  if (useDist && fs.existsSync(path.join(distRoot, 'index.html'))) {
     return { root: distRoot, publicDir: null };
   }
   return { root: webRoot, publicDir: path.join(webRoot, 'public') };
@@ -169,8 +180,9 @@ function generateToken(){
 
 function createInitialWorldState(maxPlayers){
   const state = new gameEngine.GameState();
-  // Host "players" default to the wall width, capped at 5 paddles.
-  const defaultPlayers = Math.max(1, Math.min(5, NUM_SCREENS));
+  // 2 phones on a 3/5/8 wall is the LAB demo. Host raises this to 5.
+  // Defaulting to NUM_SCREENS forced START to wait for 3 phones on a 3-glass.
+  const defaultPlayers = 2;
   state.maxPlayers = maxPlayers || defaultPlayers;
   state.numScreens = NUM_SCREENS;
   state.lastCommentary = '';

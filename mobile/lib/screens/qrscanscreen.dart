@@ -2,6 +2,7 @@ import '../utils/app_fonts.dart';
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../utils/constants.dart';
+import '../utils/join_target.dart';
 
 class QrScanScreen extends StatefulWidget {
   const QrScanScreen({super.key});
@@ -67,13 +68,21 @@ class _QrScanScreenState extends State<QrScanScreen> {
               final List<Barcode> barcodes = capture.barcodes;
               for (final barcode in barcodes) {
                 if (barcode.rawValue != null) {
-                  if (mode == 'session' && barcode.rawValue!.startsWith('LGARK|')) {
+                  final raw = barcode.rawValue!;
+                  if (mode == 'session') {
+                    final parsed = parseJoinInput(raw);
+                    final looksLikeJoin = raw.toUpperCase().startsWith('LGARK|') ||
+                        raw.contains('/controller') ||
+                        raw.contains('?c=') ||
+                        (parsed != null && parsed.token.length == 4);
+                    if (parsed != null && looksLikeJoin) {
+                      _barcodeFound = true;
+                      Navigator.of(context).pop(raw);
+                      return;
+                    }
+                  } else if (mode == 'rigConnect' && raw.startsWith('LGRIG|')) {
                     _barcodeFound = true;
-                    Navigator.of(context).pop(barcode.rawValue);
-                    return;
-                  } else if (mode == 'rigConnect' && barcode.rawValue!.startsWith('LGRIG|')) {
-                    _barcodeFound = true;
-                    Navigator.of(context).pop(barcode.rawValue);
+                    Navigator.of(context).pop(raw);
                     return;
                   }
                 }
@@ -94,14 +103,31 @@ class _QrScanScreenState extends State<QrScanScreen> {
             bottom: 80,
             left: 0,
             right: 0,
-            child: Text(
-              'SCAN THIS QR',
-              textAlign: TextAlign.center,
-              style: AppFonts.vt323(
-                fontSize: 32,
-                color: accentPrimary,
-                letterSpacing: 2,
-              ),
+            child: Column(
+              children: [
+                Text(
+                  'SCAN THIS QR',
+                  textAlign: TextAlign.center,
+                  style: AppFonts.vt323(
+                    fontSize: 32,
+                    color: accentPrimary,
+                    letterSpacing: 2,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Text(
+                    'Best: this APK + same Wi-Fi as lg1. Point at the wall QR.',
+                    textAlign: TextAlign.center,
+                    style: AppFonts.inter(
+                      fontSize: 13,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],

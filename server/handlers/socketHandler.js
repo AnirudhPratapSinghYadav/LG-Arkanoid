@@ -29,10 +29,13 @@ function sessionInfo(worldState) {
   };
 }
 
-function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameState, getWorldSnapshot, cancelReturnToLobby) {
+function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameState, getWorldSnapshot, cancelReturnToLobby, abortMatchIfEmpty, returnToLobby, emitFullStateTo) {
   io.on('connection', (socket) => {
-    // New screens connecting after bricksDirty was already consumed need a full brick payload.
-    worldState.bricksDirty = true;
+    if (typeof emitFullStateTo === 'function') {
+      emitFullStateTo(socket);
+    } else {
+      worldState.bricksDirty = true;
+    }
 
     let screenId = parseInt(socket.handshake.query.screenId, 10);
     if (isNaN(screenId)) {
@@ -47,10 +50,9 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
 
     if (!isNaN(screenId) && screenId >= 1 && screenId <= (worldState.numScreens || 3)) {
       socket.join(`screen-${screenId}`);
+      socket.join('screens');
       socket.emit('session_info', sessionInfo(worldState));
     }
-
-    broadcastGameState();
 
     socket.on('request_session_info', () => {
       if (isNaN(screenId) || screenId < 1 || screenId > (worldState.numScreens || 3)) {
@@ -87,10 +89,16 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
       if (typeof callback === 'function') callback();
     });
 
-    socket.on('start_game', (data) => {
+    function tryStartMatch(data, opts) {
+      const fromScreen = opts && opts.fromScreen && socket.rooms.has('screens');
       const slotIndex = socketToPlayerIndex.get(socket.id);
-      if (slotIndex !== worldState.masterPlayerIndex) {
+      const ended = ['win', 'time_up', 'game_over'].includes(worldState.gameStatus);
+      if (!fromScreen && slotIndex !== worldState.masterPlayerIndex) {
         socket.emit('join_rejected', { errorCode: 1007, message: 'Only the host can start the game' });
+        return;
+      }
+      if (fromScreen && !ended) {
+        socket.emit('error', { errorCode: 1007, message: 'Only the host can start from the wall before the match ends' });
         return;
       }
       if (worldState.gameStatus === 'playing' || worldState.gameStatus === 'countdown') {
@@ -100,6 +108,15 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
       const settingsErr = applyHostLobbySettings(worldState, data);
       if (settingsErr) {
         socket.emit('error', settingsErr);
+        return;
+      }
+      const need = Math.max(1, worldState.maxPlayers || 1);
+      const connected = worldState.players.filter((p) => p.connected).length;
+      if (connected < need) {
+        socket.emit('error', {
+          errorCode: 1012,
+          message: `Need ${need} players in the lobby before start (have ${connected})`,
+        });
         return;
       }
       if (typeof cancelReturnToLobby === 'function') cancelReturnToLobby();
@@ -159,7 +176,7 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
 
       io.emit('countdown_started', { countdown: 3 });
       triggerCommentary('countdown', getWorldSnapshot(), io, worldState.commentaryRateLimiter, worldState);
-      broadcastGameState();
+      broadcastGameState({ forceControllers: true });
 
       setTimeout(() => {
         if (worldState.gameStatus === 'countdown') {
@@ -171,9 +188,45 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
             gameStartedAt: worldState.gameStartedAt,
             gameDurationSeconds: worldState.gameDurationSeconds,
           });
-          broadcastGameState();
+          broadcastGameState({ forceControllers: true });
         }
       }, 3000);
+    }
+
+    socket.on('start_game', tryStartMatch);
+
+    socket.on('return_to_lobby', () => {
+      const slotIndex = socketToPlayerIndex.get(socket.id);
+      const fromScreen = socket.rooms.has('screens');
+      if (slotIndex !== worldState.masterPlayerIndex && !fromScreen) {
+        socket.emit('error', { errorCode: 1007, message: 'Only the host can return to lobby' });
+        return;
+      }
+      const status = worldState.gameStatus;
+      if (status !== 'win' && status !== 'time_up' && status !== 'game_over') {
+        socket.emit('error', { errorCode: 1010, message: 'Match is still running' });
+        return;
+      }
+      if (typeof returnToLobby === 'function') returnToLobby({ force: true });
+    });
+
+    socket.on('rematch', () => {
+      const slotIndex = socketToPlayerIndex.get(socket.id);
+      const fromScreen = socket.rooms.has('screens');
+      if (slotIndex !== worldState.masterPlayerIndex && !fromScreen) {
+        socket.emit('error', { errorCode: 1007, message: 'Only the host can rematch' });
+        return;
+      }
+      const status = worldState.gameStatus;
+      if (status !== 'win' && status !== 'time_up' && status !== 'game_over') {
+        socket.emit('error', { errorCode: 1010, message: 'Match is still running' });
+        return;
+      }
+      tryStartMatch({
+        maxPlayers: worldState.maxPlayers,
+        ballSpeed: worldState.ballSpeed,
+        durationSeconds: worldState.gameDurationSeconds,
+      }, { fromScreen });
     });
 
     socket.on('set_game_settings', (data) => {
@@ -233,6 +286,7 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
       ipJoinAttempts,
       broadcastGameState,
       getWorldSnapshot,
+      abortMatchIfEmpty,
     });
 
     socket.on('boundary_ack', (data) => {

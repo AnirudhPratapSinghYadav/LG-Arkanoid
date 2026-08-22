@@ -1,0 +1,23 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    ignore:
+      - dependency-name: helmet
+        versions: [">=8"]
+      - dependency-name: vite
+        versions: [">=5"]
+      - dependency-name: pm2
+        versions: [">=6"]
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+  - package-ecosystem: pub
+    directory: "/mobile"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 3

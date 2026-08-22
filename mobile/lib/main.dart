@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart'
     show LicenseEntry, LicenseEntryWithLineBreaks, LicenseRegistry;
 import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:provider/provider.dart';
 import 'services/gameservice.dart';
@@ -35,6 +36,7 @@ Stream<LicenseEntry> _fontLicenses() async* {
 }
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
   // Only bypass TLS checks during local/debug development — never in release APKs.
   assert(() {
     HttpOverrides.global = DevHttpOverrides();

@@ -39,11 +39,12 @@ function namedPlayers(snapshot) {
       score: Number(p.score) || 0,
       lives: Number(p.lives) || 0,
       rank: p.rank || i + 1,
-    }));
+    }))
+    .sort((a, b) => b.score - a.score);
 }
 
 function winnerName(snapshot) {
-  const list = namedPlayers(snapshot).slice().sort((a, b) => b.score - a.score);
+  const list = namedPlayers(snapshot);
   return (list[0] && list[0].name) || 'the field';
 }
 
@@ -51,8 +52,11 @@ function pickFallbackCommentary(eventType, snapshot) {
   const names = namedPlayers(snapshot);
   const lead = names[0] ? names[0].name : 'the field';
   const second = names[1] ? names[1].name : '';
+  const draw = names.length > 1 && names[0].score === names[1].score;
   const byEvent = FALLBACK_BY_EVENT[eventType];
-  if (typeof byEvent === 'function') return byEvent({ lead, second, names, winner: winnerName(snapshot) });
+  if (typeof byEvent === 'function') {
+    return byEvent({ lead, second, names, winner: winnerName(snapshot), draw });
+  }
   if (Array.isArray(byEvent) && byEvent.length) {
     return byEvent[Math.floor(Math.random() * byEvent.length)];
   }

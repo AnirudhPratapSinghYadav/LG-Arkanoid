@@ -166,8 +166,8 @@ GameScene.prototype.renderJoin = function() {
         this.hideBootOverlay();
         this.drawLobbyFrame();
         this.layoutSideSlots(maxP);
-        if (this.logo) this.logo.setVisible(true).setAlpha(0.9);
-        if (this.gesocLogo) this.gesocLogo.setVisible(true).setAlpha(0.9);
+        if (this.logo) this.logo.setVisible(false).setAlpha(0);
+        if (this.gesocLogo) this.gesocLogo.setVisible(false).setAlpha(0);
         this.ambientLeftText.setText('LG ARKANOID');
         this.ambientLeftText.setVisible(true).setAlpha(0.98);
         this.ambientLeftSub.setText(
@@ -224,10 +224,11 @@ GameScene.prototype.renderJoin = function() {
             const matchMeta = document.getElementById('qr-match-meta');
             const playerList = document.getElementById('qr-player-list');
 
-            qrDiv.style.display = 'flex';
-            this.syncQrToCanvas();
-
-            sessionCodeDiv.innerText = token;
+            if (qrDiv) {
+                qrDiv.style.display = 'flex';
+                this.syncQrToCanvas();
+            }
+            if (sessionCodeDiv) sessionCodeDiv.innerText = token;
             if (sessionCodeInline) sessionCodeInline.innerText = token;
 
             if (matchMeta) {
@@ -273,15 +274,25 @@ GameScene.prototype.renderJoin = function() {
 
             const lanIp = this.sessionLanIp || this.currentState.lanIp;
             const port = this.sessionPort || this.currentState.port;
-            if (lanIp && !this.qrCodeObj) {
-                const qrData = `LGARK|${lanIp}|${port}|${token}`;
+            // Pacman: phone opens http://masterIp:PORT/controller. Encode that
+            // URL so a camera / browser can open a paddle, not a private LGARK blob.
+            const joinUrl = (lanIp && token)
+                ? `http://${lanIp}:${port || 8130}/controller?c=${encodeURIComponent(token)}`
+                : '';
+            const urlEl = document.getElementById('qr-controller-url');
+            if (urlEl) {
+                urlEl.textContent = joinUrl || 'Waiting for LAN IPv4…';
+            }
+            if (joinUrl && this.qrJoinUrl !== joinUrl) {
+                this.clearLobbyQr();
+                this.qrJoinUrl = joinUrl;
                 this.qrCodeObj = new QRCode(document.getElementById('qrcode-img'), {
-                    text: qrData,
+                    text: joinUrl,
                     width: 188,
                     height: 188,
                     colorDark: '#041018',
                     colorLight: '#ffffff',
-                    correctLevel: QRCode.CorrectLevel.L
+                    correctLevel: QRCode.CorrectLevel.M
                 });
             }
         }
@@ -308,6 +319,7 @@ GameScene.prototype.clearLobbyQr = function() {
     const img = document.getElementById('qrcode-img');
     if (img) img.innerHTML = '';
     this.qrCodeObj = null;
+    this.qrJoinUrl = '';
 };
 
 GameScene.prototype.fetchSessionInfo = function() {
@@ -337,7 +349,8 @@ GameScene.prototype.applySessionInfo = function(data) {
 };
 
 GameScene.prototype.hideJoinMode = function() {
-    document.getElementById('qrcode').style.display = 'none';
+    const qr = document.getElementById('qrcode');
+    if (qr) qr.style.display = 'none';
     this.hideBootOverlay();
     if (this.lobbyDecorGfx) this.lobbyDecorGfx.clear();
     if (this.ambientLeftText) this.ambientLeftText.setVisible(false);

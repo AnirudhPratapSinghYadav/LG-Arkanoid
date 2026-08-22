@@ -30,7 +30,7 @@ class TTSService extends ChangeNotifier {
     await _tts.awaitSpeakCompletion(false);
     await _tts.setLanguage("en-US");
     await _tts.setVolume(1.0);
-    await _tts.setSpeechRate(0.42);
+    await _tts.setSpeechRate(0.55);
     await _tts.setPitch(0.88);
 
     if (!kIsWeb && (defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.macOS)) {
@@ -38,10 +38,19 @@ class TTSService extends ChangeNotifier {
     }
   }
 
+  bool _speaking = false;
+
   Future<void> speak(String text) async {
-    if (_isMuted || text.isEmpty) return;
-    await _tts.stop();
-    await _tts.speak(text);
+    if (_isMuted || text.isEmpty || _speaking) return;
+    _speaking = true;
+    try {
+      await _tts.stop();
+      await _tts.speak(text);
+    } catch (_) {
+      // Never block the game isolate on a TTS engine fault.
+    } finally {
+      _speaking = false;
+    }
   }
 
   Future<void> stop() async {

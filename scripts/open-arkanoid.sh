@@ -1,286 +1,130 @@
 #!/bin/bash
-# LG Arkanoid launcher (galaxy-pacman / galaxy-asteroids pattern).
+# Open the wall the way Galaxy Pacman does, then Asteroids if keys fail.
 #
-# Usage: bash open-arkanoid.sh [<number_of_screens>|<lg_password>]
-#        bash open-arkanoid.sh --screens <n> [--password <pw>]
-#        bash open-arkanoid.sh --frames <n>    # print the frame map, launch nothing
+# Pacman (every frame, including lg1):
+#   ssh -Xnf lg@$lg " export DISPLAY=:0 ; chromium-browser <url> --start-fullscreen … &"
+# Asteroids (slaves only):
+#   sshpass … ssh -tXn $lg "export DISPLAY=:0 ; chromium-browser … &"
 #
-# Supports 1..12 (typical LG: 3,5,7,9,12). With no argument the screen count is
-# read from the rig personality.
+# Slice URLs stay /1 left … /N right (not Pacman's hostname digit).
 #
-# The first positional argument is overloaded on purpose. lg-retro-gaming's
-# launcher runs `bash <openScript> lq`, i.e. it passes the LG *password* as $1
-# (see lg-retro-gaming/server/index.js and galaxy-asteroids/scripts/open.sh,
-# which does PW="$1"). A numeric $1 is therefore a screen count from a human or
-# from the phone app, and a non-numeric $1 is LGRG handing us the password.
-#
-# Do not `wait` on Chromium — SSH from the phone app must return after launch.
+# Usage: bash open-arkanoid.sh [screens|password] [--screens N] [--password pw] [--frames [N]]
 
-ARG_SCREENS=""
-ARG_PASSWORD=""
-DRY_RUN=""
-while [ $# -gt 0 ]; do
-  case "$1" in
-    --frames)
-      DRY_RUN=1
-      if [[ "$2" =~ ^[0-9]+$ ]]; then ARG_SCREENS="$2"; shift; fi
-      ;;
-    --screens)
-      ARG_SCREENS="$2"; shift
-      ;;
-    --password)
-      ARG_PASSWORD="$2"; shift
-      ;;
-    -h|--help)
-      sed -n '3,9p' "$0"; exit 0
-      ;;
-    *)
-      if [[ "$1" =~ ^[0-9]+$ ]]; then
-        ARG_SCREENS="$1"
-      elif [ -n "$1" ]; then
-        # LGRG contract: `bash open-arkanoid.sh <password>`.
-        ARG_PASSWORD="$1"
-      fi
-      ;;
-  esac
-  shift
-done
-export NODE_ENV=production
+set -u
 
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 PROJECT_DIR="$( cd "$SCRIPT_DIR/.." && pwd )"
-SERVER_PATH="$PROJECT_DIR/server/index.js"
+# shellcheck disable=SC1091
+. "$SCRIPT_DIR/lib/parse-open-args.sh"
+# shellcheck disable=SC1091
+. "$SCRIPT_DIR/lib/load-rig.sh"
+# shellcheck disable=SC1091
+. "$SCRIPT_DIR/lib/frames.sh"
+# shellcheck disable=SC1091
+. "$SCRIPT_DIR/lib/ssh-pacman.sh"
+# shellcheck disable=SC1091
+. "$SCRIPT_DIR/lib/ssh-asteroids.sh"
+# shellcheck disable=SC1091
+. "$SCRIPT_DIR/lib/chrome-remote.sh"
+# shellcheck disable=SC1091
+. "$SCRIPT_DIR/lib/wait-health.sh"
+# shellcheck disable=SC1091
+. "$SCRIPT_DIR/lib/pm2-game.sh"
+# shellcheck disable=SC1091
+. "$SCRIPT_DIR/lib/open-one-frame.sh"
 
-# nvm Node/pm2 are not on the default SSH PATH used by the Flutter app.
-export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
-if [ -s "$NVM_DIR/nvm.sh" ]; then
-  # shellcheck disable=SC1090
-  . "$NVM_DIR/nvm.sh"
-  nvm use 16 >/dev/null 2>&1 || nvm use default >/dev/null 2>&1 || true
-fi
-if command -v npm >/dev/null 2>&1; then
-  NPM_PREFIX="$(npm config get prefix 2>/dev/null || true)"
-  if [ -n "$NPM_PREFIX" ] && [ -d "$NPM_PREFIX/bin" ]; then
-    export PATH="$NPM_PREFIX/bin:$PATH"
-  fi
-fi
-
-if [ -f "$PROJECT_DIR/server/.env" ]; then
-  # shellcheck disable=SC1091
-  set -a
-  # shellcheck disable=SC1091
-  source "$PROJECT_DIR/server/.env"
-  set +a
-fi
-
-# Liquid Galaxy rig personality. DHCP drops /lg/personavars.txt on every frame
-# (DHCP_LG_FRAMES, DHCP_LG_FRAMES_MAX, DHCP_RANDR); ${HOME}/etc/shell.conf then
-# derives LG_FRAMES / LG_FRAMES_MAX from it. Same contract every LG game uses.
-for persona in /lg/personavars.txt /home/lg/personavars.txt; do
-  if [ -r "$persona" ]; then
-    # shellcheck disable=SC1090
-    . "$persona"
-    echo "Loaded rig personality from $persona"
-    break
-  fi
-done
-if [ -f "${HOME}/etc/shell.conf" ]; then
-  # shellcheck disable=SC1090
-  . "${HOME}/etc/shell.conf"
+parse_open_args "$@"
+if [ "$?" -eq 2 ]; then
+  sed -n '3,12p' "$0"
+  exit 0
 fi
 
-# Explicit argument wins, then the rig's own screen count, then server/.env.
-if [ -n "$ARG_SCREENS" ]; then
+export NODE_ENV=production
+load_nvm_node16
+load_server_env "$PROJECT_DIR/server/.env"
+load_lg_personality
+
+if [ -n "${ARG_SCREENS:-}" ]; then
   NUM_SCREENS="$ARG_SCREENS"
-elif [ -n "$DHCP_LG_FRAMES_MAX" ]; then
+elif [ -n "${DHCP_LG_FRAMES_MAX:-}" ]; then
   NUM_SCREENS="$DHCP_LG_FRAMES_MAX"
   echo "Screen count $NUM_SCREENS detected from rig personality."
 fi
 
-if [ -z "$NUM_SCREENS" ]; then
-  echo "Error: could not determine the number of screens."
+if [ -z "${NUM_SCREENS:-}" ] || ! [[ "$NUM_SCREENS" =~ ^[0-9]+$ ]]; then
   echo "Usage: bash open-arkanoid.sh <number_of_screens>"
   exit 1
 fi
-
-if ! [[ "$NUM_SCREENS" =~ ^[0-9]+$ ]]; then
-  echo "Error: <number_of_screens> must be numeric."
-  exit 1
-fi
-
 if [ "$NUM_SCREENS" -lt 1 ] || [ "$NUM_SCREENS" -gt 12 ]; then
-  echo "Error: number_of_screens must be in range 1..12."
+  echo "Error: number_of_screens must be 1..12"
   exit 1
 fi
 
-# Physical left→right hostname order on a Liquid Galaxy wall.
-#
-# The canonical mapping is documented by the rig itself: liquid-galaxy's
-# home/lg/etc/shell.conf ships
-#   LG_FRAMES=${DHCP_LG_FRAMES:-"lg6 lg7 lg8 lg1 lg2 lg3 lg4 lg5"}
-# for an 8-frame rig. Generalised, left→right is
-#   lg(n/2+2) .. lg(n)   (left wing, ascending toward the centre)
-#   lg1 .. lg(n/2+1)     (lg1 is the centre frame on odd walls)
-# so 3 screens are "lg3 lg1 lg2" and 5 screens are "lg4 lg5 lg1 lg2 lg3".
-# Arkanoid's court is one continuous world, so this order is what keeps the
-# ball travelling in a straight line across the wall.
-lg_frame_order() {
-  local n=$1 i
-  FRAMES=()
-  for i in $(seq $((n / 2 + 2)) "$n"); do FRAMES+=("lg$i"); done
-  for i in $(seq 1 $((n / 2 + 1))); do FRAMES+=("lg$i"); done
-}
+resolve_lg_frames "$NUM_SCREENS"
 
-# Keep the court centred on the master when the rig is wider than the match.
-lg_center_window() {
-  local n=$1 total=${#RIG_FRAMES[@]} master=0 start i
-  for i in $(seq 0 $((total - 1))); do
-    if [ "${RIG_FRAMES[$i]}" = "lg1" ]; then master=$i; break; fi
-  done
-  start=$((master - (n - 1) / 2))
-  if [ "$start" -lt 0 ]; then start=0; fi
-  if [ "$start" -gt $((total - n)) ]; then start=$((total - n)); fi
-  FRAMES=("${RIG_FRAMES[@]:$start:$n}")
-}
-
-RIG_FRAMES=()
-if [ -n "$LG_FRAMES" ]; then
-  # shellcheck disable=SC2206
-  RIG_FRAMES=($LG_FRAMES)
-fi
-
-if [ "${#RIG_FRAMES[@]}" -eq "$NUM_SCREENS" ]; then
-  FRAMES=("${RIG_FRAMES[@]}")
-  echo "Frame order taken from the rig's LG_FRAMES."
-elif [ "${#RIG_FRAMES[@]}" -gt "$NUM_SCREENS" ]; then
-  echo "Rig reports ${#RIG_FRAMES[@]} frames but launching $NUM_SCREENS — centring the court on lg1."
-  lg_center_window "$NUM_SCREENS"
-else
-  echo "LG_FRAMES unusable for $NUM_SCREENS screens — using the standard LG order."
-  lg_frame_order "$NUM_SCREENS"
-fi
-echo "Frame map L→R: ${FRAMES[*]}"
-
-if [ -n "$DRY_RUN" ]; then
-  screenNumber=0
+if [ -n "${DRY_RUN:-}" ]; then
+  n=0
   for frame in "${FRAMES[@]:0:$NUM_SCREENS}"; do
-    screenNumber=$((screenNumber + 1))
-    echo "  slice /$screenNumber -> $frame"
+    n=$((n + 1))
+    echo "  slice /$n -> $frame"
   done
   exit 0
 fi
 
+SERVER_PATH="$PROJECT_DIR/server/index.js"
 if [ ! -f "$SERVER_PATH" ]; then
-  echo "Error: server entry not found at $SERVER_PATH"
+  echo "Error: missing $SERVER_PATH"
   exit 1
 fi
-
 if ! command -v pm2 >/dev/null 2>&1; then
-  echo "Error: pm2 not found in PATH. Install with: npm i -g pm2"
+  echo "Error: pm2 not in PATH. On this rig: npm i -g pm2@5.4.3"
   exit 1
 fi
 
-# 8130 keeps Arkanoid inside the LG game port family and out of the way of the
-# ports the other games already claim: pong 8112, snake 8114, pacman 8128,
-# asteroids 8129, and the lg-retro-gaming launcher itself on 3123.
 port=${PORT:-8130}
-
-# An explicit password (LGRG or --password) beats whatever server/.env carries.
-if [ -n "$ARG_PASSWORD" ]; then
+if [ -n "${ARG_PASSWORD:-}" ]; then
   LG_PASSWORD="$ARG_PASSWORD"
 fi
 
-if [ -z "$LG_PASSWORD" ]; then
-  echo "LG_PASSWORD not set — using SSH keys (BatchMode)."
-  SSH_CMD="ssh -o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5"
-else
-  export SSHPASS="$LG_PASSWORD"
-  SSH_CMD="sshpass -e ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=5"
-fi
-
-export NUM_SCREENS="$NUM_SCREENS"
-export PORT="$port"
-
-# The court's aspect must match the frames. DHCP_RANDR is the rig's own rotation
-# ("right" on a stock install = portrait frames), and server/.env may override it
-# with LG_FRAME_ASPECT for unrotated panels or desk testing.
-if [ -z "$LG_FRAME_ASPECT" ]; then
+export NUM_SCREENS PORT="$port"
+LG_RANDR="${LG_RANDR:-}"
+if [ -z "${LG_FRAME_ASPECT:-}" ]; then
   export LG_RANDR="${DHCP_RANDR:-right}"
-  echo "Frame rotation: $LG_RANDR (portrait unless 'normal'/'inverted')"
+  echo "Frame rotation: $LG_RANDR"
 else
   echo "Frame aspect pinned by server/.env: $LG_FRAME_ASPECT"
 fi
 export LG_FRAME_ASPECT="${LG_FRAME_ASPECT:-}"
+export LG_RANDR
 
-# Always rebuild the wall client. Express prefers dist/ when it exists, so a
-# git pull without a rebuild would keep serving yesterday's JS on the glass.
 if command -v npm >/dev/null 2>&1; then
   echo "Building wall client (dist/)…"
-  (cd "$PROJECT_DIR" && npm run build) || echo "WARNING: npm run build failed — existing dist/ may be stale."
+  (cd "$PROJECT_DIR" && npm run build) || echo "WARNING: npm run build failed — dist/ may be stale."
 fi
-
-# Serve source tree if dist was never built (Pacman-style fallback).
 if [ ! -f "$PROJECT_DIR/dist/index.html" ]; then
   export NODE_ENV=development
   echo "dist/ missing — serving web-client directly."
 fi
 
-PM2_ENV="NUM_SCREENS=$NUM_SCREENS PORT=$port NODE_ENV=$NODE_ENV LG_RANDR=$LG_RANDR LG_FRAME_ASPECT=$LG_FRAME_ASPECT"
-if pm2 describe lg-arkanoid > /dev/null 2>&1; then
-  echo "Restarting lg-arkanoid with $PM2_ENV..."
-  NUM_SCREENS="$NUM_SCREENS" PORT="$port" NODE_ENV="$NODE_ENV" \
-    LG_RANDR="$LG_RANDR" LG_FRAME_ASPECT="$LG_FRAME_ASPECT" \
-    pm2 restart lg-arkanoid --update-env
-else
-  echo "Starting lg-arkanoid with $PM2_ENV..."
-  NUM_SCREENS="$NUM_SCREENS" PORT="$port" NODE_ENV="$NODE_ENV" \
-    LG_RANDR="$LG_RANDR" LG_FRAME_ASPECT="$LG_FRAME_ASPECT" \
-    pm2 start "$SERVER_PATH" --name lg-arkanoid
+start_or_restart_pm2 "$SERVER_PATH" "$port"
+if ! wait_for_health "$port"; then
+  echo "Server did not answer /health on port $port."
+  echo "Not opening Chromium — that is how a wall stays dark after a false launch."
+  exit 1
 fi
 
-sleep 2
-
-# Chromium kiosk flags — compared against galaxy-pacman / galaxy-asteroids:
-#   * Pacman uses --start-fullscreen only and can still show the address bar.
-#     --kiosk is what mentors expect on the wall.
-#   * Pacman sets --autoplay-policy only on lg1 and also passes /dev/null as a
-#     second URL (Chromium opens a junk tab). We set autoplay on every frame
-#     and never pass a dummy path.
-#   * Do not use --incognito: the "you are incognito" banner sits on the glass.
-#     A throwaway --user-data-dir per frame avoids the restore-session bubble
-#     without that banner.
-#   * Ubuntu 16.04 LG images ship `chromium-browser`. Newer images / VMs ship
-#     `chromium` or `google-chrome`. Resolve instead of hard-coding.
-# Window geometry is left to kiosk so portrait frames (DHCP_RANDR=right) fill.
-resolve_chrome() {
-  command -v chromium-browser 2>/dev/null \
-    || command -v chromium 2>/dev/null \
-    || command -v google-chrome 2>/dev/null \
-    || command -v google-chrome-stable 2>/dev/null \
-    || echo chromium-browser
-}
-CHROME_BIN="$(resolve_chrome)"
-CHROME_FLAGS="--kiosk --start-fullscreen --no-first-run --noerrdialogs --disable-translate --disable-infobars --disable-session-crashed-bubble --disable-pinch --overscroll-history-navigation=0 --autoplay-policy=no-user-gesture-required"
-
+failed=0
 screenNumber=0
 for frame in "${FRAMES[@]:0:$NUM_SCREENS}"; do
   screenNumber=$((screenNumber + 1))
-  PROFILE="/tmp/lg-arkanoid-chrome-${frame}"
-  if [ "$frame" = "lg1" ]; then
-    echo "Opening ${CHROME_BIN} on master ($frame → /$screenNumber)..."
-    pkill -f "lg-arkanoid-chrome-${frame}" 2>/dev/null || true
-    DISPLAY=:0 nohup "$CHROME_BIN" $CHROME_FLAGS \
-      --user-data-dir="$PROFILE" \
-      "http://localhost:${port}/${screenNumber}" \
-      >/tmp/lg-arkanoid-chrome-lg1.log 2>&1 &
-    disown || true
-  else
-    echo "Opening Chromium on $frame → /$screenNumber..."
-    REMOTE_CMD="CHROME=\$(command -v chromium-browser || command -v chromium || command -v google-chrome || echo chromium-browser); pkill -f 'lg-arkanoid-chrome-${frame}' 2>/dev/null || true; DISPLAY=:0 nohup \$CHROME ${CHROME_FLAGS} --user-data-dir=${PROFILE} 'http://lg1:${port}/${screenNumber}' >/tmp/lg-arkanoid-chrome.log 2>&1 &"
-    $SSH_CMD lg@"$frame" "$REMOTE_CMD" || echo "Warning: failed to open Chromium on $frame"
+  if ! open_one_frame "$frame" "$screenNumber" "$port"; then
+    failed=1
   fi
-  # Pacman sleeps 1s per frame so old CPUs are not hit with N Chromiums at once.
   sleep 1
 done
 
 echo "Launched $NUM_SCREENS screens on port $port."
+if [ "$failed" = 1 ]; then
+  echo "Some slaves did not open. Fix SSH, then run this script again."
+  exit 1
+fi

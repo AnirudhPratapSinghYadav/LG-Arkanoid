@@ -15,7 +15,7 @@
     "server": "npm run start --workspace=server",
     "start": "concurrently --names \"SERVER,VITE\" -c \"cyan,magenta\" \"npm run server\" \"npm run dev\"",
     "build": "vite build",
-    "test": "node server/tests/gameEngine.test.js"
+    "test": "node server/tests/gameEngine.test.js && node server/tests/join-url.test.js && node server/tests/ssh-launch.test.js && node server/tests/matchResult.test.js"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",

@@ -76,6 +76,12 @@ const io = new Server(server, {
 });
 
 const webRoot = resolveWebRoot();
+// Pacman/Asteroids: the phone opens http://masterIp:PORT/controller.
+// GET / used to serve the wall Phaser page, so typing the "game link" on a
+// phone showed a broken court instead of a paddle. Always send / to the controller.
+app.get('/', (req, res) => {
+  res.redirect(302, '/controller');
+});
 app.use(express.static(webRoot.root));
 if (webRoot.publicDir) {
   app.use(express.static(webRoot.publicDir));
@@ -91,7 +97,17 @@ const match = createMatchController({
   clearAllPowerUpTimers,
 });
 
-registerSocketHandlers(io, worldState, pendingHandoffs, match.broadcastGameState, match.getWorldSnapshot, match.cancelReturnToLobby);
+registerSocketHandlers(
+  io,
+  worldState,
+  pendingHandoffs,
+  match.broadcastGameState,
+  match.getWorldSnapshot,
+  match.cancelReturnToLobby,
+  match.abortMatchIfEmpty,
+  match.returnToLobby,
+  match.emitFullStateTo
+);
 worldState.io = io;
 
 match.startGameLoop();

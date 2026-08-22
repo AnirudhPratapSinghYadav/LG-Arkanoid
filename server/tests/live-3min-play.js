@@ -165,14 +165,14 @@ async function main() {
   console.log(`joined: ${j1.playerId} + ${j2.playerId}`);
 
   p1.emit('set_game_settings', {
-    maxPlayers: 3,
+    maxPlayers: 2,
     ballSpeed: 'medium',
     durationSeconds: DURATION_SEC,
   });
   await new Promise((r) => setTimeout(r, 300));
 
   const cdP = once(p1, 'countdown_started', 8000);
-  p1.emit('start_game', { durationSeconds: DURATION_SEC, maxPlayers: 3, ballSpeed: 'medium' });
+  p1.emit('start_game', { durationSeconds: DURATION_SEC, maxPlayers: 2, ballSpeed: 'medium' });
   await cdP;
   const playing = await waitForGameState(p1, (st) => st.gameStatus === 'playing', 10000);
   console.log(`match live — duration=${playing.gameDurationSeconds}s startedAt=${playing.gameStartedAt}`);

@@ -233,24 +233,35 @@ GameScene.prototype.drawWinMode = function() {
     }
 
     const status = this.currentState.gameStatus;
-    const ranked = [...(this.currentState.players || [])]
-        .filter((p) => p && (p.connected || (p.score || 0) > 0 || p.name))
-        .sort((a, b) => (b.score || 0) - (a.score || 0));
+    const result = this.currentState.matchResult;
+    const ranked = (result && result.ranked && result.ranked.length)
+        ? result.ranked
+        : [...(this.currentState.players || [])]
+            .filter((p) => p && (p.connected || (p.score || 0) > 0 || p.name))
+            .sort((a, b) => (b.score || 0) - (a.score || 0));
+    const isDraw = result && result.outcome === 'draw';
     const winner = ranked[0];
     const winnerName = (winner && (winner.name || ('P' + (winner.playerNumber || 1)))) || 'PLAYER';
     const comment = (this.currentState.lastCommentary || '').trim();
     let oneLiner = comment;
     if (!oneLiner || oneLiner.length < 8) {
-        if (status === 'time_up') oneLiner = 'Congratulations ' + winnerName + ' — the clock hit zero and you own the wall.';
-        else if (status === 'game_over') oneLiner = 'Congratulations ' + winnerName + ' — last paddle standing.';
-        else oneLiner = 'Congratulations ' + winnerName + ' — you cleared the Liquid Galaxy wall.';
+        if (isDraw) oneLiner = 'Same score. This match is a draw.';
+        else if (status === 'time_up') oneLiner = winnerName + ' wins on the clock.';
+        else if (status === 'game_over') oneLiner = winnerName + ' — last paddle standing.';
+        else oneLiner = winnerName + ' cleared the wall.';
     }
 
-    if (status === 'time_up') this.winTitle.setText('TIME UP');
-    else if (status === 'game_over') this.winTitle.setText('GAME OVER');
-    else this.winTitle.setText('YOU WIN');
-
-    this.winName.setText(winnerName.toUpperCase() + ' WINS');
+    if (isDraw) {
+        this.winCongrats.setText('MATCH OVER');
+        this.winTitle.setText('DRAW');
+        this.winName.setText('NOBODY WINS');
+    } else {
+        this.winCongrats.setText('CONGRATULATIONS');
+        if (status === 'time_up') this.winTitle.setText('TIME UP');
+        else if (status === 'game_over') this.winTitle.setText('GAME OVER');
+        else this.winTitle.setText('YOU WIN');
+        this.winName.setText(winnerName.toUpperCase() + ' WINS');
+    }
     this.winMessage.setText(oneLiner);
 
     const onRight = isRightmostScreen(this.currentState);
@@ -305,7 +316,7 @@ GameScene.prototype.drawWinMode = function() {
         }
     }
 
-    if (isCenterScreen && !this.winConfettiEmitted && winner) {
+    if (isCenterScreen && !this.winConfettiEmitted && winner && !isDraw) {
         this.winConfettiEmitted = true;
         if (this.winConfetti && typeof this.winConfetti.explode === 'function') {
             this.winConfetti.explode(48);

@@ -32,7 +32,7 @@ The listing itself is a pull request against
 [LiquidGalaxyLAB/Data](https://github.com/LiquidGalaxyLAB/Data), not against
 GO-Web-Store. Full steps: [docs/GO_WEB_STORE.md](../docs/GO_WEB_STORE.md).
 
-Connect with master IP, port **8130**, and the session token shown on the Liquid Galaxy center screen (QR / 4-letter code). `/health` does not include the join code.
+Connect with the IPv4 printed under the wall QR, port **8130**, and the 4-letter code on the center screen. The connecting screen probes `http://IP:8130/health` first, then opens the live link. `/health` does not include the join code. Same Wi-Fi as lg1 — never type `lg1`.
 
 ## Typography is offline by design
 

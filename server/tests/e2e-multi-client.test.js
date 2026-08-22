@@ -128,6 +128,18 @@ async function main() {
     ctrl.status === 200 && !/\sonclick\s*=/.test(ctrl.body),
     'onclick present'
   );
+  record(
+    'controller has Join game + mid-match LEAVE',
+    ctrl.status === 200 && /id="joinBtn"/.test(ctrl.body) && /id="leaveMatchBtn"/.test(ctrl.body),
+    'join/leave missing'
+  );
+  const root = await httpGet('/');
+  const loc = String((root.headers && root.headers.location) || '');
+  record(
+    'GET / redirects to /controller (Pacman-style phone link)',
+    root.status === 302 && /\/controller/.test(loc),
+    `status=${root.status} location=${loc}`
+  );
 
   // 2) Three screen sockets
   const screens = [];
@@ -211,7 +223,7 @@ async function main() {
     5000
   ).catch(() => null);
   // Trigger a settings broadcast so a fresh game_state is guaranteed
-  p1.emit('set_game_settings', { maxPlayers: 3, ballSpeed: 'medium', durationSeconds: 180 });
+  p1.emit('set_game_settings', { maxPlayers: 2, ballSpeed: 'medium', durationSeconds: 180 });
   lobbyState = await lobbyWait;
   if (!lobbyState) {
     lobbyState = await once(p1, 'game_state', 3000).catch((e) => ({ __err: e.message }));
@@ -226,14 +238,14 @@ async function main() {
   );
 
   // 4) Host starts game (short duration for time_up test later — use 60s for play, then separate endless check)
-  p1.emit('set_game_settings', { maxPlayers: 3, ballSpeed: 'medium', durationSeconds: 60 });
+  p1.emit('set_game_settings', { maxPlayers: 2, ballSpeed: 'medium', durationSeconds: 60 });
   await new Promise((r) => setTimeout(r, 200));
 
   const countdownP = Promise.race([
     once(p1, 'countdown_started', 5000),
     once(screens[0], 'countdown_started', 5000),
   ]);
-  p1.emit('start_game', { durationSeconds: 60, maxPlayers: 3, ballSpeed: 'medium' });
+  p1.emit('start_game', { durationSeconds: 60, maxPlayers: 2, ballSpeed: 'medium' });
   const cd = await countdownP.catch((e) => ({ __err: e.message }));
   record('countdown_started emitted', cd && !cd.__err, JSON.stringify(cd));
 

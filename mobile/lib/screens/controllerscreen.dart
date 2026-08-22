@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -8,11 +9,12 @@ import '../services/gameservice.dart';
 import '../widgets/mission_background.dart';
 import '../widgets/lgpanel.dart';
 import '../widgets/connectionstatus.dart';
-import '../widgets/controller_touchpad.dart';
 import '../widgets/controller_dpad.dart';
 import '../widgets/powerup_panel.dart';
 import '../widgets/player_stats_bar.dart';
 import '../widgets/game_end_overlay.dart';
+import '../utils/leave_match.dart';
+import '../services/ttsservice.dart';
 
 class ControllerScreen extends StatefulWidget {
   const ControllerScreen({super.key});
@@ -21,38 +23,24 @@ class ControllerScreen extends StatefulWidget {
   State<ControllerScreen> createState() => _ControllerScreenState();
 }
 
-class _ControllerScreenState extends State<ControllerScreen>
-    with TickerProviderStateMixin {
-  String _controlMode = 'touch'; // 'touch' or 'dpad'
-
-  // Game-end overlay state
+class _ControllerScreenState extends State<ControllerScreen> {
   bool _showGameEndOverlay = false;
   String _gameEndTitle = '';
   String _gameEndSubtitle = '';
+  String _gameEndKicker = '';
   String _gameEndMessage = '';
+  bool _gameEndIsHost = false;
   List<Map<String, dynamic>> _gameEndRankings = <Map<String, dynamic>>[];
-
-  late AnimationController _glowController;
-  late Animation<double> _glowAnimation;
 
   @override
   void initState() {
     super.initState();
-    final service = context.read<GameService>();
-    service.addListener(_onGameStateUpdate);
-
-    _glowController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 2000),
-    )..repeat(reverse: true);
-    _glowAnimation =
-        Tween<double>(begin: 0.2, end: 0.6).animate(_glowController);
+    context.read<GameService>().addListener(_onGameStateUpdate);
   }
 
   @override
   void dispose() {
     context.read<GameService>().removeListener(_onGameStateUpdate);
-    _glowController.dispose();
     super.dispose();
   }
 
@@ -64,17 +52,14 @@ class _ControllerScreenState extends State<ControllerScreen>
 
     final status = gameState['gameStatus'] as String? ?? 'playing';
 
-    if ((status == 'lobby' || status == 'waiting') && _showGameEndOverlay) {
-      setState(() {
-        _showGameEndOverlay = false;
-      });
-      Navigator.pushReplacementNamed(context, '/lobby');
+    if (_showGameEndOverlay &&
+        (status == 'countdown' || status == 'playing')) {
+      setState(() => _showGameEndOverlay = false);
       return;
     }
 
     if ((status == 'game_over' || status == 'time_up' || status == 'win') &&
         !_showGameEndOverlay) {
-      // Determine winner
       final players = gameState['players'] as List<dynamic>? ?? [];
       final sorted = List<dynamic>.from(players)
         ..sort((a, b) {
@@ -83,6 +68,11 @@ class _ControllerScreenState extends State<ControllerScreen>
           return bScore.compareTo(aScore);
         });
 
+      final result = gameState['matchResult'];
+      final isDraw = result is Map && result['outcome'] == 'draw';
+      final masterIndex = gameState['masterPlayerIndex'] as int? ?? 0;
+      final isHost = (service.playerNumber ?? 0) - 1 == masterIndex;
+
       String winnerName = 'Nobody';
       if (sorted.isNotEmpty) {
         final winner = sorted.first as Map;
@@ -90,28 +80,32 @@ class _ControllerScreenState extends State<ControllerScreen>
             winner['name'] as String? ?? 'Player ${winner['playerNumber']}';
       }
 
+      final myId = service.playerId;
+      int myRank = service.rank;
+      if (myId != null) {
+        final idx = sorted.indexWhere((raw) => (raw as Map)['id'] == myId);
+        if (idx >= 0) myRank = idx + 1;
+      }
+      final iWon = !isDraw && myRank == 1;
+
       setState(() {
         _showGameEndOverlay = true;
-        if (status == 'time_up') {
-          _gameEndTitle = 'TIME\'S UP!';
-        } else if (status == 'win') {
-          _gameEndTitle = 'VICTORY!';
+        _gameEndIsHost = isHost;
+        if (isDraw) {
+          _gameEndKicker = 'MATCH OVER';
+          _gameEndTitle = 'DRAW';
+          _gameEndSubtitle = 'Same score — nobody wins.';
+          _gameEndMessage = 'It is a tie. Play again or exit.';
+        } else if (iWon) {
+          _gameEndKicker = 'CONGRATULATIONS';
+          _gameEndTitle = status == 'time_up' ? 'TIME\'S UP!' : 'YOU WIN';
+          _gameEndSubtitle = 'You take the wall.';
+          _gameEndMessage = '$winnerName wins.';
         } else {
-          _gameEndTitle = 'GAME OVER';
-        }
-        _gameEndSubtitle = 'Congratulations — $winnerName wins!';
-        final commentary = (gameState['lastCommentary'] as String?)?.trim() ?? '';
-        if (commentary.isNotEmpty) {
-          _gameEndMessage = commentary;
-        } else if (status == 'time_up') {
-          _gameEndMessage =
-              'Congratulations $winnerName — the clock hit zero and you own the wall.';
-        } else if (status == 'win') {
-          _gameEndMessage =
-              'Congratulations $winnerName — you cleared the Liquid Galaxy wall.';
-        } else {
-          _gameEndMessage =
-              'Congratulations $winnerName — last paddle standing.';
+          _gameEndKicker = 'BETTER LUCK NEXT TIME';
+          _gameEndTitle = myRank == 2 ? '2ND PLACE' : 'YOU PLACED #$myRank';
+          _gameEndSubtitle = '$winnerName wins this match.';
+          _gameEndMessage = 'Stay for a rematch or exit.';
         }
         _gameEndRankings = sorted.take(5).map((raw) {
           final row = raw as Map;
@@ -123,7 +117,12 @@ class _ControllerScreenState extends State<ControllerScreen>
         }).toList();
       });
 
-      HapticFeedback.heavyImpact();
+      HapticFeedback.mediumImpact();
+      if (isDraw) {
+        unawaited(TTSService().speak('Draw. Same score.'));
+      } else if (!iWon) {
+        unawaited(TTSService().speak('Better luck next time.'));
+      }
     }
   }
 
@@ -136,7 +135,6 @@ class _ControllerScreenState extends State<ControllerScreen>
     final playerColor =
         playerColors[((service.playerNumber ?? 1) - 1) % playerColors.length];
 
-    // Calculate remaining time
     int remainingSeconds = 0;
     bool showTimer = false;
     bool warnLowTime = false;
@@ -157,7 +155,15 @@ class _ControllerScreenState extends State<ControllerScreen>
       }
     }
 
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        final ok = await confirmLeave(context, title: 'LEAVE MATCH?');
+        if (!ok || !context.mounted) return;
+        leaveToStart(context);
+      },
+      child: Scaffold(
       backgroundColor: bgDark,
       body: MissionControlBackground(
         child: Stack(
@@ -165,11 +171,11 @@ class _ControllerScreenState extends State<ControllerScreen>
             SafeArea(
               child: Column(
                 children: [
-                  // ── Top HUD: Player info + Connection ──
                   Padding(
                     padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        const EdgeInsets.fromLTRB(12, 6, 12, 0),
                     child: LgPanel(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       child: Row(
                         children: [
                           Container(
@@ -190,8 +196,10 @@ class _ControllerScreenState extends State<ControllerScreen>
                             ),
                           ),
                           const Spacer(),
-                          ConnectionStatus(
-                              isConnected: service.connected, label: 'GAME'),
+                          Flexible(
+                            child: ConnectionStatus(
+                                isConnected: service.connected, label: 'GAME'),
+                          ),
                           const SizedBox(width: 8),
                           Text(
                             '${service.latencyMs}ms',
@@ -203,37 +211,44 @@ class _ControllerScreenState extends State<ControllerScreen>
                               color: textSecondary,
                             ),
                           ),
-                          IconButton(
-                            icon: const Icon(Icons.settings,
-                                color: textSecondary, size: 18),
-                            constraints: const BoxConstraints(),
-                            padding: const EdgeInsets.only(left: 8),
-                            tooltip: 'Settings',
-                            onPressed: () =>
-                                Navigator.pushNamed(context, '/settings'),
+                          TextButton(
+                            onPressed: () async {
+                              final ok = await confirmLeave(
+                                  context, title: 'LEAVE MATCH?');
+                              if (!ok || !context.mounted) return;
+                              leaveToStart(context);
+                            },
+                            style: TextButton.styleFrom(
+                              foregroundColor: accentError,
+                              padding: const EdgeInsets.symmetric(horizontal: 8),
+                              minimumSize: const Size(64, 36),
+                            ),
+                            child: Text(
+                              'LEAVE',
+                              style: AppFonts.spaceGrotesk(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w800,
+                                color: accentError,
+                              ),
+                            ),
                           ),
                         ],
                       ),
                     ),
                   ),
-
-                  // ── Score / Lives / Rank / Timer Row ──
                   PlayerStatsBar(
                     playerColor: playerColor,
                     remainingSeconds: remainingSeconds,
                     showTimer: showTimer,
                     warnLowTime: warnLowTime,
                   ),
-
-                  const SizedBox(height: 4),
-
                   if (service.lastCommentary.isNotEmpty)
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
                       child: Container(
                         width: double.infinity,
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 10),
+                            horizontal: 12, vertical: 8),
                         decoration: BoxDecoration(
                           color: cardFill,
                           borderRadius: BorderRadius.circular(10),
@@ -250,149 +265,27 @@ class _ControllerScreenState extends State<ControllerScreen>
                         ),
                       ),
                     ),
-
-                  const Spacer(),
-
-                  // ── Power-Up Buttons Row ──
-                  const PowerupPanel(),
-
-                  const SizedBox(height: 12),
-
-                  // ── Control Mode Selector ──
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: cardFill,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: borderLight),
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: GestureDetector(
-                              onTap: () =>
-                                  setState(() => _controlMode = 'touch'),
-                              child: Container(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 8),
-                                decoration: BoxDecoration(
-                                  color: _controlMode == 'touch'
-                                      ? playerColor.withOpacity(0.2)
-                                      : Colors.transparent,
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                    color: _controlMode == 'touch'
-                                        ? playerColor
-                                        : Colors.transparent,
-                                    width: 1,
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.touch_app_rounded,
-                                      size: 16,
-                                      color: _controlMode == 'touch'
-                                          ? playerColor
-                                          : textSecondary,
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      'TOUCH',
-                                      style: AppFonts.spaceGrotesk(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.bold,
-                                        color: _controlMode == 'touch'
-                                            ? textPrimary
-                                            : textSecondary,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: GestureDetector(
-                              onTap: () =>
-                                  setState(() => _controlMode = 'dpad'),
-                              child: Container(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 8),
-                                decoration: BoxDecoration(
-                                  color: _controlMode == 'dpad'
-                                      ? playerColor.withOpacity(0.2)
-                                      : Colors.transparent,
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                    color: _controlMode == 'dpad'
-                                        ? playerColor
-                                        : Colors.transparent,
-                                    width: 1,
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.gamepad_rounded,
-                                      size: 16,
-                                      color: _controlMode == 'dpad'
-                                          ? playerColor
-                                          : textSecondary,
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      'D-PAD',
-                                      style: AppFonts.spaceGrotesk(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.bold,
-                                        color: _controlMode == 'dpad'
-                                            ? textPrimary
-                                            : textSecondary,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
+                  const Padding(
+                    padding: EdgeInsets.only(top: 8),
+                    child: PowerupPanel(),
+                  ),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(0, 8, 0, 12),
+                      child: ControllerDpad(
+                        playerColor: playerColor,
+                        onPaddleMove: (delta) {
+                          context.read<GameService>().sendPaddleMove(delta);
+                        },
                       ),
                     ),
                   ),
-
-                  const SizedBox(height: 12),
-
-                  // ── Main Controller (Touch Drag or D-Pad) ──
-                  if (_controlMode == 'dpad')
-                    ControllerDpad(
-                      glowAnimation: _glowAnimation,
-                      playerColor: playerColor,
-                      onPaddleMove: (delta) {
-                        context.read<GameService>().sendPaddleMove(delta);
-                      },
-                    )
-                  else
-                    ControllerTouchpad(
-                      glowAnimation: _glowAnimation,
-                      playerColor: playerColor,
-                      onPaddleMove: (delta) {
-                        context.read<GameService>().sendPaddleMove(delta);
-                      },
-                    ),
-                  const SizedBox(height: 16),
                 ],
               ),
             ),
-
-            // ── Game-End Overlay ──
             if (_showGameEndOverlay)
               GameEndOverlay(
+                kicker: _gameEndKicker,
                 title: _gameEndTitle,
                 subtitle: _gameEndSubtitle,
                 message: _gameEndMessage,
@@ -400,22 +293,30 @@ class _ControllerScreenState extends State<ControllerScreen>
                 score: service.score,
                 rank: service.rank,
                 playerColor: playerColor,
-                onBackToLobby: () {
-                  setState(() {
-                    _showGameEndOverlay = false;
-                  });
-                  if (service.connected) {
-                    Navigator.pushReplacementNamed(context, '/lobby');
-                  } else {
-                    Navigator.pushNamedAndRemoveUntil(
-                        context, '/joinchoice', (_) => false);
-                  }
+                isHost: _gameEndIsHost,
+                onRematch: _gameEndIsHost
+                    ? () {
+                        context.read<GameService>().rematch();
+                      }
+                    : null,
+                onNewGame: _gameEndIsHost
+                    ? () {
+                        context.read<GameService>().returnToLobbyFromHost();
+                        setState(() => _showGameEndOverlay = false);
+                        if (context.mounted) {
+                          Navigator.pushReplacementNamed(context, '/lobby');
+                        }
+                      }
+                    : null,
+                onExit: () {
+                  setState(() => _showGameEndOverlay = false);
+                  leaveToStart(context);
                 },
               ),
           ],
         ),
       ),
+    ),
     );
   }
 }
-

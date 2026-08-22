@@ -45,7 +45,7 @@ class QrInviteScreen extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          'Scan this QR code from another device on the same Wi-Fi network to join the game.',
+                          'Scan this QR from another phone on the same Wi-Fi / LAN as lg1. Cellular or guest Wi-Fi will not connect.',
                           style: AppFonts.inter(
                             color: textSecondary,
                             fontSize: 14,

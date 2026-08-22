@@ -1,11 +1,14 @@
 function startMatch() {
     if (!socket || !isConnected || !isHost) return;
+    const need = hostMaxPlayers;
+    const connected = ((window.__lastGameState && window.__lastGameState.players) || [])
+        .filter((p) => p && p.connected).length;
+    if (connected < need) {
+        const btn = document.getElementById('startMatchBtn');
+        if (btn) btn.textContent = 'Need ' + need + ' players (' + connected + ')';
+        return;
+    }
     persistHostSettings();
-    socket.emit('set_game_settings', {
-        maxPlayers: hostMaxPlayers,
-        ballSpeed: hostBallSpeed,
-        durationSeconds: hostDuration
-    });
     socket.emit('start_game', {
         durationSeconds: hostDuration,
         maxPlayers: hostMaxPlayers,
@@ -59,7 +62,7 @@ function emitHostSettings() {
 
 function prefillJoin() {
     const params = new URLSearchParams(window.location.search);
-    let code = (params.get('code') || params.get('token') || params.get('session') || '').trim().toUpperCase();
+    let code = (params.get('c') || params.get('code') || params.get('token') || params.get('session') || '').trim().toUpperCase();
     if (code.indexOf('|') !== -1) {
         const parts = code.split('|');
         code = (parts[parts.length - 1] || '').trim().toUpperCase();
@@ -71,5 +74,12 @@ function prefillJoin() {
     const tokenInput = document.getElementById('tokenInput');
     const nameInput = document.getElementById('nameInput');
     if (tokenInput && code) tokenInput.value = code.slice(0, 4);
-    if (nameInput && name) nameInput.value = name.slice(0, 12);
+    if (nameInput) {
+        if (name) nameInput.value = name.slice(0, 12);
+        else if (!nameInput.value) nameInput.value = 'Player';
+    }
+    // Camera-scanned QR is a real URL with ?c=CODE — join without a second tap.
+    if (tokenInput && tokenInput.value.length === 4 && params.get('auto') !== '0') {
+        setTimeout(function () { joinGame(); }, 350);
+    }
 }

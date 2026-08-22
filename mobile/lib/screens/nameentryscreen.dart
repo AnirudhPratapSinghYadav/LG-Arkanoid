@@ -6,6 +6,7 @@ import '../widgets/lgpanel.dart';
 import '../widgets/lgbutton.dart';
 import '../widgets/lgtextfield.dart';
 import '../widgets/mission_background.dart';
+import '../utils/join_target.dart';
 
 class NameEntryScreen extends StatefulWidget {
   const NameEntryScreen({super.key});
@@ -45,6 +46,16 @@ class _NameEntryScreenState extends State<NameEntryScreen> {
     await prefs.setString(prefPlayerName, name);
 
     if (!mounted) return;
+    final host = parseJoinInput(
+      '${args['ip'] ?? ''}',
+      defaultPort: '${args['port'] ?? defaultServerPort}',
+    );
+    if (host?.warning != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(host!.warning!)),
+      );
+      return;
+    }
     Navigator.pushNamed(
       context,
       '/connecting',
@@ -90,12 +101,24 @@ class _NameEntryScreenState extends State<NameEntryScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Enter a display name to verify connection',
+                      'This name shows on the wall. Confirm the IP and code below match the center screen.',
                       style: AppFonts.inter(
                         fontSize: 13,
                         color: textSecondary,
                       ),
                       textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+                    LgPanel(
+                      child: Text(
+                        'http://${args['ip'] ?? '?'}:${args['port'] ?? defaultServerPort}'
+                        '   code ${(args['token'] ?? '').toString().toUpperCase()}',
+                        textAlign: TextAlign.center,
+                        style: AppFonts.jetBrainsMono(
+                          fontSize: 13,
+                          color: textPrimary,
+                        ),
+                      ),
                     ),
                     const SizedBox(height: 36),
                     LgPanel(

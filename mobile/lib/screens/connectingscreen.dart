@@ -1,13 +1,15 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import '../utils/app_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/gameservice.dart';
+import '../services/health_probe.dart';
 import '../utils/constants.dart';
-import '../widgets/lgpanel.dart';
-import '../widgets/lgbutton.dart';
+import '../utils/join_copy.dart';
+import '../utils/join_target.dart';
+import '../widgets/connecting_error.dart';
+import '../widgets/connecting_progress.dart';
 import '../widgets/mission_background.dart';
 
 class ConnectingScreen extends StatefulWidget {
@@ -19,15 +21,22 @@ class ConnectingScreen extends StatefulWidget {
 
 class _ConnectingScreenState extends State<ConnectingScreen> {
   late GameService _gameService;
-  int _currentStepIndex = 0;
-  String? _errorMessage;
-  Timer? _timeoutTimer;
+  int _step = 0;
+  String? _error;
+  String? _hint;
+  Timer? _timeout;
+  bool _cancelled = false;
 
-  final List<String> _stages = [
-    'Checking server…',
-    'Connecting…',
-    'Joining lobby…',
-    'Ready',
+  String _ip = '';
+  String _port = defaultServerPort;
+  String _token = '';
+  String _name = '';
+
+  static const _labels = [
+    'Can we see the wall?',
+    'Opening a live link…',
+    'Sending your name and code…',
+    'In the lobby',
   ];
 
   @override
@@ -35,259 +44,185 @@ class _ConnectingScreenState extends State<ConnectingScreen> {
     super.initState();
     _gameService = context.read<GameService>();
     _gameService.addListener(_onServiceUpdate);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _startConnecting();
-    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _connect());
   }
 
   @override
   void dispose() {
     _gameService.removeListener(_onServiceUpdate);
-    _timeoutTimer?.cancel();
+    _timeout?.cancel();
     super.dispose();
   }
 
+  Map<String, dynamic> _args() {
+    return ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>? ??
+        {};
+  }
+
+  void _readArgs() {
+    final args = _args();
+    final parsed = parseJoinInput(
+      '${args['ip'] ?? ''}',
+      defaultPort: '${args['port'] ?? defaultServerPort}',
+    );
+    _ip = parsed?.ip ?? (args['ip'] as String? ?? '');
+    _port = parsed?.port ?? (args['port'] as String? ?? defaultServerPort);
+    _token = ((args['token'] as String?) ?? '').trim().toUpperCase();
+    if (_token.isEmpty && (parsed?.token.length ?? 0) == 4) {
+      _token = parsed!.token;
+    }
+    _name = (args['name'] as String?) ?? '';
+    _hint = parsed?.hint;
+  }
+
   void _onServiceUpdate() {
-    if (!mounted) return;
-
-    if (_gameService.isJoinConfirmed && _currentStepIndex < 3) {
-      _timeoutTimer?.cancel();
-
+    if (!mounted || _cancelled) return;
+    if (_gameService.isJoinConfirmed && _step < 3) {
+      _timeout?.cancel();
       if (_gameService.isSpectator) {
-        setState(() {
-          _errorMessage = 'Lobby is full. Try again when a slot opens.';
-        });
+        setState(() => _error = lobbyFullCopy());
         _gameService.disconnect();
         return;
       }
-
-      _proceedToStep(3);
-      final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
-      const storage = FlutterSecureStorage();
-      storage.write(key: prefServerAddress, value: args['ip']);
-      storage.write(key: prefServerPort, value: args['port']);
-      storage.write(key: prefSessionToken, value: args['token']);
-      SharedPreferences.getInstance().then((prefs) {
-        final name = args['name'] as String?;
-        if (name != null && name.isNotEmpty) {
-          prefs.setString(prefPlayerName, name);
-        }
-      });
-
-      if (mounted) {
-        Navigator.pushReplacementNamed(context, '/lobby');
-      }
-    } else if (_gameService.joinError != null) {
-      _timeoutTimer?.cancel();
-      setState(() {
-        _errorMessage = _gameService.joinError;
-      });
+      _saveAndGoLobby();
+      return;
+    }
+    if (_gameService.joinError != null) {
+      _timeout?.cancel();
+      setState(() => _error = joinRejectedCopy(_gameService.joinError));
     }
   }
 
-  void _proceedToStep(int stepIndex) {
-    if (mounted && stepIndex > _currentStepIndex) {
-      setState(() {
-        _currentStepIndex = stepIndex;
-      });
-    }
+  Future<void> _saveAndGoLobby() async {
+    setState(() => _step = 3);
+    const storage = FlutterSecureStorage();
+    await storage.write(key: prefServerAddress, value: _ip);
+    await storage.write(key: prefServerPort, value: _port);
+    await storage.write(key: prefSessionToken, value: _token);
+    final prefs = await SharedPreferences.getInstance();
+    if (_name.isNotEmpty) await prefs.setString(prefPlayerName, _name);
+    if (!mounted || _cancelled) return;
+    Navigator.pushReplacementNamed(context, '/lobby');
   }
 
-  Future<void> _startConnecting() async {
-    final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
-    if (args == null) {
-      setState(() {
-        _errorMessage = 'Invalid navigation arguments';
-      });
+  Future<void> _connect() async {
+    _timeout?.cancel();
+    _cancelled = false;
+    _readArgs();
+    if (_ip.isEmpty || _token.length != 4 || _name.isEmpty) {
+      setState(() => _error = missingJoinFieldsCopy());
       return;
     }
 
-    final ip = args['ip'] as String;
-    final port = args['port'] as String;
-    final token = args['token'] as String;
-    final name = args['name'] as String;
+    final host = parseJoinInput(_ip, defaultPort: _port);
+    if (host?.warning != null) {
+      setState(() => _error = host!.warning);
+      return;
+    }
+    _hint = host?.hint ?? _hint;
 
     setState(() {
-      _currentStepIndex = 0; // Searching for Session...
-      _errorMessage = null;
+      _step = 0;
+      _error = null;
     });
 
-    final ok = await _gameService.connect(ip, port);
-    if (!ok) {
-      if (mounted) {
-        setState(() {
-          _errorMessage = 'Failed to reach the rig. Verify host configuration.';
-        });
-      }
+    _gameService.disconnect();
+
+    final health = await probeHealth(_ip, _port);
+    if (!mounted || _cancelled) return;
+    if (!health.ok) {
+      setState(() {
+        _error = cannotReachRig(_ip, _port, detail: health.detail);
+      });
       return;
     }
 
-    _proceedToStep(1);
-    _proceedToStep(2);
-    _gameService.joinGame(token, name);
+    setState(() => _step = 1);
+    final ok = await _gameService.connect(
+      _ip,
+      _port,
+      timeout: const Duration(seconds: 12),
+    );
+    if (!mounted || _cancelled) return;
+    if (!ok) {
+      setState(() {
+        _error = socketFailedCopy(
+          _ip,
+          _port,
+          detail: _gameService.lastConnectError,
+        );
+      });
+      return;
+    }
 
-    _timeoutTimer = Timer(const Duration(seconds: 6), () {
-      if (mounted && !_gameService.isJoinConfirmed) {
-        setState(() {
-          _errorMessage = 'Rig connection timed out. Please try again.';
-        });
-        _gameService.disconnect();
-      }
+    setState(() => _step = 2);
+    _gameService.joinGame(_token, _name);
+    _timeout = Timer(const Duration(seconds: 12), () {
+      if (!mounted || _cancelled || _gameService.isJoinConfirmed) return;
+      setState(() => _error = joinTimeoutCopy(_ip, _port));
+      _gameService.disconnect();
     });
+  }
+
+  void _cancelJoin() {
+    _cancelled = true;
+    _timeout?.cancel();
+    _gameService.disconnect();
+    if (!mounted) return;
+    Navigator.pop(context);
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: bgDark,
-      body: MissionControlBackground(
-        child: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 400),
-                child: _errorMessage != null ? _buildErrorState() : _buildProgressState(),
+    if (_ip.isEmpty) _readArgs();
+    return PopScope(
+      canPop: _error != null,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        _cancelJoin();
+      },
+      child: Scaffold(
+        backgroundColor: bgDark,
+        body: MissionControlBackground(
+          child: SafeArea(
+            child: Center(
+              child: SingleChildScrollView(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 400),
+                  child: _error != null
+                      ? ConnectingError(
+                          message: _error!,
+                          onRetry: _connect,
+                          onChangeCode: _cancelJoin,
+                          onStartOver: () {
+                            _cancelled = true;
+                            _timeout?.cancel();
+                            _gameService.disconnect();
+                            Navigator.pushNamedAndRemoveUntil(
+                              context,
+                              '/joinchoice',
+                              (_) => false,
+                            );
+                          },
+                        )
+                      : ConnectingProgress(
+                          ip: _ip,
+                          port: _port,
+                          token: _token,
+                          name: _name,
+                          step: _step,
+                          labels: _labels,
+                          hint: _hint,
+                          onCancel: _cancelJoin,
+                        ),
+                ),
               ),
             ),
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildProgressState() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const Center(
-          child: SizedBox(
-            width: 48,
-            height: 48,
-            child: CircularProgressIndicator(
-              strokeWidth: 4,
-              color: accentPrimary,
-            ),
-          ),
-        ),
-        const SizedBox(height: 48),
-
-        LgPanel(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'JOINING SESSION',
-                style: AppFonts.spaceGrotesk(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: textSecondary,
-                  letterSpacing: 1.5,
-                ),
-              ),
-              const SizedBox(height: 16),
-              const Divider(color: borderLight),
-              const SizedBox(height: 12),
-              for (int i = 0; i < _stages.length; i++) ...[
-                _buildStageRow(i),
-                if (i < _stages.length - 1) const SizedBox(height: 12),
-              ],
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStageRow(int index) {
-    final bool isCompleted = index < _currentStepIndex;
-    final bool isActive = index == _currentStepIndex;
-    
-    Color textColor = textSecondary.withOpacity(0.3);
-    Widget icon = Text('[ ]', style: AppFonts.jetBrainsMono(color: textColor));
-
-    if (isCompleted) {
-      textColor = accentSuccess;
-      icon = const Icon(Icons.check_circle_outline_rounded, color: accentSuccess, size: 16);
-    } else if (isActive) {
-      textColor = textPrimary;
-      icon = const SizedBox(
-        width: 12,
-        height: 12,
-        child: CircularProgressIndicator(strokeWidth: 2, color: accentPrimary),
-      );
-    }
-
-    return Row(
-      children: [
-        SizedBox(width: 24, child: Center(child: icon)),
-        const SizedBox(width: 14),
-        Expanded(
-          child: Text(
-            _stages[index],
-            style: AppFonts.jetBrainsMono(
-              fontSize: 13,
-              color: textColor,
-              fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildErrorState() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        LgPanel(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              children: [
-                const Icon(
-                  Icons.error_outline_rounded,
-                  color: accentError,
-                  size: 48,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Connection Failed',
-                  style: AppFonts.spaceGrotesk(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  _errorMessage ?? 'An unknown connection error occurred.',
-                  style: AppFonts.inter(
-                    fontSize: 13,
-                    color: textSecondary,
-                    height: 1.4,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 36),
-        LgButton(
-          label: 'RETRY CONNECTION',
-          onPressed: _startConnecting,
-          isPrimary: true,
-        ),
-        const SizedBox(height: 14),
-        LgButton(
-          label: 'EDIT INFO',
-          onPressed: () {
-            Navigator.pop(context); // Go back to name entry
-          },
-          isPrimary: false,
-        ),
-      ],
     );
   }
 }

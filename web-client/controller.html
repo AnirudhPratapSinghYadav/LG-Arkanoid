@@ -20,7 +20,7 @@
             <div class="join-brand__pulse" aria-hidden="true"></div>
             <p class="join-brand__eyebrow">Liquid Galaxy</p>
             <h1 class="join-title">LG Arkanoid</h1>
-            <p class="join-sub">Enter the 4-letter session code shown on the wall</p>
+            <p class="join-sub">Same Wi-Fi as the rig. Enter the 4-letter code, or open the URL printed under the QR.</p>
         </div>
         <div class="join-form">
             <label class="join-field">
@@ -46,6 +46,7 @@
                 <span class="hud-status-dot"></span> ONLINE
             </div>
             <div class="hud-ping" id="hudPing">--ms</div>
+            <button type="button" class="hud-leave" id="leaveMatchBtn">LEAVE</button>
         </div>
 
         <div class="stats-row">
@@ -80,14 +81,14 @@
         <div id="hostControls" class="host-controls">
             <div class="host-block">
                 <div class="host-label">Create game</div>
-                <p class="host-hint">Host only. Players default to the wall screen count (max 5).</p>
+                <p class="host-hint">Host only. Default is 2 players (one phone + one laptop). Raise to 5 if you need more paddles.</p>
             </div>
             <div class="host-block">
-                <div class="host-label">Players (= screens, max 5)</div>
+                <div class="host-label">Players (max 5)</div>
                 <div class="chip-row" id="maxPlayersRow">
                     <button type="button" class="chip" data-max-players="1">1</button>
-                    <button type="button" class="chip" data-max-players="2">2</button>
-                    <button type="button" class="chip is-on" data-max-players="3">3</button>
+                    <button type="button" class="chip is-on" data-max-players="2">2</button>
+                    <button type="button" class="chip" data-max-players="3">3</button>
                     <button type="button" class="chip" data-max-players="4">4</button>
                     <button type="button" class="chip" data-max-players="5">5</button>
                 </div>
@@ -134,23 +135,32 @@
         </div>
 
         <div class="touch-pad-wrap" id="touchPadWrap">
-            <div class="touch-pad" id="touchPad">
-                <div class="touch-track" id="touchTrack"></div>
-                <div class="puck" id="touchPuck"></div>
-                <div class="touch-label">Drag to move paddle</div>
+            <div class="dpad-row" id="touchPad">
+                <button type="button" class="dpad-btn" id="dpadLeft" aria-label="Hold left">
+                    <span class="dpad-arrow">◀</span>
+                    <span class="dpad-caption">HOLD LEFT</span>
+                </button>
+                <button type="button" class="dpad-btn" id="dpadRight" aria-label="Hold right">
+                    <span class="dpad-arrow">▶</span>
+                    <span class="dpad-caption">HOLD RIGHT</span>
+                </button>
             </div>
         </div>
     </div>
 
     <div class="game-end-overlay" id="gameEndOverlay">
-        <div class="ge-kicker" id="geKicker">CONGRATULATIONS</div>
+        <div class="ge-kicker" id="geKicker">MATCH OVER</div>
         <div class="ge-title" id="geTitle">GAME OVER</div>
-        <div class="ge-subtitle" id="geSubtitle">Player 1 wins!</div>
+        <div class="ge-subtitle" id="geSubtitle"></div>
         <div class="ge-message" id="geMessage"></div>
         <div class="ge-board" id="geBoard"></div>
         <div class="ge-score" id="geScore" style="color:#20c5ff;"></div>
         <div class="ge-score" id="geRank" style="color:#9AA4AF;"></div>
-        <button class="ge-btn" type="button" id="backToJoinBtn">Leave</button>
+        <div class="ge-host-actions" id="geHostActions" hidden>
+            <button class="ge-btn ge-btn-primary" type="button" id="geRematchBtn">PLAY AGAIN</button>
+            <button class="ge-btn" type="button" id="geNewGameBtn">NEW GAME</button>
+        </div>
+        <button class="ge-btn" type="button" id="backToJoinBtn">EXIT</button>
     </div>
 
     <div id="aboutModal" class="modal">

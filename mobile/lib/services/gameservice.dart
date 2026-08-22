@@ -1,10 +1,11 @@
 import 'dart:math';
-import 'dart:io';
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
 import 'ttsservice.dart';
+import '../utils/join_target.dart';
+import 'health_probe.dart';
 
 class GameService extends ChangeNotifier {
   io.Socket? socket;
@@ -24,35 +25,63 @@ class GameService extends ChangeNotifier {
   bool connected = false;
   bool isJoinConfirmed = false;
   String? joinError;
+  String? lastConnectError;
   Map<String, dynamic>? latestGameState;
   void Function(bool isSpectator)? onJoinConfirmed;
 
   String robotState = 'idle';
   Timer? robotStateTimer;
 
+  int _hudNotifyAt = 0;
+  String _hudStatus = '';
+  int _hudScore = -1;
+  int _hudLives = -1;
+  String _hudCommentary = '';
+
   final Random _random = Random();
+
+  void _notifyHud({bool urgent = false}) {
+    final status = latestGameState?['gameStatus'] as String? ?? '';
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final changed = urgent ||
+        status != _hudStatus ||
+        score != _hudScore ||
+        lives != _hudLives ||
+        lastCommentary != _hudCommentary;
+    if (!changed && now - _hudNotifyAt < 200) return;
+    _hudNotifyAt = now;
+    _hudStatus = status;
+    _hudScore = score;
+    _hudLives = lives;
+    _hudCommentary = lastCommentary;
+    notifyListeners();
+  }
 
   String generateNonce(){
     return List.generate(8, (_)=>_random.nextInt(16).toRadixString(16)).join();
   }
 
   Future<bool> checkHealth(String address, String port) async {
-    try {
-      final client = HttpClient();
-      client.connectionTimeout = const Duration(milliseconds: 2000);
-      final uri = Uri.parse('http://$address:$port/health');
-      final req = await client.getUrl(uri);
-      final resp = await req.close();
-      return resp.statusCode == 200;
-    } catch (e) {
-      debugPrint('Health check failed for $address: $e');
-      return false;
+    final result = await probeHealth(address, port);
+    if (!result.ok) {
+      debugPrint('Health check failed for $address: ${result.detail}');
     }
+    return result.ok;
   }
 
   Future<bool> connect(String address, String port,
       {Duration timeout = const Duration(seconds: 8)}) async {
     disconnect();
+    final parsed = parseJoinInput(
+      address.contains('://') || address.contains('/')
+          ? address
+          : '$address:$port',
+      defaultPort: port,
+    );
+    if (parsed != null) {
+      address = parsed.ip;
+      port = parsed.port;
+    }
     serverAddress = address;
     serverPort = port;
 
@@ -68,6 +97,7 @@ class GameService extends ChangeNotifier {
             .enableReconnection()
             .setReconnectionDelay(1000)
             .setReconnectionAttempts(5)
+            .setTimeout(8000)
             .build(),
       );
 
@@ -86,7 +116,9 @@ class GameService extends ChangeNotifier {
       });
 
       socket!.onConnectError((error){
-        debugPrint('[GameService] ❌ Connect error: $error');
+        debugPrint('[GameService] Connect error: $error');
+        lastConnectError = error.toString();
+        notifyListeners();
       });
 
       socket!.onError((error){
@@ -137,34 +169,20 @@ class GameService extends ChangeNotifier {
 
       socket!.on('game_state', (data){
         latestGameState = _asMap(data);
+        var urgent = false;
         if(playerId!=null){
           final players = latestGameState!['players'] as List<dynamic>? ?? [];
-          
-          final sortedPlayers = List<dynamic>.from(players)
-            ..sort((a, b){
-              final aScore = _asMap(a)['score'] as int? ?? 0;
-              final bScore = _asMap(b)['score'] as int? ?? 0;
-              return bScore.compareTo(aScore);
-            });
-
-          for(int i = 0; i < sortedPlayers.length; i++){
-            final pm = _asMap(sortedPlayers[i]);
-            if(pm['id']==playerId){
-              rank = i+1;
-              break;
-            }
-          }
-
           for(final p in players){
             final pm = _asMap(p);
             if(pm['id']==playerId){
-              int newScore = pm['score'] as int? ?? 0;
-              int newLives = pm['lives'] as int? ?? 0;
-              if (newScore - score >= 50) {
-                HapticFeedback.mediumImpact();
-              }
+              final newScore = pm['score'] as int? ?? 0;
+              final newLives = pm['lives'] as int? ?? 0;
               if (newLives < lives) {
                 HapticFeedback.heavyImpact();
+                urgent = true;
+              }
+              if (pm['rank'] is int) {
+                rank = pm['rank'] as int;
               }
               score = newScore;
               lives = newLives;
@@ -172,7 +190,12 @@ class GameService extends ChangeNotifier {
             }
           }
         }
-        notifyListeners();
+        final status = latestGameState!['gameStatus'] as String? ?? '';
+        if (status == 'game_over' || status == 'time_up' || status == 'win' ||
+            status == 'countdown' || status == 'lobby') {
+          urgent = true;
+        }
+        _notifyHud(urgent: urgent);
       });
 
       socket!.on('commentary_thinking', (data){
@@ -180,9 +203,9 @@ class GameService extends ChangeNotifier {
         robotStateTimer?.cancel();
         robotStateTimer = Timer(const Duration(seconds: 3), () {
           robotState = 'idle';
-          notifyListeners();
+          _notifyHud(urgent: true);
         });
-        notifyListeners();
+        _notifyHud();
       });
 
       socket!.on('commentary', (data){
@@ -207,22 +230,26 @@ class GameService extends ChangeNotifier {
           if(newCommentary.isNotEmpty && newCommentary!=lastCommentary){
           lastCommentary = newCommentary;
           lastCommentarySource = map['source'] as String? ?? 'fallback';
-          HapticFeedback.mediumImpact();
-          // Speak all commentary (Gemini + arcade fallback) so the phone feels alive offline.
-          TTSService().speak(lastCommentary);
+          // No haptic on commentary — was buzzing phones for the whole TTS line.
+          // Speak only short critical events; countdown spam caused ~10s vibration/TTS.
+          if (eventType == 'life_lost' || eventType == 'victory') {
+            unawaited(TTSService().speak(lastCommentary));
+          }
         }
-        notifyListeners();
+        _notifyHud(urgent: true);
       });
 
       socket!.connect();
 
       final start = DateTime.now();
-      while(DateTime.now().difference(start) < timeout){
+      while (DateTime.now().difference(start) < timeout) {
         await Future.delayed(const Duration(milliseconds: 100));
-        if(connected){
+        if (connected) {
+          lastConnectError = null;
           return true;
         }
       }
+      lastConnectError ??= 'Timed out after ${timeout.inSeconds}s';
       return false;
     } catch (e) {
       debugPrint('Socket connection error: $e');
@@ -244,14 +271,20 @@ class GameService extends ChangeNotifier {
   void sendPaddleMove(double deltaX){
     if(socket==null || !connected || playerId==null) return;
     if(lives <= 0) return;
+    final status = latestGameState?['gameStatus'] as String? ?? '';
+    if (status != 'playing' && status != 'countdown') return;
     // Scale by the real court width, not just the screen count: LG frames are
     // portrait by default, which makes each frame 608 logical px wide instead
     // of 1920, so the same swipe must move the paddle proportionally less.
     final n = latestGameState?['numScreens'] as int? ?? 3;
     final frameWidth = (latestGameState?['screenWidth'] as num?)?.toDouble() ?? 1920.0;
     final scale = ((n * frameWidth) / (3 * 1920.0)).clamp(0.15, 5.0);
+    var stepped = (deltaX * scale).round();
+    if (deltaX != 0 && stepped == 0) {
+      stepped = deltaX < 0 ? -1 : 1;
+    }
     socket!.emit('paddle_move', {
-      'deltaX': (deltaX * scale).round(),
+      'deltaX': stepped,
       'timestamp': DateTime.now().millisecondsSinceEpoch,
       'nonce': generateNonce(),
     });
@@ -280,6 +313,16 @@ class GameService extends ChangeNotifier {
   void setMaxPlayers(int count){
     if(socket==null || !connected) return;
     socket!.emit('set_max_players', {'maxPlayers': count});
+  }
+
+  void returnToLobbyFromHost() {
+    if (socket == null || !connected) return;
+    socket!.emit('return_to_lobby');
+  }
+
+  void rematch() {
+    if (socket == null || !connected) return;
+    socket!.emit('rematch');
   }
 
   void startGame({
@@ -311,6 +354,7 @@ class GameService extends ChangeNotifier {
     connected = false;
     isJoinConfirmed = false;
     joinError = null;
+    lastConnectError = null;
     playerId = null;
     playerNumber = null;
     sessionId = null;
