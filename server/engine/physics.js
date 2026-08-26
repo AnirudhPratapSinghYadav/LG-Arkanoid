@@ -5,6 +5,50 @@ const { Ball, PowerUp } = require('./entities.js');
 const { getRespawnVelocity } = require('./speeds.js');
 const { loadLevel } = require('./levels.js');
 
+function servingPaddle(gameState) {
+  const players = gameState.players || [];
+  let p = players.find((x) => x.id && x.id === gameState.lastFallenBallToucher && x.connected && x.lives > 0);
+  if (!p) p = players.find((x) => x.connected && x.lives > 0);
+  return p || null;
+}
+
+function placeBallOnPaddle(ball, player) {
+  if (!ball || !player) return;
+  const pw = player.paddleWidth || 300;
+  ball.x = player.paddleX + pw / 2;
+  ball.y = (player.paddleY || 1000) - (ball.radius || 8) - 2;
+  ball.vx = 0;
+  ball.vy = 0;
+  ball.glued = true;
+  ball.lastTouchedByPlayerId = player.id || null;
+}
+
+function launchGluedBall(ball, gameState) {
+  if (!ball) return;
+  const v = getRespawnVelocity(gameState);
+  ball.glued = false;
+  ball.active = true;
+  ball.vx = v.vx;
+  ball.vy = v.vy;
+}
+
+function stickGluedBalls(gameState, player) {
+  if (!player) return;
+  (gameState.balls || []).forEach((b) => {
+    if (!b || !b.glued || !b.active) return;
+    if (b.lastTouchedByPlayerId && b.lastTouchedByPlayerId !== player.id) return;
+    placeBallOnPaddle(b, player);
+  });
+}
+
+function creditBrick(players, ball) {
+  let player = ball.lastTouchedByPlayerId
+    ? players.find((p) => p.id === ball.lastTouchedByPlayerId)
+    : null;
+  if (!player) player = players.find((p) => p.connected && p.lives > 0);
+  if (player) player.score += 10;
+}
+
 function moveBall(ball){
   try {
     ball.x += ball.vx;
@@ -137,12 +181,7 @@ function checkBrickCollision(ball, gameState){
             brick.active = false;
             gameState.bricksDirty = true;
 
-            if(ball.lastTouchedByPlayerId){
-              let player = players.find(p=>p.id===ball.lastTouchedByPlayerId);
-              if(player){
-                player.score += 10;
-              }
-            }
+            creditBrick(players, ball);
 
             if(Math.random() < 0.1){
               let pool = ['wide_paddle', 'slow_ball', 'multi_ball', 'bomb'];
@@ -220,6 +259,11 @@ function updateGameLoop(gameState, applyPowerUpEffectCallback){
     for(let i = 0; i < gameState.balls.length; i++){
       let ball = gameState.balls[i];
       if(!ball.active) continue;
+      if (ball.glued) {
+        const holder = servingPaddle(gameState);
+        if (holder) placeBallOnPaddle(ball, holder);
+        continue;
+      }
 
       const speed = Math.hypot(ball.vx, ball.vy);
       const steps = Math.max(1, Math.min(8, Math.ceil(speed / 12)));
@@ -278,6 +322,9 @@ function updateGameLoop(gameState, applyPowerUpEffectCallback){
         playerToDeduct.lives -= 1;
         playerToDeduct.score = Math.max(0, playerToDeduct.score-10);
       }
+      const holder = (playerToDeduct && playerToDeduct.lives > 0)
+        ? playerToDeduct
+        : servingPaddle(gameState);
       gameState.lastFallenBallToucher = null;
 
       let mainBall = gameState.balls[0] || gameState.balls.find(Boolean);
@@ -285,13 +332,12 @@ function updateGameLoop(gameState, applyPowerUpEffectCallback){
         mainBall = new Ball('ball_1', 0, 0, 0, 0, 8);
         gameState.balls.push(mainBall);
       }
-      mainBall.x = ((gameState.numScreens || 3) * SCREEN_WIDTH)/2;
-      mainBall.y = 500;
-      const respawn = getRespawnVelocity(gameState);
-      mainBall.vx = respawn.vx;
-      mainBall.vy = respawn.vy;
-      mainBall.active = true;
-      mainBall.lastTouchedByPlayerId = null;
+      if (holder) placeBallOnPaddle(mainBall, holder);
+      else {
+        mainBall.x = ((gameState.numScreens || 3) * SCREEN_WIDTH)/2;
+        mainBall.y = 500;
+      }
+      launchGluedBall(mainBall, gameState);
       mainBall.rallyCount = 0;
       mainBall.currentCombo = 0;
     }
@@ -354,4 +400,8 @@ module.exports = {
   checkBrickCollision,
   updatePowerUps,
   updateGameLoop,
+  servingPaddle,
+  placeBallOnPaddle,
+  launchGluedBall,
+  stickGluedBalls,
 };

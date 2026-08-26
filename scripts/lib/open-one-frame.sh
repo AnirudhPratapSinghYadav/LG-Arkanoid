@@ -1,5 +1,6 @@
 #!/bin/bash
-# One physical frame. SSH is Pacman first, Asteroids second.
+# Master Chromium is local (galaxy-asteroids/scripts/open.sh).
+# Slaves: Pacman ssh -Xnf lg@$frame first, then Asteroids sshpass in background.
 # Slice URL is left→right /N — not Pacman's ${lg:2} hostname digit.
 
 open_one_frame() {
@@ -13,18 +14,11 @@ open_one_frame() {
   else
     url="http://lg1:${port}/${screen_number}"
   fi
-  # Autoplay on every frame: center-screen TTS uses speechSynthesis; slaves that
-  # become the center slice (odd walls) need the same Chromium flag as lg1.
   extra="--autoplay-policy=no-user-gesture-required"
 
-  remote="$(pacman_chrome_cmd "$url" "$extra")"
-  echo "Opening $frame → /$screen_number  (ssh -Xnf lg@$frame)"
-  if ssh_pacman "$frame" "$remote"; then
-    return 0
-  fi
-
+  # Asteroids opens lg1 Chromium on DISPLAY=:0 in this shell — no ssh to self.
   if [ "$frame" = "lg1" ]; then
-    echo "  SSH to lg1 failed — opening Chromium locally (laptop / VM)."
+    echo "Opening master lg1 → /$screen_number  (local Chromium, Asteroids pattern)"
     DISPLAY=:0 nohup chromium-browser --start-fullscreen \
       --autoplay-policy=no-user-gesture-required "$url" \
       >/tmp/lg-arkanoid-chrome-lg1.log 2>&1 &
@@ -32,9 +26,15 @@ open_one_frame() {
     return 0
   fi
 
+  remote="$(pacman_chrome_cmd "$url" "$extra")"
+  echo "Opening $frame → /$screen_number  (ssh -Xnf lg@$frame)"
+  if ssh_pacman "$frame" "$remote"; then
+    return 0
+  fi
+
   remote="$(asteroids_chrome_cmd "$url" "$extra")"
   if ssh_asteroids "$frame" "$remote" "${LG_PASSWORD:-}"; then
-    echo "  Pacman ssh failed — Asteroids sshpass used (ssh -tXn $frame)."
+    echo "  Pacman ssh failed — Asteroids sshpass used (ssh -tXn lg@$frame)."
     return 0
   fi
 

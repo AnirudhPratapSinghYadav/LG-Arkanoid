@@ -216,8 +216,12 @@ GameScene.prototype.drawBalls = function() {
         const radius = ball.radius || 8;
 
         if (!this.ballTrails[i]) this.ballTrails[i] = [];
-        this.ballTrails[i].push({ x: localX, y: ball.y });
-        if (this.ballTrails[i].length > 8) this.ballTrails[i].shift();
+        if (ball.glued) {
+            this.ballTrails[i] = [];
+        } else {
+            this.ballTrails[i].push({ x: localX, y: ball.y });
+            if (this.ballTrails[i].length > 8) this.ballTrails[i].shift();
+        }
 
         if (localX < -40 || localX > SCREEN_W + 40) continue;
 

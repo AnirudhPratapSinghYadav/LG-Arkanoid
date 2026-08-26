@@ -34,6 +34,8 @@ GO-Web-Store. Full steps: [docs/GO_WEB_STORE.md](../docs/GO_WEB_STORE.md).
 
 Connect with the IPv4 printed under the wall QR, port **8130**, and the 4-letter code on the center screen. The connecting screen probes `http://IP:8130/health` first, then opens the live link. `/health` does not include the join code. Same Wi-Fi as lg1 — never type `lg1`.
 
+Android emulator: join `10.0.2.2:8130` (host loopback). Settings → Launch/SSH still needs the real rig IPv4, not `10.0.2.2`.
+
 ## Typography is offline by design
 
 The controller does **not** use the `google_fonts` package. That package pulls

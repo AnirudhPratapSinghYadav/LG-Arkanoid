@@ -48,10 +48,10 @@ class GameScene extends Phaser.Scene {
         this.ensureRobotSlots(5);
 
         this.centerCommentaryTitle = this.add.text(CENTER_X, 448, 'ARKANOID AI', {
-            fontFamily: FONTS.heading, fontSize: '18px', color: HEX.system, fontWeight: 'bold', letterSpacing: 3
+            fontFamily: FONTS.heading, fontSize: '22px', color: HEX.system, fontWeight: 'bold', letterSpacing: 3
         }).setOrigin(0.5, 0).setVisible(false).setDepth(60);
         this.centerCommentaryText = this.add.text(CENTER_X, 476, '', {
-            fontFamily: FONTS.body, fontSize: '30px', color: HEX.textLight, align: 'center',
+            fontFamily: FONTS.body, fontSize: '42px', color: HEX.textLight, align: 'center',
             wordWrap: { width: Math.min(1000, SCREEN_W - 64) }
         }).setOrigin(0.5, 0).setVisible(false).setDepth(60);
 
@@ -105,7 +105,7 @@ class GameScene extends Phaser.Scene {
         for(let i = 0; i < 5; i++) {
             let txt = this.add.text(CENTER_X, 548 + (i * 88), '', {
                 fontFamily: FONTS.mono,
-                fontSize: '36px'
+        fontSize: '52px'
             }).setOrigin(0.5, 0).setDepth(55);
             if (screenId !== numScreens) txt.setVisible(false);
             this.leaderboardTexts.push(txt);
@@ -113,7 +113,7 @@ class GameScene extends Phaser.Scene {
 
         this.leaderboardTitle = this.add.text(CENTER_X, 488, 'LIVE STANDINGS', {
             fontFamily: FONTS.heading,
-            fontSize: '40px',
+            fontSize: '56px',
             color: HEX.accent,
             fontWeight: 'bold'
         }).setOrigin(0.5, 0).setDepth(55);

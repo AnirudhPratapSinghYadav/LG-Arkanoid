@@ -320,4 +320,32 @@ test('ARKANOID AI lists ten Gemini fallback models', () => {
   assert.ok(/Bravo/i.test(life), life);
 });
 
+test('life-loss respawn launches upward from the serving paddle', () => {
+  const state = makePlayingState(3);
+  const p = state.players[0];
+  p.paddleX = 120;
+  state.balls[0].active = false;
+  state.balls[0].y = 2000;
+  state.lastFallenBallToucher = 'player1';
+  gameEngine.updateGameLoop(state, () => {});
+  const ball = state.balls.find((b) => b.active);
+  assert.ok(ball, 'respawned ball');
+  assert.ok(Math.abs(ball.x - (p.paddleX + p.paddleWidth / 2)) < 2, 'serve sits on paddle X');
+  assert.ok(ball.y < p.paddleY, 'serve sits above the paddle');
+  assert.ok(ball.vy < 0, 'serve goes up into the bricks');
+  assert.strictEqual(ball.glued, false);
+});
+
+test('brick break credits a living paddle if the ball was never touched', () => {
+  const state = makePlayingState(3);
+  const ball = state.balls[0];
+  ball.lastTouchedByPlayerId = null;
+  const brick = state.bricks.flat().find((b) => b.active && b.type !== 'indestructible');
+  assert.ok(brick, 'need a breakable brick');
+  ball.x = brick.x + brick.width / 2;
+  ball.y = brick.y + brick.height / 2;
+  gameEngine.checkBrickCollision(ball, state);
+  assert.strictEqual(state.players[0].score, 10);
+});
+
 console.log('All gameEngine tests passed.');

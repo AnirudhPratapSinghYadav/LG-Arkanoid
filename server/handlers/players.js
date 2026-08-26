@@ -197,9 +197,8 @@ function registerPlayerHandlers(socket, ctx) {
       player.paddleX += deltaX;
       const pw = player.paddleWidth || 300;
       player.paddleX = Math.max(0, Math.min(maxRight - pw, Math.round(player.paddleX)));
-      // Playing ticks already stream to the wall at 16ms. Countdown has no
-      // physics loop, so push paddle aims immediately or the wall looks frozen.
       if (worldState.gameStatus === 'countdown') {
+        gameEngine.stickGluedBalls(worldState, player);
         broadcastGameState({ forceControllers: true });
       }
     });

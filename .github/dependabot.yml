@@ -12,12 +12,30 @@ updates:
         versions: [">=5"]
       - dependency-name: pm2
         versions: [">=6"]
+      - dependency-name: express
+        versions: [">=5"]
+      - dependency-name: node-fetch
+        versions: [">=3"]
+      - dependency-name: concurrently
+        versions: [">=9"]
+      - dependency-name: express-rate-limit
+        versions: [">=8"]
+      - dependency-name: puppeteer-core
+        versions: [">=22"]
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
       interval: weekly
+    ignore:
+      - dependency-name: actions/setup-java
+        versions: [">=5"]
   - package-ecosystem: pub
     directory: "/mobile"
     schedule:
       interval: weekly
     open-pull-requests-limit: 3
+    ignore:
+      - dependency-name: flutter_lints
+        versions: [">=6"]
+      - dependency-name: flutter_secure_storage
+        versions: [">=11"]

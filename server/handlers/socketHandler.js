@@ -143,18 +143,6 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
       worldState.rallyCount = 0;
       worldState.currentCombo = 0;
 
-      const centerX = (worldState.numScreens * SCREEN_WIDTH) / 2;
-      const ballCount = Math.max(1, worldState.maxPlayers || 3);
-      const speedMult = gameEngine.getBallSpeedMultiplier(worldState.ballSpeed);
-      worldState.balls = [];
-      for (let b = 0; b < ballCount; b++) {
-        const vxDir = (b % 2 === 0 ? 1 : -1) * (2.5 + (b * 0.8)) * speedMult;
-        const vyDir = (3.5 + (b * 0.5)) * speedMult;
-        const ball = new gameEngine.Ball(`ball_${b + 1}`, centerX + ((b - Math.floor(ballCount / 2)) * 120), 500, vxDir, vyDir, BALL_RADIUS);
-        ball.active = (b < Math.min(2, ballCount));
-        worldState.balls.push(ball);
-      }
-
       for (let i = 0; i < worldState.players.length; i++) {
         const p = worldState.players[i];
         p.score = 0;
@@ -166,6 +154,22 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
         }
         resetPaddle(p, worldState.numScreens, i, worldState.maxPlayers);
       }
+
+      const host = worldState.players[worldState.masterPlayerIndex] || worldState.players.find((p) => p.connected) || worldState.players[0];
+      const speedMult = gameEngine.getBallSpeedMultiplier(worldState.ballSpeed);
+      worldState.balls = [];
+      const serve = new gameEngine.Ball('ball_1', 0, 0, 0, 0, BALL_RADIUS);
+      serve.active = true;
+      if (host) gameEngine.placeBallOnPaddle(serve, host);
+      else {
+        serve.x = (worldState.numScreens * SCREEN_WIDTH) / 2;
+        serve.y = 500;
+        serve.glued = true;
+      }
+      worldState.balls.push(serve);
+      const spare = new gameEngine.Ball('ball_2', serve.x, serve.y, -2.5 * speedMult, 3.5 * speedMult, BALL_RADIUS);
+      spare.active = false;
+      worldState.balls.push(spare);
 
       worldState.gameStatus = 'countdown';
       worldState.countdownStartedAt = Date.now();
@@ -184,6 +188,9 @@ function registerSocketHandlers(io, worldState, pendingHandoffs, broadcastGameSt
           worldState.gameStatus = 'playing';
           worldState.gameActive = true;
           worldState.gameStartedAt = Date.now();
+          (worldState.balls || []).forEach((b) => {
+            if (b && b.glued && b.active) gameEngine.launchGluedBall(b, worldState);
+          });
           io.emit('game_started', {
             sessionId: worldState.sessionId,
             gameStartedAt: worldState.gameStartedAt,

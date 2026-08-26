@@ -1,12 +1,13 @@
 #!/bin/bash
-# Open the wall the way Galaxy Pacman does, then Asteroids if keys fail.
+# Open the wall the way Galaxy Asteroids opens the master and Pacman opens slaves.
 #
-# Pacman (every frame, including lg1):
+# Master (lg1): local Chromium on DISPLAY=:0 (galaxy-asteroids/scripts/open.sh).
+# Slaves: Pacman first, then Asteroids sshpass in the background:
 #   ssh -Xnf lg@$lg " export DISPLAY=:0 ; chromium-browser <url> --start-fullscreen … &"
-# Asteroids (slaves only):
-#   sshpass … ssh -tXn $lg "export DISPLAY=:0 ; chromium-browser … &"
+#   sshpass … ssh -tXn lg@$lg "export DISPLAY=:0 ; chromium-browser … &" &
 #
 # Slice URLs stay /1 left … /N right (not Pacman's hostname digit).
+# Never npm run build here — install.sh already built dist/.
 #
 # Usage: bash open-arkanoid.sh [screens|password] [--screens N] [--password pw] [--frames [N]]
 
@@ -97,13 +98,11 @@ fi
 export LG_FRAME_ASPECT="${LG_FRAME_ASPECT:-}"
 export LG_RANDR
 
-if command -v npm >/dev/null 2>&1; then
-  echo "Building wall client (dist/)…"
-  (cd "$PROJECT_DIR" && npm run build) || echo "WARNING: npm run build failed — dist/ may be stale."
-fi
+# Pacman/Asteroids never rebuild on launch. A phone SSH used to die at 45s
+# while Vite ran, so master+slaves never opened. install.sh already built dist/.
 if [ ! -f "$PROJECT_DIR/dist/index.html" ]; then
   export NODE_ENV=development
-  echo "dist/ missing — serving web-client directly."
+  echo "dist/ missing — serving web-client (run npm run build on the rig once)."
 fi
 
 start_or_restart_pm2 "$SERVER_PATH" "$port"

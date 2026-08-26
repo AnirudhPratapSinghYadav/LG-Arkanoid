@@ -106,6 +106,7 @@ function createMatchController({ worldState, io, pendingHandoffs, applyPowerUpEf
         vy: b.vy,
         radius: b.radius,
         active: b.active,
+        glued: !!b.glued,
       })),
       powerUps: worldState.powerUps.map((p) => ({
         type: p.type,
@@ -430,7 +431,7 @@ function createMatchController({ worldState, io, pendingHandoffs, applyPowerUpEf
 
     for (let i = 0; i < worldState.players.length; i++) {
       const p = worldState.players[i];
-      if (p.score > 0 && Math.floor(beforeScores[i] / 5000) < Math.floor(p.score / 5000)) {
+      if (p.score > 0 && Math.floor(beforeScores[i] / 500) < Math.floor(p.score / 500)) {
         const snap = getWorldSnapshot();
         snap.playerId = p.id;
         triggerCommentary('score_milestone', snap, io, worldState.commentaryRateLimiter, worldState);

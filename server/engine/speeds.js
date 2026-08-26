@@ -10,7 +10,9 @@ function getBallSpeedMultiplier(ballSpeed) {
 function getRespawnVelocity(gameState) {
   const m = getBallSpeedMultiplier(gameState && gameState.ballSpeed);
   const slow = gameState && gameState.slowBallActive ? 0.5 : 1;
-  return { vx: 3 * m * slow, vy: 4 * m * slow };
+  // Up into the brick belt (negative vy). Hypot ~8.6 at medium so the first
+  // paddle clamp in physics (min 8) does not suddenly jump the serve.
+  return { vx: 5 * m * slow, vy: -7 * m * slow };
 }
 
 module.exports = { getBallSpeedMultiplier, getRespawnVelocity };

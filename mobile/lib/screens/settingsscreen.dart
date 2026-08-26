@@ -30,6 +30,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _obscurePassword = true;
   bool _isConnecting = false;
   bool _isConnected = false;
+  bool _isBusy = false;
 
   final _secureStorage = const FlutterSecureStorage();
 
@@ -142,36 +143,54 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return parsed.clamp(1, 12);
   }
 
+  bool _sshLooksFailed(String out) {
+    final t = out.trim();
+    if (t.startsWith('ERROR')) return true;
+    if (t.contains('did not answer /health')) return true;
+    if (t.contains('Warning: failed to open Chromium')) return true;
+    if (t.contains('Some slaves did not open')) return true;
+    return false;
+  }
+
   Future<void> _launchGame() async {
-    if (!_isConnected) return;
+    if (!_isConnected || _isBusy) return;
+    setState(() => _isBusy = true);
     final screens = _parseScreenCount();
-    final err = await SSHService().launchGame(screens);
-    if (mounted && err.startsWith('ERROR')) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err), backgroundColor: accentError));
-    } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Launched successfully.'), backgroundColor: accentSuccess));
-    }
+    final out = await SSHService().launchGame(screens);
+    if (!mounted) return;
+    setState(() => _isBusy = false);
+    final failed = _sshLooksFailed(out);
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(failed ? out : 'Launched successfully.'),
+      backgroundColor: failed ? accentError : accentSuccess,
+    ));
   }
 
   Future<void> _relaunchGame() async {
-    if (!_isConnected) return;
+    if (!_isConnected || _isBusy) return;
+    setState(() => _isBusy = true);
     final screens = _parseScreenCount();
-    final err = await SSHService().relaunchGame(screens);
-    if (mounted && err.startsWith('ERROR')) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err), backgroundColor: accentError));
-    } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Launched successfully.'), backgroundColor: accentSuccess));
-    }
+    final out = await SSHService().relaunchGame(screens);
+    if (!mounted) return;
+    setState(() => _isBusy = false);
+    final failed = _sshLooksFailed(out);
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(failed ? out : 'Launched successfully.'),
+      backgroundColor: failed ? accentError : accentSuccess,
+    ));
   }
 
   Future<void> _closeGame() async {
-    if (!_isConnected) return;
-    final err = await SSHService().closeGame();
-    if (mounted && err.startsWith('ERROR')) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err), backgroundColor: accentError));
-    } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Closed successfully.'), backgroundColor: accentSuccess));
-    }
+    if (!_isConnected || _isBusy) return;
+    setState(() => _isBusy = true);
+    final out = await SSHService().closeGame();
+    if (!mounted) return;
+    setState(() => _isBusy = false);
+    final failed = _sshLooksFailed(out);
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(failed ? out : 'Closed successfully.'),
+      backgroundColor: failed ? accentError : accentSuccess,
+    ));
   }
 
   Future<void> _disconnect() async {
@@ -311,8 +330,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     const SizedBox(height: 16),
                     SettingsLabeledField(
                       label: 'IP ADDRESS',
-                      hint: '192.168.1.42',
+                      hint: '10.11.77.106  (lg1 Wi‑Fi IPv4)',
                       controller: _hostController,
+                      validator: (value) {
+                        final h = (value ?? '').trim().toLowerCase();
+                        if (h.isEmpty) return 'This field is required';
+                        if (h == 'lg1') {
+                          return 'Phones cannot resolve lg1. Use the Wi‑Fi IPv4.';
+                        }
+                        if (h == '10.0.2.2' || h == '127.0.0.1' || h == 'localhost') {
+                          return 'SSH needs the rig IPv4. 10.0.2.2 is only for joining the game from the emulator.';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Emulator join uses 10.0.2.2:8130. Launch/SSH always uses the rig Wi‑Fi IPv4, never 10.0.2.2.',
+                      style: AppFonts.inter(
+                        fontSize: 11,
+                        color: textSecondary,
+                        height: 1.4,
+                      ),
                     ),
                     const SizedBox(height: 16),
                     SettingsLabeledField(
@@ -421,9 +460,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             const SizedBox(height: 12),
             ElevatedButton.icon(
-              onPressed: _isConnected ? _launchGame : null,
-              icon: const Icon(Icons.rocket_launch),
-              label: const Text('LAUNCH ON RIG'),
+              onPressed: _isConnected && !_isBusy ? _launchGame : null,
+              icon: _isBusy
+                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Icon(Icons.rocket_launch),
+              label: Text(_isBusy ? 'LAUNCHING WALL…' : 'LAUNCH ON RIG'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: accentGame,
                 foregroundColor: bgDark,
@@ -434,7 +475,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             const SizedBox(height: 12),
             ElevatedButton.icon(
-              onPressed: _isConnected ? _relaunchGame : null,
+              onPressed: _isConnected && !_isBusy ? _relaunchGame : null,
               icon: const Icon(Icons.restart_alt),
               label: const Text('RELAUNCH'),
               style: ElevatedButton.styleFrom(
@@ -447,7 +488,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             const SizedBox(height: 12),
             ElevatedButton.icon(
-              onPressed: _isConnected ? _closeGame : null,
+              onPressed: _isConnected && !_isBusy ? _closeGame : null,
               icon: const Icon(Icons.stop_circle),
               label: const Text('SHUT DOWN ON RIG'),
               style: ElevatedButton.styleFrom(

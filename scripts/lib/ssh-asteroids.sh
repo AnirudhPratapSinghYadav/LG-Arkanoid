@@ -2,10 +2,9 @@
 # Copied from galaxy-asteroids/scripts/open.sh:
 #   sshpass -p $PW ssh -tXn $lg "export DISPLAY=:0 ; chromium-browser … &" &
 #
-# Keep Asteroids flags: -tXn, hostname (User lg comes from ~/.ssh/config).
-# Use sshpass -e so `ps` does not show the password (Asteroids uses -p).
-# Asteroids backgrounds the whole ssh. We wait for the SSH exit code so a
-# failed slave is not reported as launched (that was the Lleida dark-glass bug).
+# Always lg@$host (Pacman does). Asteroids relies on ~/.ssh/config User lg;
+# without it, `ssh -tXn lg2` tries the phone/operator user and the glass stays dark.
+# Background the ssh like Asteroids. Do NOT timeout-kill — that SIGHUPs Chromium.
 
 ssh_asteroids() {
   local host="$1"
@@ -15,11 +14,7 @@ ssh_asteroids() {
     return 1
   fi
   export SSHPASS="$pw"
-  # Asteroids backgrounds the whole ssh. We wait (with a cap) for the exit
-  # code so a failed slave is not reported as launched.
-  if command -v timeout >/dev/null 2>&1; then
-    timeout 12 sshpass -e ssh -tXn "$host" "$remote"
-  else
-    sshpass -e ssh -tXn "$host" "$remote"
-  fi
+  sshpass -e ssh -tXn "lg@$host" "$remote" >/tmp/lg-arkanoid-ssh-${host}.log 2>&1 &
+  sleep 1
+  return 0
 }

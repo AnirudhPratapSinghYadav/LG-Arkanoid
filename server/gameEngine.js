@@ -11,6 +11,10 @@ const {
   checkBrickCollision,
   updatePowerUps,
   updateGameLoop,
+  servingPaddle,
+  placeBallOnPaddle,
+  launchGluedBall,
+  stickGluedBalls,
 } = require('./engine/physics.js');
 
 function applyGameMasterMod(gameState, modType){
@@ -19,12 +23,17 @@ function applyGameMasterMod(gameState, modType){
       case 'WIDE_PADDLE':
         gameState.powerUps.push(new PowerUp('wide_paddle', ((gameState.numScreens || 3) * layout.SCREEN_WIDTH)/2, 0));
         break;
-      case 'EXTRA_BALL':
-        const speedMult = gameState.slowBallActive ? 1.5 : 3;
+      case 'EXTRA_BALL': {
         const radius = gameState.balls.length > 0 ? gameState.balls[0].radius : 8;
-        let newBall = new Ball(Date.now().toString(), ((gameState.numScreens || 3) * layout.SCREEN_WIDTH)/2, 500, speedMult, speedMult * 1.33, radius);
-        gameState.balls.push(newBall);
+        const extra = new Ball(Date.now().toString(), 0, 0, 0, 0, radius);
+        extra.active = true;
+        const holder = servingPaddle(gameState);
+        if (holder) placeBallOnPaddle(extra, holder);
+        launchGluedBall(extra, gameState);
+        extra.vx = -extra.vx;
+        gameState.balls.push(extra);
         break;
+      }
       case 'SLOW_BALL':
         if(!gameState.slowBallActive){
           gameState.balls.forEach(b=>{
@@ -85,5 +94,9 @@ module.exports = {
   checkBrickCollision,
   updatePowerUps,
   updateGameLoop,
-  applyGameMasterMod
+  applyGameMasterMod,
+  servingPaddle,
+  placeBallOnPaddle,
+  launchGluedBall,
+  stickGluedBalls,
 };

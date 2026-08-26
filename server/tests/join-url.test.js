@@ -34,5 +34,11 @@ assert.ok(!loop.warning);
 assert.ok(loop.hint);
 assert.strictEqual(loop.ip, '127.0.0.1');
 
+const emu = parseJoinInput('http://10.0.2.2:8130/controller?c=CATA');
+assert.ok(!emu.warning);
+assert.ok(emu.hint);
+assert.ok(/10\.0\.2\.2/.test(emu.hint));
+assert.strictEqual(emu.ip, '10.0.2.2');
+
 assert.strictEqual(buildControllerJoinUrl('', 8130, 'ABCD'), '');
 console.log('join-url tests passed');

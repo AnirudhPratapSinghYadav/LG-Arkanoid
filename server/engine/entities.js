@@ -17,6 +17,7 @@ class Ball {
     this.radius = radius;
     this.active = true;
     this.lastTouchedByPlayerId = null;
+    this.glued = false;
     this.rallyCount = 0;
     this.currentCombo = 0;
   }

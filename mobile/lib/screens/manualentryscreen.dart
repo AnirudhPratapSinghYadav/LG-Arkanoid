@@ -166,7 +166,7 @@ class _ManualEntryScreenState extends State<ManualEntryScreen> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'Using USB debugging? Run "adb reverse tcp:8130 tcp:8130" and use IP 127.0.0.1',
+                            'Using USB debugging? Run "adb reverse tcp:8130 tcp:8130" and use IP 127.0.0.1. Android emulator join uses 10.0.2.2:8130 (host loopback). SSH/launch to a real rig still needs lg1 Wi‑Fi IPv4.',
                             style: AppFonts.inter(
                               fontSize: 11,
                               color: textSecondary,
@@ -177,7 +177,7 @@ class _ManualEntryScreenState extends State<ManualEntryScreen> {
                           LgTextField(
                             controller: _ipController,
                             label: 'RIG HOST IP ADDRESS',
-                            hint: '192.168.1.42 or http://192.168.1.42:8130/controller',
+                            hint: '10.11.77.106 or 10.0.2.2 (emulator join only)',
                             keyboardType: TextInputType.text,
                             autocorrect: false,
                             enableSuggestions: false,

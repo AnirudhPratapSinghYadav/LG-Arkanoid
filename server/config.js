@@ -170,7 +170,8 @@ function resolveWebRoot() {
 }
 
 function generateToken(){
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  // No 0/O/1/I — testers typed OWGO as OGWO and got "Invalid session token".
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let token = '';
   for(let i = 0; i < 4; i++){
     token += chars.charAt(Math.floor(Math.random()*chars.length));

@@ -85,5 +85,8 @@ String? _hostHint(String host) {
   if (h == 'localhost' || h == '127.0.0.1') {
     return '127.0.0.1 only works with USB debugging. On a PC run: adb reverse tcp:8130 tcp:8130';
   }
+  if (h == '10.0.2.2') {
+    return 'Emulator loopback to the host PC. Join the game here on :8130. SSH to a real Liquid Galaxy still needs lg1 Wi‑Fi IPv4, never 10.0.2.2.';
+  }
   return null;
 }

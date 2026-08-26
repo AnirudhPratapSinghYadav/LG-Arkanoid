@@ -85,11 +85,19 @@ class SSHService {
     }
   }
 
-  Future<String> sendCommand(String command) {
-    return _serialized(() => _sendCommandUnlocked(command));
+  static const _wallScriptTimeout = Duration(seconds: 180);
+
+  Future<String> sendCommand(
+    String command, {
+    Duration timeout = const Duration(seconds: 45),
+  }) {
+    return _serialized(() => _sendCommandUnlocked(command, timeout: timeout));
   }
 
-  Future<String> _sendCommandUnlocked(String command) async {
+  Future<String> _sendCommandUnlocked(
+    String command, {
+    Duration timeout = const Duration(seconds: 45),
+  }) async {
     try {
       if (_client == null) {
         final connectResult = await _connectUnlocked();
@@ -106,9 +114,9 @@ class SSHService {
       debugPrint('[SSHService] Executing: $sanitizedCommand');
 
       final session = await _client!.execute(command).timeout(
-        const Duration(seconds: 45),
+        timeout,
         onTimeout: () => throw TimeoutException(
-          'SSH command timed out after 45s (rig may be hung)',
+          'SSH command timed out (rig may be hung)',
         ),
       );
 
@@ -116,7 +124,7 @@ class SSHService {
           .cast<List<int>>()
           .transform(utf8.decoder)
           .join()
-          .timeout(const Duration(seconds: 45));
+          .timeout(timeout);
       final stderr = await session.stderr
           .cast<List<int>>()
           .transform(utf8.decoder)
@@ -170,12 +178,20 @@ class SSHService {
   Future<String> launchGame(int numScreens) async {
     final remotePath = await _remotePath();
     final screens = numScreens.clamp(1, 12);
-    return sendCommand('bash $remotePath/scripts/open-arkanoid.sh $screens');
+    // Wall open used to die at 45s while Vite rebuilt dist/. Pacman/Asteroids
+    // never rebuild on launch; 180s covers pm2 + /health + slave SSH.
+    return sendCommand(
+      'bash $remotePath/scripts/open-arkanoid.sh $screens',
+      timeout: _wallScriptTimeout,
+    );
   }
 
   Future<String> closeGame() async {
     final remotePath = await _remotePath();
-    return sendCommand('bash $remotePath/scripts/close-arkanoid.sh');
+    return sendCommand(
+      'bash $remotePath/scripts/close-arkanoid.sh',
+      timeout: _wallScriptTimeout,
+    );
   }
 
   /// Wait until pm2 no longer lists lg-arkanoid and Chromium for :8130 is gone.
@@ -210,12 +226,16 @@ class SSHService {
     return _serialized(() async {
       final remotePath = await _remotePath();
       final closeOut =
-          await _sendCommandUnlocked('bash $remotePath/scripts/close-arkanoid.sh');
+          await _sendCommandUnlocked(
+        'bash $remotePath/scripts/close-arkanoid.sh',
+        timeout: _wallScriptTimeout,
+      );
       if (closeOut.startsWith('ERROR:')) return closeOut;
       await _waitForTeardown();
       final screens = numScreens.clamp(1, 12);
       return _sendCommandUnlocked(
         'bash $remotePath/scripts/open-arkanoid.sh $screens',
+        timeout: _wallScriptTimeout,
       );
     });
   }
