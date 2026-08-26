@@ -57,4 +57,11 @@ assert.ok(config.includes("ABCDEFGHJKLMNPQRSTUVWXYZ23456789"), 'session codes sk
 const sshDart = read('mobile/lib/services/ssh_service.dart');
 assert.ok(sshDart.includes('Duration(seconds: 180)'), 'phone launch/close must wait longer than 45s');
 
+const pkg = JSON.parse(read('package.json'));
+assert.ok(pkg.scripts['open-wall'], 'npm start must open every wall slice, not only the QR');
+assert.ok(pkg.scripts.start.includes('open-wall'), 'npm start launches all local screens');
+const localWall = read('scripts/open-local-wall.js');
+assert.ok(localWall.includes('127.0.0.1'), 'laptop wall tabs hit Express :8130 so SCREEN_ID is injected');
+assert.ok(!/localhost:5173|127\.0\.0\.1:5173/.test(localWall), 'do not open Vite — slices would all look like the center QR');
+
 console.log('ssh-launch tests passed');

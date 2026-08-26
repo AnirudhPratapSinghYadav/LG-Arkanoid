@@ -171,23 +171,13 @@ LG_FRAME_ASPECT=16:9
 
 Leave `GEMINI_API_KEY` empty. The match still runs. `16:9` is for a laptop (the wall is portrait by default).
 
-### A4. Start the server
+### A4. Start — this opens every slice
 
 ```bash
 npm start
 ```
 
-Leave this terminal open.
-
-```bash
-curl http://127.0.0.1:8130/health
-```
-
-You want `"status":"ok"`. That JSON has **no** join code.
-
-### A5. Open the wall (browser)
-
-Three tabs because `NUM_SCREENS=3`:
+Leave this terminal open. When `/health` answers, the default browser opens **all** wall slices, not only the QR:
 
 | Tab | URL | What it is |
 |---|---|---|
@@ -195,9 +185,25 @@ Three tabs because `NUM_SCREENS=3`:
 | 2 | http://localhost:8130/2 | Center — **QR + 4-letter code** |
 | 3 | http://localhost:8130/3 | Right slice — standings in play |
 
+That is the laptop stand-in for master + slaves. If a popup blocker eats a tab, open the missing URL from the table. `NUM_SCREENS` in `server/.env` is how many tabs you get.
+
+Check the server:
+
+```bash
+curl http://127.0.0.1:8130/health
+```
+
+You want `"status":"ok"`. That JSON has **no** join code.
+
 `http://localhost:8130/` with no path redirects to `/controller`.
 
-### A6. Open a paddle on the same computer
+To reopen the wall tabs later (server already running):
+
+```bash
+npm run open-wall
+```
+
+### A5. Open a paddle on the same computer
 
 New tab: http://localhost:8130/controller
 
