@@ -16,7 +16,7 @@ dependencies:
   flutter_tts: 3.8.5
   mobile_scanner: 5.2.3
   qr_flutter: 4.1.0
-  dartssh2: 2.11.0
+  dartssh2: 3.3.1
   # google_fonts is deliberately absent: it downloads .ttf files at runtime and
   # the rig's LAN has no internet, so every label would fall back mid-demo.
   # Typography lives in lib/utils/app_fonts.dart against the bundled faces below.
