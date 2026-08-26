@@ -45,3 +45,5 @@ updates:
         versions: [">=4"]
       - dependency-name: mobile_scanner
         versions: [">=6"]
+      - dependency-name: dartssh2
+        versions: [">=3"]
