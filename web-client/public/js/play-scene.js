@@ -48,11 +48,11 @@ class GameScene extends Phaser.Scene {
         this.ensureRobotSlots(5);
 
         this.centerCommentaryTitle = this.add.text(CENTER_X, 448, 'ARKANOID AI', {
-            fontFamily: FONTS.heading, fontSize: '22px', color: HEX.system, fontWeight: 'bold', letterSpacing: 3
+            fontFamily: FONTS.heading, fontSize: uiPx(18), color: HEX.system, fontWeight: 'bold', letterSpacing: 3
         }).setOrigin(0.5, 0).setVisible(false).setDepth(60);
         this.centerCommentaryText = this.add.text(CENTER_X, 476, '', {
-            fontFamily: FONTS.body, fontSize: '42px', color: HEX.textLight, align: 'center',
-            wordWrap: { width: Math.min(1000, SCREEN_W - 64) }
+            fontFamily: FONTS.body, fontSize: uiPx(26), color: HEX.textLight, align: 'center',
+            wordWrap: { width: SCREEN_W - 64 }
         }).setOrigin(0.5, 0).setVisible(false).setDepth(60);
 
         this.screenLabel = this.add.text(20, 20, 'SCREEN ' + screenId, {
@@ -89,31 +89,36 @@ class GameScene extends Phaser.Scene {
         this.timerPanelGraphics = this.add.graphics().setDepth(69);
         this.timerLabel = this.add.text(CENTER_X, 10, 'TIME LEFT', {
             fontFamily: FONTS.mono,
-            fontSize: '16px',
+            fontSize: uiPx(14),
             color: HEX.accent,
         }).setOrigin(0.5, 0).setDepth(70);
-        this.timerText = this.add.text(CENTER_X, 30, '03:00', {
+        this.timerText = this.add.text(CENTER_X, 28, '03:00', {
             fontFamily: FONTS.heading,
-            fontSize: '56px',
+            fontSize: uiPx(40),
             color: HEX.white,
             stroke: '#05070c',
-            strokeThickness: 8,
+            strokeThickness: 6,
         }).setOrigin(0.5, 0).setDepth(70);
 
+        this._boardRowH = Math.round(56 * UI_SCALE);
+        this._boardTitleY = 500;
+        this._boardRow0Y = 548;
         this.leaderboardPanelGraphics = this.add.graphics();
         this.leaderboardTexts = [];
         for(let i = 0; i < 5; i++) {
-            let txt = this.add.text(CENTER_X, 548 + (i * 88), '', {
+            let txt = this.add.text(CENTER_X, this._boardRow0Y + (i * this._boardRowH), '', {
                 fontFamily: FONTS.mono,
-        fontSize: '52px'
+                fontSize: uiPx(22),
+                wordWrap: { width: SCREEN_W - 80 },
+                align: 'center',
             }).setOrigin(0.5, 0).setDepth(55);
             if (screenId !== numScreens) txt.setVisible(false);
             this.leaderboardTexts.push(txt);
         }
 
-        this.leaderboardTitle = this.add.text(CENTER_X, 488, 'LIVE STANDINGS', {
+        this.leaderboardTitle = this.add.text(CENTER_X, this._boardTitleY, 'LIVE STANDINGS', {
             fontFamily: FONTS.heading,
-            fontSize: '56px',
+            fontSize: uiPx(28),
             color: HEX.accent,
             fontWeight: 'bold'
         }).setOrigin(0.5, 0).setDepth(55);
@@ -284,7 +289,7 @@ class GameScene extends Phaser.Scene {
                     const id = `${r}-${c}`;
                     if (this.previousBricks[id] && !brick.active) {
                         const localX = brick.x - virtualLeft;
-                        if (localX > -600 && localX < 2520) {
+                        if (localX > -160 && localX < SCREEN_W + 160) {
                             this.brickEmitter.setParticleTint(ROW_COLORS[r % ROW_COLORS.length]);
                             this.brickEmitter.emitParticleAt(localX + (brick.width || 140) / 2, brick.y + (brick.height || 30) / 2, 10);
                             this.playBeep(600 + (6 - (r % 6)) * 100, 'square', 0.1, 0.05);
@@ -338,7 +343,7 @@ class GameScene extends Phaser.Scene {
     }
 
     spawnFloatingText(text, x, y, color) {
-        if (x < -200 || x > 2100) return; 
+        if (x < -200 || x > SCREEN_W + 200) return; 
         const t = this.add.text(x, y, text, {
             fontFamily: FONTS.heading,
             fontSize: '28px',

@@ -10,7 +10,7 @@ GameScene.prototype.syncQrToCanvas = function() {
     const scale = Math.min(rect.width / SCREEN_W, rect.height / CANVAS_H);
     const cardW = Math.max(300, Math.min(420, 420 * scale));
     qr.style.width = `${cardW}px`;
-    qr.style.maxHeight = `${Math.max(400, Math.min(rect.height * 0.88, 900))}px`;
+    qr.style.maxHeight = `${Math.min(rect.height * 0.82, 720)}px`;
 };
 
 GameScene.prototype.drawAttractMode = function() {
@@ -20,9 +20,10 @@ GameScene.prototype.drawAttractMode = function() {
         if (!this.bootSideText) {
             this.bootSideText = this.add.text(CENTER_X, 540, '', {
                 fontFamily: FONTS.display,
-                fontSize: '52px',
+                fontSize: uiPx(40),
                 fill: HEX.textPrimary,
-                align: 'center'
+                align: 'center',
+                wordWrap: { width: SCREEN_W - 48 }
             }).setOrigin(0.5).setDepth(6);
         }
         this.bootSideText.setPosition(CENTER_X, screenId === 1 ? 560 : 540);
@@ -78,26 +79,26 @@ GameScene.prototype.initAmbientTexts = function() {
     }
     if (!this.ambientLeftText) {
         this.ambientLeftText = this.add.text(CENTER_X, 250, '', {
-            fontFamily: FONTS.display, fontSize: '68px', fill: HEX.systemAlt,
-            align: 'center'
+            fontFamily: FONTS.display, fontSize: uiPx(42), fill: HEX.systemAlt,
+            align: 'center', wordWrap: { width: SCREEN_W - 48 }
         }).setOrigin(0.5, 0).setVisible(false).setDepth(6);
     }
     if (!this.ambientLeftSub) {
         this.ambientLeftSub = this.add.text(CENTER_X, 340, '', {
-            fontFamily: FONTS.heading, fontSize: '20px', fill: HEX.textSecondary,
-            align: 'center', lineSpacing: 12
+            fontFamily: FONTS.heading, fontSize: uiPx(16), fill: HEX.textSecondary,
+            align: 'center', lineSpacing: 8, wordWrap: { width: SCREEN_W - 56 }
         }).setOrigin(0.5, 0).setVisible(false).setDepth(6);
     }
     if (!this.ambientRightText) {
         this.ambientRightText = this.add.text(CENTER_X, 250, '', {
-            fontFamily: FONTS.display, fontSize: '68px', fill: HEX.systemAlt,
-            align: 'center'
+            fontFamily: FONTS.display, fontSize: uiPx(42), fill: HEX.systemAlt,
+            align: 'center', wordWrap: { width: SCREEN_W - 48 }
         }).setOrigin(0.5, 0).setVisible(false).setDepth(6);
     }
     if (!this.ambientRightSub) {
         this.ambientRightSub = this.add.text(CENTER_X, 340, '', {
-            fontFamily: FONTS.heading, fontSize: '20px', fill: HEX.textSecondary,
-            align: 'center', lineSpacing: 12
+            fontFamily: FONTS.heading, fontSize: uiPx(16), fill: HEX.textSecondary,
+            align: 'center', lineSpacing: 8, wordWrap: { width: SCREEN_W - 56 }
         }).setOrigin(0.5, 0).setVisible(false).setDepth(6);
     }
     const maxP = (this.currentState && this.currentState.maxPlayers) || 5;
@@ -107,7 +108,7 @@ GameScene.prototype.initAmbientTexts = function() {
     while (this.lobbyPlayerTexts.length < maxP) {
         const idx = this.lobbyPlayerTexts.length;
         const txt = this.add.text(CENTER_X, 470 + (idx * 62), '', {
-            fontFamily: FONTS.heading, fontSize: '26px', fill: HEX.textSecondary
+            fontFamily: FONTS.heading, fontSize: uiPx(20), fill: HEX.textSecondary
         }).setOrigin(0.5).setVisible(false).setDepth(6);
         this.lobbyPlayerTexts.push({ text: txt });
     }
@@ -119,12 +120,13 @@ GameScene.prototype.drawLobbyFrame = function() {
     // logical px wide, so the old fixed 1200px panel spilled off the glass.
     const panelW = Math.min(1200, SCREEN_W * 0.86);
     const panelX = CENTER_X - panelW / 2;
+    const panelH = Math.min(720, CANVAS_H - 280);
     const inset = panelW * 0.1;
     this.lobbyDecorGfx.clear();
     this.lobbyDecorGfx.fillStyle(0x0a1018, 0.55);
-    this.lobbyDecorGfx.fillRect(panelX, 180, panelW, 720);
+    this.lobbyDecorGfx.fillRect(panelX, 180, panelW, panelH);
     this.lobbyDecorGfx.lineStyle(2, 0x2a3a4a, 1);
-    this.lobbyDecorGfx.strokeRect(panelX, 180, panelW, 720);
+    this.lobbyDecorGfx.strokeRect(panelX, 180, panelW, panelH);
     this.lobbyDecorGfx.lineStyle(1, 0x20c5ff, 0.35);
     this.lobbyDecorGfx.lineBetween(panelX + inset, 430, panelX + panelW - inset, 430);
 };
@@ -152,6 +154,14 @@ GameScene.prototype.renderJoin = function() {
     const durationLabel = duration === 0 ? 'Endless' : `${Math.round((duration || 180) / 60)} min`;
     const screensLabel = `${this.currentState.numScreens || numScreens} screens`;
     const speedLabel = (this.currentState.ballSpeed || 'medium');
+    const token = this.sessionToken || this.currentState.sessionToken || '';
+    const names = players.map((p) => (p && p.connected ? (p.name || '') : '')).join(',');
+    const lobbyKey = [screenId, connectedCount, maxP, token, durationLabel, screensLabel, speedLabel, names].join('|');
+    if (this._lobbyRenderKey === lobbyKey) {
+        if (isQrScreen(this.currentState)) this.syncQrToCanvas();
+        return;
+    }
+    this._lobbyRenderKey = lobbyKey;
 
     if (this.lobbyDecorGfx) this.lobbyDecorGfx.clear();
     if (this.ambientLeftText) this.ambientLeftText.setVisible(false);
@@ -168,7 +178,7 @@ GameScene.prototype.renderJoin = function() {
         this.layoutSideSlots(maxP);
         if (this.logo) this.logo.setVisible(false).setAlpha(0);
         if (this.gesocLogo) this.gesocLogo.setVisible(false).setAlpha(0);
-        this.ambientLeftText.setText('LG ARKANOID');
+        this.ambientLeftText.setText('PLAYERS');
         this.ambientLeftText.setVisible(true).setAlpha(0.98);
         this.ambientLeftSub.setText(
             '1  Look at the CENTER screen for the QR\n2  Phone = paddle (app or /controller)\n3  First player is HOST — they press CREATE & START'
@@ -361,6 +371,7 @@ GameScene.prototype.hideJoinMode = function() {
     if (this.paddleNameTexts) this.paddleNameTexts.forEach((t) => t.setVisible(false));
     if (this.logo) this.logo.setVisible(false).setAlpha(0);
     if (this.gesocLogo) this.gesocLogo.setVisible(false).setAlpha(0);
+    this._lobbyRenderKey = '';
     this.hideJoinToast();
 };
 
@@ -378,7 +389,7 @@ GameScene.prototype.hideJoinToast = function() {
 GameScene.prototype.drawCountdownMode = function() {
     if (!this.countdownText) {
         this.countdownText = this.add.text(CENTER_X, 540, '', {
-            fontFamily: FONTS.display, fontSize: '240px', color: HEX.accent, fontWeight: 'bold'
+            fontFamily: FONTS.display, fontSize: uiPx(SCREEN_W < 800 ? 140 : 220), color: HEX.accent, fontWeight: 'bold'
         }).setOrigin(0.5, 0.5).setDepth(80);
     }
     
@@ -397,7 +408,7 @@ GameScene.prototype.drawCountdownMode = function() {
             this.countdownText.setScale(scale);
             this.countdownText.setAlpha(1 - (elapsed % 1000) / 1000);
         } else {
-            this.countdownText.setText('START!');
+            this.countdownText.setText('GO');
             this.countdownText.setScale(1);
             this.countdownText.setAlpha(1);
         }

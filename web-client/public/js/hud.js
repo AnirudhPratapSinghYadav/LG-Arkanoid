@@ -33,7 +33,8 @@ GameScene.prototype.updateHUD = function() {
     const liveScreens = liveNumScreens(this.currentState);
     const onRight = screenId === liveScreens;
     const matchEnded = status === 'win' || status === 'time_up' || status === 'game_over';
-    const showStandings = onRight && (status === 'playing' || status === 'countdown' || matchEnded);
+    // Right glass: live standings only. Match-end uses the win overlay — do not stack both.
+    const showStandings = onRight && (status === 'playing' || status === 'countdown');
     if (screenId === 1) this.hudText.setVisible(true);
     this.timerText.setVisible(true);
     if (this.timerLabel) this.timerLabel.setVisible(true);
@@ -129,8 +130,8 @@ GameScene.prototype.updateHUD = function() {
         }
     }
 
-    const pillW = 280;
-    const pillH = 88;
+    const pillW = Math.min(280 * UI_SCALE, SCREEN_W - 48);
+    const pillH = Math.min(72 * UI_SCALE, 88);
     const pillX = CENTER_X - pillW / 2;
     const pillColor = (remainingForPill != null && remainingForPill <= 30) || matchEnded ? 0xe63946 : 0x20c5ff;
     this.timerPanelGraphics.fillStyle(0x05070c, 0.88);
@@ -150,11 +151,11 @@ GameScene.prototype.updateHUD = function() {
         if (showStandings && i < boardPlayers.length) {
             const p = boardPlayers[i];
             const colorHex = PLAYER_HEX[(Math.max(1, p.playerNumber) - 1) % PLAYER_HEX.length];
-            const name = (p.name || ('P' + p.playerNumber)).toUpperCase();
+            const name = (p.name || ('P' + p.playerNumber)).toUpperCase().substring(0, 8);
             const rank = p.rank || (i + 1);
             const hearts = '♥'.repeat(Math.max(0, Math.min(p.lives, 5))) || '—';
             this.leaderboardTexts[i].setText(
-                '#' + rank + '   ' + name + '   ' + String(p.score).padStart(5, '0') + '   ' + hearts
+                '#' + rank + '  ' + name + '  ' + String(p.score).padStart(5, '0') + '  ' + hearts
             );
             this.leaderboardTexts[i].setColor(colorHex);
         } else {
@@ -165,8 +166,9 @@ GameScene.prototype.updateHUD = function() {
     if (showStandings && boardPlayers.length > 0) {
         this.leaderboardTitle.setVisible(true).setDepth(55);
         this.leaderboardTitle.setText(matchEnded ? 'FINAL LEADERBOARD' : 'LIVE STANDINGS');
-        const panelY = 468;
-        const panelH = 72 + boardPlayers.length * 88;
+        const rowH = this._boardRowH || Math.round(56 * UI_SCALE);
+        const panelY = (this._boardTitleY || 500) - 16;
+        const panelH = Math.round(48 * UI_SCALE) + boardPlayers.length * rowH;
         this.leaderboardPanelGraphics.fillStyle(0x0c1219, 0.78);
         this.leaderboardPanelGraphics.fillRoundedRect(36, panelY, SCREEN_W - 72, panelH, 18);
         this.leaderboardPanelGraphics.lineStyle(2, matchEnded ? 0xffc300 : 0x20c5ff, 0.5);
@@ -189,34 +191,37 @@ GameScene.prototype.updateHUD = function() {
 GameScene.prototype.drawWinMode = function() {
     if (!this.winTitle) {
         this.winCongrats = this.add.text(CENTER_X, 118, 'CONGRATULATIONS', {
-            fontFamily: FONTS.heading, fontSize: '26px', color: HEX.game, fontWeight: 'bold', letterSpacing: 6
+            fontFamily: FONTS.heading, fontSize: uiPx(22), color: HEX.game, fontWeight: 'bold', letterSpacing: 4
         }).setOrigin(0.5, 0.5).setDepth(90);
 
         this.winTitle = this.add.text(CENTER_X, 164, 'MATCH OVER', {
-            fontFamily: FONTS.heading, fontSize: '40px', color: HEX.accent, fontWeight: 'bold'
+            fontFamily: FONTS.heading, fontSize: uiPx(32), color: HEX.accent, fontWeight: 'bold'
         }).setOrigin(0.5, 0.5).setDepth(90);
 
         this.winName = this.add.text(CENTER_X, 226, '', {
-            fontFamily: FONTS.heading, fontSize: '52px', color: HEX.textPrimary, fontWeight: 'bold'
+            fontFamily: FONTS.heading, fontSize: uiPx(36), color: HEX.textPrimary, fontWeight: 'bold',
+            wordWrap: { width: SCREEN_W - 48 }, align: 'center'
         }).setOrigin(0.5, 0.5).setDepth(90);
 
         this.winMessage = this.add.text(CENTER_X, 286, '', {
-            fontFamily: FONTS.body, fontSize: '22px', color: HEX.white, align: 'center',
-            wordWrap: { width: SCREEN_W - 120, useAdvancedWrap: true }
+            fontFamily: FONTS.body, fontSize: uiPx(18), color: HEX.white, align: 'center',
+            wordWrap: { width: SCREEN_W - 64, useAdvancedWrap: true }
         }).setOrigin(0.5, 0.5).setDepth(90);
 
         this.winRatingLabel = this.add.text(CENTER_X, 338, 'FINAL LEADERBOARD', {
-            fontFamily: FONTS.heading, fontSize: '22px', color: HEX.accent, letterSpacing: 4
+            fontFamily: FONTS.heading, fontSize: uiPx(18), color: HEX.accent, letterSpacing: 3
         }).setOrigin(0.5, 0.5).setDepth(90);
 
         this.winStatsText = this.add.text(CENTER_X, 368, '', {
-            fontFamily: FONTS.body, fontSize: '18px', color: HEX.textSecondary, align: 'center', lineSpacing: 8
+            fontFamily: FONTS.body, fontSize: uiPx(16), color: HEX.textSecondary, align: 'center', lineSpacing: 8
         }).setOrigin(0.5, 0).setDepth(90);
 
         this.winRankTexts = [];
+        const winRowH = Math.round(52 * UI_SCALE);
         for (let i = 0; i < 5; i++) {
-            this.winRankTexts.push(this.add.text(CENTER_X, 410 + i * 86, '', {
-                fontFamily: FONTS.mono, fontSize: '30px', color: HEX.textPrimary, align: 'center'
+            this.winRankTexts.push(this.add.text(CENTER_X, 410 + i * winRowH, '', {
+                fontFamily: FONTS.mono, fontSize: uiPx(20), color: HEX.textPrimary, align: 'center',
+                wordWrap: { width: SCREEN_W - 48 }
             }).setOrigin(0.5, 0).setDepth(90).setVisible(false));
         }
 
@@ -289,9 +294,9 @@ GameScene.prototype.drawWinMode = function() {
                 const starStr = '★'.repeat(stars) + '☆'.repeat(5 - stars);
                 const lives = Math.max(0, p.lives || 0);
                 row.setText(
-                    medals[i] + '  ' + (p.name || ('P' + (p.playerNumber || i + 1))).toUpperCase() +
-                    '   ' + String(p.score || 0).padStart(5, '0') +
-                    '   ' + starStr + '   ' + lives + '♥'
+                    medals[i] + '  ' + (p.name || ('P' + (p.playerNumber || i + 1))).toUpperCase().substring(0, 10) +
+                    '  ' + String(p.score || 0).padStart(5, '0') +
+                    '  ' + starStr + '  ' + lives + '♥'
                 );
                 row.setColor(PLAYER_HEX[(Math.max(1, p.playerNumber) - 1) % PLAYER_HEX.length]);
                 row.setVisible(true);

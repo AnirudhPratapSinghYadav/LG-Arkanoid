@@ -167,7 +167,7 @@ GameScene.prototype.drawBricks = function() {
             if (!brick || !brick.active) continue;
 
             const localX = brick.x - virtualLeft;
-            if (localX < -160 || localX > 2080) continue;
+            if (localX < -160 || localX > SCREEN_W + 160) continue;
 
             const gap = 4;
             const drawW = (brick.width || 140) - gap;

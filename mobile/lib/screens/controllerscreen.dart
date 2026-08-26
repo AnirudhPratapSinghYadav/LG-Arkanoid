@@ -200,7 +200,7 @@ class _ControllerScreenState extends State<ControllerScreen> {
                             child: ConnectionStatus(
                                 isConnected: service.connected, label: 'GAME'),
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 6),
                           Text(
                             '${service.latencyMs}ms',
                             maxLines: 1,
@@ -220,13 +220,14 @@ class _ControllerScreenState extends State<ControllerScreen> {
                             },
                             style: TextButton.styleFrom(
                               foregroundColor: accentError,
-                              padding: const EdgeInsets.symmetric(horizontal: 8),
-                              minimumSize: const Size(64, 36),
+                              padding: const EdgeInsets.symmetric(horizontal: 6),
+                              minimumSize: const Size(56, 36),
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                             ),
                             child: Text(
                               'LEAVE',
                               style: AppFonts.spaceGrotesk(
-                                fontSize: 13,
+                                fontSize: 12,
                                 fontWeight: FontWeight.w800,
                                 color: accentError,
                               ),

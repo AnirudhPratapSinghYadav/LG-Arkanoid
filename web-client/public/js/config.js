@@ -9,6 +9,11 @@ const SCREEN_W = (typeof window.SCREEN_W === 'number' && window.SCREEN_W > 0)
     : Math.round(CANVAS_H * (16 / 9));
 const CENTER_X = SCREEN_W / 2;
 const CENTER_Y = CANVAS_H / 2;
+// Portrait LG frames are ~608px wide. Landscape HUD sizes (52–68px) overflow.
+const UI_SCALE = Math.max(0.58, Math.min(1, SCREEN_W / 960));
+function uiPx(n) {
+    return Math.round(n * UI_SCALE) + 'px';
+}
 
 function liveNumScreens(state) {
     const n = state && state.numScreens;

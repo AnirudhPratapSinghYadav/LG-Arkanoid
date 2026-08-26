@@ -128,12 +128,16 @@ class GameEndOverlay extends StatelessWidget {
                     final rowScore = row['score'] as int? ?? 0;
                     return Padding(
                       padding: const EdgeInsets.symmetric(vertical: 3),
-                      child: Text(
-                        '#${i + 1}  ${name.toUpperCase()}   ${rowScore.toString().padLeft(5, '0')}',
-                        style: AppFonts.jetBrainsMono(
-                          fontSize: 14,
-                          color: i == 0 ? accentWarning : textPrimary,
-                          fontWeight: FontWeight.w600,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          '#${i + 1}  ${name.toUpperCase()}   ${rowScore.toString().padLeft(5, '0')}',
+                          maxLines: 1,
+                          style: AppFonts.jetBrainsMono(
+                            fontSize: 14,
+                            color: i == 0 ? accentWarning : textPrimary,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
                     );

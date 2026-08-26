@@ -478,7 +478,14 @@ body.is-leftmost-screen .boot-overlay__logos {
     }
     .lobby-card__brand { font-size: 1.15rem; }
     .lobby-card__code { font-size: 1.4rem; }
-    .lg-corner { display: none !important; }
+    .lg-corner {
+        gap: 8px;
+        padding: 8px 10px;
+        max-width: calc(100vw - 16px);
+    }
+    .lg-corner__logo { height: 28px; max-width: 96px; }
+    .lg-corner__eyebrow { font-size: 9px; }
+    .lg-corner__name { font-size: 18px; }
 }
 
 #qr-session-code-inline {
