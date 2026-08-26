@@ -1,11 +1,11 @@
 # LG Arkanoid — mobile controller
 
-Flutter phone controller for the panoramic LG Arkanoid game.
+Flutter **phone paddle** for the panoramic LG Arkanoid match. This APK does not draw the wall.
 
 ## Requirements
 
 - Flutter **3.24.x**
-- Android device or emulator on the same network as the game server
+- Android device or emulator. Emulator join to a laptop server: `10.0.2.2:8130`. SSH / LAUNCH ON RIG: rig Wi‑Fi IPv4, never `10.0.2.2`. Hostname `lg1` is blocked.
 
 ## Run
 

@@ -1,35 +1,17 @@
 'use strict';
 /**
- * Arkanoid AI — Gemini with a 10-model cascade, then arcade-announcer fallback.
- * Invalid keys / 4xx auth stop the cascade immediately (all models would fail).
- * Missing-model 404s walk the list. Failures cool down so the physics loop
- * never hammers Google every 16 ms.
+ * Arkanoid AI — Gemini cascade then arcade-announcer fallback.
+ * The HTTP client lives in geminiClient.js so this file stays prompts + policy.
  */
-const fetch = require('node-fetch');
 const gameEngine = require('../gameEngine.js');
 const { FALLBACK_COMMENTARY, FALLBACK_BY_EVENT, COMMENTARY_COOLDOWNS } = require('../config.js');
-
-const GEMINI_MODELS = [
-  'gemini-2.5-flash',
-  'gemini-2.5-flash-lite',
-  'gemini-2.5-pro',
-  'gemini-2.0-flash',
-  'gemini-2.0-flash-lite',
-  'gemini-2.0-flash-exp',
-  'gemini-1.5-flash',
-  'gemini-1.5-flash-8b',
-  'gemini-1.5-pro',
-  'gemini-1.5-flash-latest',
-];
+const { GEMINI_MODELS, callGemini } = require('./geminiClient.js');
+const config = require('../config.js');
 
 let isGeneratingLevel = false;
 let isPollingGameMaster = false;
 let geminiLevelCooldownUntil = 0;
 let geminiPollCooldownUntil = 0;
-let geminiAuthCooldownUntil = 0;
-let lastWorkingModel = GEMINI_MODELS[0];
-
-const config = require('../config.js');
 
 function namedPlayers(snapshot) {
   return (snapshot && snapshot.players ? snapshot.players : [])
@@ -61,108 +43,6 @@ function pickFallbackCommentary(eventType, snapshot) {
     return byEvent[Math.floor(Math.random() * byEvent.length)];
   }
   return FALLBACK_COMMENTARY[Math.floor(Math.random() * FALLBACK_COMMENTARY.length)];
-}
-
-function isAuthFailure(status, body) {
-  if (status === 401 || status === 403) return true;
-  const s = String(body || '');
-  return /API_KEY_INVALID|API key not valid|PERMISSION_DENIED|UNAUTHENTICATED/i.test(s);
-}
-
-async function callGeminiOnce(model, prompt, options) {
-  const apiKey = config.GEMINI_API_KEY;
-  if (!apiKey) {
-    const err = new Error('GEMINI_API_KEY not configured');
-    err.code = 'NO_KEY';
-    throw err;
-  }
-
-  const maxOutputTokens = options.maxOutputTokens || 80;
-  const temperature = options.temperature != null ? options.temperature : 0.9;
-  const timeoutMs = options.timeoutMs || 8000;
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
-
-  try {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-goog-api-key': apiKey,
-        },
-        signal: controller.signal,
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { maxOutputTokens, temperature },
-        }),
-      }
-    );
-    clearTimeout(timeout);
-    const raw = await response.text();
-    if (!response.ok) {
-      const err = new Error(`Gemini ${model} ${response.status}`);
-      err.status = response.status;
-      err.body = raw.slice(0, 400);
-      err.auth = isAuthFailure(response.status, raw);
-      err.skipModel = response.status === 404 || /not found|NOT_FOUND/i.test(raw);
-      throw err;
-    }
-    let data;
-    try { data = JSON.parse(raw); } catch (e) {
-      const err = new Error('Gemini JSON parse failed');
-      err.skipModel = true;
-      throw err;
-    }
-    const text = (data.candidates && data.candidates[0] && data.candidates[0].content &&
-      data.candidates[0].content.parts && data.candidates[0].content.parts[0] &&
-      data.candidates[0].content.parts[0].text) || '';
-    return String(text).trim();
-  } catch (e) {
-    clearTimeout(timeout);
-    throw e;
-  }
-}
-
-async function callGemini(prompt, options = {}) {
-  if (!config.GEMINI_API_KEY) {
-    const err = new Error('GEMINI_API_KEY not configured');
-    err.code = 'NO_KEY';
-    throw err;
-  }
-  if (Date.now() < geminiAuthCooldownUntil) {
-    const err = new Error('Gemini auth cooldown');
-    err.code = 'AUTH_COOLDOWN';
-    throw err;
-  }
-
-  const preferred = lastWorkingModel && GEMINI_MODELS.indexOf(lastWorkingModel) !== -1
-    ? [lastWorkingModel, ...GEMINI_MODELS.filter((m) => m !== lastWorkingModel)]
-    : GEMINI_MODELS.slice();
-
-  let lastErr = null;
-  for (let i = 0; i < preferred.length; i++) {
-    const model = preferred[i];
-    try {
-      const text = await callGeminiOnce(model, prompt, options);
-      if (text) {
-        lastWorkingModel = model;
-        return { text, model };
-      }
-    } catch (err) {
-      lastErr = err;
-      if (err.code === 'NO_KEY') throw err;
-      if (err.auth) {
-        geminiAuthCooldownUntil = Date.now() + 300000;
-        err.code = 'AUTH';
-        throw err;
-      }
-      // 404 / unknown model → try the next id. Other 4xx/5xx also walk the list.
-      continue;
-    }
-  }
-  throw lastErr || new Error('All Gemini models failed');
 }
 
 function buildPrompt(eventType, snapshot) {
@@ -229,17 +109,18 @@ async function triggerCommentary(eventType, snapshot, io, commentaryRateLimiter,
   });
 }
 
-async function pollGameMasterAsync(worldState, io) {
+async function pollGameMasterAsync(worldState, io, snapshot) {
   if (isPollingGameMaster) return;
-  if (Date.now() < geminiPollCooldownUntil || Date.now() < geminiAuthCooldownUntil) return;
+  if (Date.now() < geminiPollCooldownUntil) return;
   const limiter = worldState.commentaryRateLimiter && worldState.commentaryRateLimiter.game_master;
   if (limiter && Date.now() - limiter.lastCalledAt < 15000) return;
 
   isPollingGameMaster = true;
   if (limiter) limiter.lastCalledAt = Date.now();
+  const view = snapshot || worldState;
   try {
     io.emit('commentary_thinking', { eventType: 'game_master', source: 'gemini' });
-    const prompt = buildPrompt('game_master', worldState);
+    const prompt = buildPrompt('game_master', view);
     const result = await callGemini(prompt, { maxOutputTokens: 120, temperature: 0.5 });
     const jsonMatch = result.text && result.text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) return;
@@ -269,7 +150,7 @@ async function pollGameMasterAsync(worldState, io) {
 
 async function generateNextLevelAsync(nextLevel, worldState) {
   if (isGeneratingLevel) return;
-  if (Date.now() < geminiLevelCooldownUntil || Date.now() < geminiAuthCooldownUntil) return;
+  if (Date.now() < geminiLevelCooldownUntil) return;
   isGeneratingLevel = true;
   try {
     if (worldState && worldState.io) {

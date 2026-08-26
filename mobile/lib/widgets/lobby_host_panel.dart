@@ -53,7 +53,7 @@ class LobbyHostPanel extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         Text(
-          'PLAYERS',
+          'PADDLE SLOTS',
           style: AppFonts.spaceGrotesk(
             fontSize: 12,
             fontWeight: FontWeight.bold,

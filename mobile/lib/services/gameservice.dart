@@ -253,6 +253,7 @@ class GameService extends ChangeNotifier {
       return false;
     } catch (e) {
       debugPrint('Socket connection error: $e');
+      lastConnectError = e.toString();
       return false;
     }
   }

@@ -5,23 +5,25 @@ const path = require('path');
 const fs = require('fs');
 const { getLanIp, resolveWebRoot, SCREEN_WIDTH, CANVAS_HEIGHT, PORT } = require('./config.js');
 
+function healthPayload(worldState) {
+  return {
+    status: 'ok',
+    numScreens: worldState.numScreens || 3,
+    gameStatus: worldState.gameStatus,
+    gameActive: worldState.gameStatus === 'playing',
+    connectedPlayers: (worldState.players || []).filter((p) => p.connected).length,
+    // sessionToken intentionally omitted — join code is pushed only to screen sockets.
+    lanIp: getLanIp(),
+    port: PORT,
+  };
+}
+
 function createRouter(worldState) {
   const router = express.Router();
   const web = resolveWebRoot();
 
-  // Health check endpoint
-
   router.get('/health', (req, res) => {
-    res.json({
-      status: 'ok',
-      numScreens: worldState.numScreens || 3,
-      gameStatus: worldState.gameStatus,
-      gameActive: worldState.gameStatus === 'playing',
-      connectedPlayers: worldState.players.filter((p) => p.connected).length,
-      // sessionToken intentionally omitted — join code is pushed only to screen sockets.
-      lanIp: getLanIp(),
-      port: PORT,
-    });
+    res.json(healthPayload(worldState));
   });
 
   // Pacman-style browser controller (optional). Flutter app is preferred on phone.
@@ -51,7 +53,7 @@ function createRouter(worldState) {
   //   http://lg1:8130/2  -- the slice to its right
   // Unlike galaxy-pacman, which puts the *hostname* digit in the URL, the slice
   // index here is the physical left→right position the launcher derived from
-  // LG_FRAMES. See docs/lg-setup.md for why.
+  // LG_FRAMES. README section C documents the map.
   // Injects SCREEN_ID + NUM_SCREENS for the Phaser client (Pacman-style routes).
 
   router.get('/:screenNum(\\d+)', (req, res) => {
@@ -88,4 +90,5 @@ function createRouter(worldState) {
   return router;
 }
 
+createRouter.healthPayload = healthPayload;
 module.exports = createRouter;

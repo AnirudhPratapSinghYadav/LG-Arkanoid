@@ -139,13 +139,14 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
     });
   }
 
-  void _onStartMatch() {
+  Future<void> _onStartMatch() async {
     if (_gameService.latestGameState != null) {
       final players = _gameService.latestGameState!['players'] as List<dynamic>? ?? [];
       final connected = players.where((p) => p['connected'] == true).length;
       if (connected < _selectedMaxPlayers) return;
     }
-    _persistAndPushSettings();
+    await _persistAndPushSettings();
+    if (!mounted) return;
     _gameService.startGame(
       durationSeconds: _selectedDuration,
       maxPlayers: _selectedMaxPlayers,

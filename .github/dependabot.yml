@@ -14,6 +14,8 @@ updates:
         versions: [">=6"]
       - dependency-name: express
         versions: [">=5"]
+      - dependency-name: dotenv
+        versions: [">=17"]
       - dependency-name: node-fetch
         versions: [">=3"]
       - dependency-name: concurrently
@@ -39,3 +41,7 @@ updates:
         versions: [">=6"]
       - dependency-name: flutter_secure_storage
         versions: [">=11"]
+      - dependency-name: flutter_tts
+        versions: [">=4"]
+      - dependency-name: mobile_scanner
+        versions: [">=6"]

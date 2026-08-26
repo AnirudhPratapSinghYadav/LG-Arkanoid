@@ -7,9 +7,9 @@ import 'package:provider/provider.dart';
 import '../utils/constants.dart';
 import '../services/gameservice.dart';
 import '../widgets/mission_background.dart';
-import '../widgets/lgpanel.dart';
-import '../widgets/connectionstatus.dart';
 import '../widgets/controller_dpad.dart';
+import '../widgets/controller_touchpad.dart';
+import '../widgets/controller_hud_bar.dart';
 import '../widgets/powerup_panel.dart';
 import '../widgets/player_stats_bar.dart';
 import '../widgets/game_end_overlay.dart';
@@ -172,69 +172,18 @@ class _ControllerScreenState extends State<ControllerScreen> {
               child: Column(
                 children: [
                   Padding(
-                    padding:
-                        const EdgeInsets.fromLTRB(12, 6, 12, 0),
-                    child: LgPanel(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 8,
-                            height: 8,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: playerColor,
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            'P${service.playerNumber ?? 1}',
-                            style: AppFonts.spaceGrotesk(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                              color: textPrimary,
-                            ),
-                          ),
-                          const Spacer(),
-                          Flexible(
-                            child: ConnectionStatus(
-                                isConnected: service.connected, label: 'GAME'),
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            '${service.latencyMs}ms',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: AppFonts.jetBrainsMono(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              color: textSecondary,
-                            ),
-                          ),
-                          TextButton(
-                            onPressed: () async {
-                              final ok = await confirmLeave(
-                                  context, title: 'LEAVE MATCH?');
-                              if (!ok || !context.mounted) return;
-                              leaveToStart(context);
-                            },
-                            style: TextButton.styleFrom(
-                              foregroundColor: accentError,
-                              padding: const EdgeInsets.symmetric(horizontal: 6),
-                              minimumSize: const Size(56, 36),
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            ),
-                            child: Text(
-                              'LEAVE',
-                              style: AppFonts.spaceGrotesk(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w800,
-                                color: accentError,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+                    padding: const EdgeInsets.fromLTRB(12, 6, 12, 0),
+                    child: ControllerHudBar(
+                      playerColor: playerColor,
+                      playerNumber: service.playerNumber ?? 1,
+                      connected: service.connected,
+                      latencyMs: service.latencyMs,
+                      onLeave: () async {
+                        final ok = await confirmLeave(
+                            context, title: 'LEAVE MATCH?');
+                        if (!ok || !context.mounted) return;
+                        leaveToStart(context);
+                      },
                     ),
                   ),
                   PlayerStatsBar(
@@ -272,12 +221,24 @@ class _ControllerScreenState extends State<ControllerScreen> {
                   ),
                   Expanded(
                     child: Padding(
-                      padding: const EdgeInsets.fromLTRB(0, 8, 0, 12),
-                      child: ControllerDpad(
-                        playerColor: playerColor,
-                        onPaddleMove: (delta) {
-                          context.read<GameService>().sendPaddleMove(delta);
-                        },
+                      padding: const EdgeInsets.fromLTRB(0, 8, 0, 8),
+                      child: Column(
+                        children: [
+                          Expanded(
+                            child: ControllerDpad(
+                              playerColor: playerColor,
+                              onPaddleMove: (delta) {
+                                context.read<GameService>().sendPaddleMove(delta);
+                              },
+                            ),
+                          ),
+                          ControllerTouchpad(
+                            playerColor: playerColor,
+                            onPaddleMove: (delta) {
+                              context.read<GameService>().sendPaddleMove(delta);
+                            },
+                          ),
+                        ],
                       ),
                     ),
                   ),

@@ -75,11 +75,21 @@ function joinGame() {
         setJoinBusy(false);
     }, 12000);
 
-    let serverOrigin = window.location.origin;
-    if (window.location.port === '5173') {
-        serverOrigin = window.location.protocol + '//' + window.location.hostname + ':8130';
-    }
+    const serverOrigin = controllerServerOrigin();
+    probeControllerHealth(serverOrigin).then(function () {
+        openJoinSocket(serverOrigin, token, playerName);
+    }).catch(function () {
+        const err = document.getElementById('joinError');
+        if (err) err.textContent = 'Could not reach LG Arkanoid /health on port 8130. Same Wi-Fi, not SSH 22.';
+        if (joinTimer) {
+            clearTimeout(joinTimer);
+            joinTimer = null;
+        }
+        setJoinBusy(false);
+    });
+}
 
+function openJoinSocket(serverOrigin, token, playerName) {
     if (socket) {
         socket.removeAllListeners();
         socket.disconnect();

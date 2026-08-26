@@ -3,15 +3,17 @@ import '../utils/app_fonts.dart';
 import '../utils/constants.dart';
 
 class ControllerTouchpad extends StatefulWidget {
-  final Animation<double> glowAnimation;
+  final Animation<double>? glowAnimation;
   final Color playerColor;
   final Function(double) onPaddleMove;
+  final double height;
 
   const ControllerTouchpad({
     super.key,
-    required this.glowAnimation,
+    this.glowAnimation,
     required this.playerColor,
     required this.onPaddleMove,
+    this.height = 140,
   });
 
   @override
@@ -57,27 +59,29 @@ class _ControllerTouchpadState extends State<ControllerTouchpad> {
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
+    final glow = widget.glowAnimation ?? const AlwaysStoppedAnimation<double>(0.7);
 
     return GestureDetector(
       onPanUpdate: (details) => _onPanUpdate(details, screenWidth),
       onPanEnd: _onPanEnd,
       child: AnimatedBuilder(
-        animation: widget.glowAnimation,
+        animation: glow,
         builder: (context, child) {
+          final g = glow.value;
           return Container(
             width: double.infinity,
-            height: 200,
+            height: widget.height,
             margin: const EdgeInsets.symmetric(horizontal: 16),
             decoration: BoxDecoration(
               color: cardFill,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: widget.playerColor.withOpacity(widget.glowAnimation.value),
+                color: widget.playerColor.withOpacity(g),
                 width: 1.5,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: widget.playerColor.withOpacity(widget.glowAnimation.value * 0.3),
+                  color: widget.playerColor.withOpacity(g * 0.3),
                   blurRadius: 20,
                   spreadRadius: -5,
                 ),

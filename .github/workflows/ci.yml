@@ -97,6 +97,10 @@ jobs:
         run: flutter analyze
         working-directory: ./mobile
 
+      - name: Flutter unit tests
+        run: flutter test
+        working-directory: ./mobile
+
       - name: Build split-per-ABI release APKs
         # Maven Central sometimes returns 429 on GitHub-hosted runners.
         # Retry a few times so a rate-limit does not fail a green tree.

@@ -8,8 +8,9 @@ import '../services/ssh_service.dart';
 import '../utils/constants.dart';
 import '../widgets/lgpanel.dart';
 import '../widgets/connectionstatus.dart';
-import '../widgets/dual_brand.dart';
 import '../widgets/settings_labeled_field.dart';
+import '../widgets/settings_about_footer.dart';
+import '../utils/settings_validators.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -332,17 +333,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       label: 'IP ADDRESS',
                       hint: '10.11.77.106  (lg1 Wi‑Fi IPv4)',
                       controller: _hostController,
-                      validator: (value) {
-                        final h = (value ?? '').trim().toLowerCase();
-                        if (h.isEmpty) return 'This field is required';
-                        if (h == 'lg1') {
-                          return 'Phones cannot resolve lg1. Use the Wi‑Fi IPv4.';
-                        }
-                        if (h == '10.0.2.2' || h == '127.0.0.1' || h == 'localhost') {
-                          return 'SSH needs the rig IPv4. 10.0.2.2 is only for joining the game from the emulator.';
-                        }
-                        return null;
-                      },
+                      validator: validateRigHost,
                     ),
                     const SizedBox(height: 8),
                     Text(
@@ -359,11 +350,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       hint: '22',
                       controller: _portController,
                       keyboardType: TextInputType.number,
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) return 'This field is required';
-                        if (int.tryParse(value) == null) return 'Must be a valid port number';
-                        return null;
-                      }
+                      validator: validateSshPort
                     ),
                     const SizedBox(height: 16),
                     SettingsLabeledField(
@@ -371,13 +358,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       hint: '3',
                       controller: _screensController,
                       keyboardType: TextInputType.number,
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) return 'This field is required';
-                        final n = int.tryParse(value);
-                        if (n == null) return 'Must be a number';
-                        if (n < 1 || n > 12) return 'Use 1–12 (typical LG: 3, 5, 7, 9, 12)';
-                        return null;
-                      }
+                      validator: validateScreenCount
                     ),
                   ],
                 ),
@@ -513,49 +494,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
             const SizedBox(height: 32),
-            // -- About section ------------------------------------------------
-            Center(
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Image.asset('assets/app_icon_transparent.webp', width: 28, height: 28),
-                      const SizedBox(width: 12),
-                      const DualBrand(height: 24),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'AI Arkanoid LG',
-                    style: AppFonts.spaceGrotesk(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      color: textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Panoramic Arkanoid for Liquid Galaxy',
-                    style: AppFonts.inter(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: accentSystem,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Built by Anirudh Pratap Singh Yadav for Liquid Galaxy\nGemini SoC 2026',
-                    style: AppFonts.inter(
-                      fontSize: 11,
-                      color: textSecondary,
-                      height: 1.4,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            ),
+            const SettingsAboutFooter(),
             const SizedBox(height: 24),
           ],
         ),

@@ -348,4 +348,20 @@ test('brick break credits a living paddle if the ball was never touched', () => 
   assert.strictEqual(state.players[0].score, 10);
 });
 
+test('disconnect grace freezes the court so lives are not drained offline', () => {
+  const state = makePlayingState(3);
+  const p = state.players[0];
+  p.connected = false;
+  p.lives = 3;
+  p.score = 40;
+  state.lastFallenBallToucher = 'player1';
+  const ball = state.balls[0];
+  ball.active = true;
+  ball.y = gameEngine.CANVAS_HEIGHT + 80;
+  ball.vy = 20;
+  gameEngine.updateGameLoop(state, () => {});
+  assert.strictEqual(p.lives, 3, 'offline paddle keeps lives during grace');
+  assert.strictEqual(p.score, 40, 'offline paddle keeps score during grace');
+});
+
 console.log('All gameEngine tests passed.');

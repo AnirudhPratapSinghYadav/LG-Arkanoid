@@ -65,4 +65,15 @@ const localWall = read('scripts/open-local-wall.js');
 assert.ok(localWall.includes('127.0.0.1'), 'laptop wall tabs hit Express :8130 so SCREEN_ID is injected');
 assert.ok(!/localhost:5173|127\.0\.0\.1:5173/.test(localWall), 'do not open Vite — slices would all look like the center QR');
 
+const frames = read('scripts/lib/frames.sh');
+assert.ok(frames.includes('lg_frame_order'), 'left-to-right LG order helper');
+assert.ok(!/screen_number=\$\{lg:2\}/.test(frames), 'do not map hostname digit to slice');
+
+const match = read('server/match.js');
+assert.ok(match.includes("io.to('screens').emit('lobby_ready'"), 'lobby token must not be a global io.emit');
+assert.ok(!/^\s*io\.emit\('lobby_ready'/m.test(match), 'idle sockets must not receive the join code');
+
+const joinHtml = read('web-client/controller.html');
+assert.ok(joinHtml.includes('controller-join.js'), 'web paddle must probe /health before Socket.IO');
+
 console.log('ssh-launch tests passed');

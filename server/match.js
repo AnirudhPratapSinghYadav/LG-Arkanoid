@@ -301,7 +301,10 @@ function createMatchController({ worldState, io, pendingHandoffs, applyPowerUpEf
     worldState.balls[1].active = false;
 
     const info = sessionInfoPayload();
-    io.emit('lobby_ready', info);
+    // Join code goes only to wall screens and already-joined paddles —
+    // never to every idle Socket.IO connection on the LAN.
+    io.to('screens').emit('lobby_ready', info);
+    io.to('controllers').emit('lobby_ready', info);
 
     worldState.players.forEach((p, index) => {
       if (p.connected && p.socketId && p.id) {
@@ -440,7 +443,7 @@ function createMatchController({ worldState, io, pendingHandoffs, applyPowerUpEf
         const snap = getWorldSnapshot();
         snap.playerId = p.id;
         triggerCommentary('life_lost', snap, io, worldState.commentaryRateLimiter, worldState);
-        pollGameMasterAsync(worldState, io);
+        pollGameMasterAsync(worldState, io, getWorldSnapshot());
         if (p.lives === 0) {
           io.emit('player_eliminated', { playerId: p.id, playerNumber: i + 1 });
         }
@@ -450,7 +453,7 @@ function createMatchController({ worldState, io, pendingHandoffs, applyPowerUpEf
     if (worldState.level > beforeLevel) {
       worldState.currentLevel = worldState.level;
       triggerCommentary('level_cleared', getWorldSnapshot(), io, worldState.commentaryRateLimiter, worldState);
-      pollGameMasterAsync(worldState, io);
+      pollGameMasterAsync(worldState, io, getWorldSnapshot());
     }
 
     if (worldState.gameStatus === 'game_over' || worldState.gameStatus === 'win' || worldState.gameStatus === 'time_up') {

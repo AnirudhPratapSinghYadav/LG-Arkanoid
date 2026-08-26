@@ -51,9 +51,9 @@ class StatusScreen extends StatelessWidget {
               _buildCard(
                 'GAME STATE',
                 [
-                  _buildRow('Status', state['status'] ?? 'Unknown'),
+                  _buildRow('Status', '${state['gameStatus'] ?? 'Unknown'}'),
                   _buildRow(
-                      'Screen Width', '${state['rigVirtualWidth'] ?? 0}'),
+                      'Screens', '${state['numScreens'] ?? 0} × ${state['screenWidth'] ?? 0}px'),
                   const SizedBox(height: 8),
                   Text('BALLS',
                       style: AppFonts.inter(
