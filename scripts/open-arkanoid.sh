@@ -34,6 +34,34 @@ PROJECT_DIR="$( cd "$SCRIPT_DIR/.." && pwd )"
 # shellcheck disable=SC1091
 . "$SCRIPT_DIR/lib/open-one-frame.sh"
 
+print_backup_urls() {
+  local port="$1"
+  local n=0 frame url
+  echo ""
+  echo "============================================================"
+  echo "Backup Chromium links (same pattern as Galaxy Pacman)."
+  echo "The command on lg1 should already have opened every glass."
+  echo "If one stays dark, sit at THAT machine and paste its line:"
+  echo "============================================================"
+  for frame in "${FRAMES[@]:0:$NUM_SCREENS}"; do
+    n=$((n + 1))
+    if [ "$frame" = "lg1" ]; then
+      url="http://localhost:${port}/${n}"
+    else
+      url="http://lg1:${port}/${n}"
+    fi
+    echo "  $frame  slice /$n"
+    echo "    chromium-browser --start-fullscreen '$url'"
+  done
+  echo "Laptop with no slaves — all slices on this PC:"
+  n=0
+  while [ "$n" -lt "$NUM_SCREENS" ]; do
+    n=$((n + 1))
+    echo "    http://127.0.0.1:${port}/$n"
+  done
+  echo "============================================================"
+}
+
 parse_open_args "$@"
 if [ "$?" -eq 2 ]; then
   sed -n '3,12p' "$0"
@@ -69,6 +97,7 @@ if [ -n "${DRY_RUN:-}" ]; then
     n=$((n + 1))
     echo "  slice /$n -> $frame"
   done
+  print_backup_urls "${PORT:-8130}"
   exit 0
 fi
 
@@ -123,7 +152,8 @@ for frame in "${FRAMES[@]:0:$NUM_SCREENS}"; do
 done
 
 echo "Launched $NUM_SCREENS screens on port $port."
+print_backup_urls "$port"
 if [ "$failed" = 1 ]; then
-  echo "Some slaves did not open. Fix SSH, then run this script again."
+  echo "Some slaves did not open. Use the Chromium line for that machine above, or fix SSH and run this script again."
   exit 1
 fi

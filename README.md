@@ -287,24 +287,61 @@ bash install.sh lq
 
 Installs Node **16.20.2** if needed, **pm2@5.4.3**, builds `dist/`, writes `server/.env`, opens **8130**.
 
-### C2. Open every screen
+### C2. Open every screen (one command on master)
+
+Galaxy Pacman and Asteroids do **not** ask you to walk to each slave. You run **one script on lg1**. That script SSHs to every other frame and starts Chromium there.
 
 ```bash
 bash scripts/open-arkanoid.sh
 ```
 
-Or `bash scripts/open-arkanoid.sh 5`. Starts the match, waits for `/health`, then Chromium:
+Or `bash scripts/open-arkanoid.sh 5`. It starts the match on **8130**, waits for `/health`, then:
 
-- lg1: `http://localhost:8130/1` … `/N` (left → right)
-- slaves: `http://lg1:8130/N`
+| Machine | Who opens it | URL in Chromium |
+|---|---|---|
+| **lg1** (master) | this script, locally | `http://localhost:8130/N` for the slice mapped to lg1 |
+| **lg2, lg3, …** (slaves) | this script, over SSH from lg1 | `http://lg1:8130/N` |
 
-QR is on the **center** physical screen.
+On a 3-glass the map is usually **lg3 → /1**, **lg1 → /2 (QR)**, **lg2 → /3**. So the QR is on the **center** machine, not because slaves were skipped — because lg1 is the center frame.
+
+Print the map without opening Chromium:
+
+```bash
+bash scripts/open-arkanoid.sh --frames 5
+```
 
 ```bash
 bash scripts/close-arkanoid.sh
 ```
 
 Already cloned: `git pull` then `bash scripts/open-arkanoid.sh`.
+
+### C2b. Backup — open Chromium by hand (what testers do when SSH fails)
+
+This is how Pacman documents a single screen: `localhost:<port>/<screen>`. Sit **at the dark machine**, not at a laptop across the room.
+
+After `open-arkanoid.sh` it prints the exact lines. Example for 3 screens:
+
+```bash
+# on lg1 (center / QR)
+chromium-browser --start-fullscreen 'http://localhost:8130/2'
+
+# on lg2 (right)
+chromium-browser --start-fullscreen 'http://lg1:8130/3'
+
+# on lg3 (left)
+chromium-browser --start-fullscreen 'http://lg1:8130/1'
+```
+
+On a **laptop** (no slaves) the same backup is all slices on this PC — `npm start` already opens them, or:
+
+```
+http://127.0.0.1:8130/1
+http://127.0.0.1:8130/2
+http://127.0.0.1:8130/3
+```
+
+Do not open `http://lg1:…` from a phone. Phones use the Wi‑Fi IPv4 and `/controller`.
 
 ### C3. Slaves must accept SSH
 

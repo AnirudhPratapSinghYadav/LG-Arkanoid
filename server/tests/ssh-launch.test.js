@@ -36,6 +36,7 @@ assert.ok(!open.includes('${lg:2}'), 'Do not copy Pacman hostname-digit slice nu
 assert.ok(!/wait_for_health "\$port" \|\| true/.test(open), 'Do not open Chromium if /health fails');
 assert.ok(open.includes('wait_for_health'), 'Must wait for /health before SSH');
 assert.ok(!/^\s*npm run build\b/m.test(open), 'Must not rebuild Vite on launch (Pacman/Asteroids never do)');
+assert.ok(open.includes('print_backup_urls') || open.includes('Backup Chromium'), 'open script must print manual Chromium URLs for each frame');
 
 const wait = read('scripts/lib/wait-health.sh');
 assert.ok(wait.includes('seq 1 40'), 'Give pm2 ~20s to answer /health');
