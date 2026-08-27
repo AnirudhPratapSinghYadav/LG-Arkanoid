@@ -1,17 +1,18 @@
 function startMatch() {
     if (!socket || !isConnected || !isHost) return;
-    const need = hostMaxPlayers;
     const connected = ((window.__lastGameState && window.__lastGameState.players) || [])
         .filter((p) => p && p.connected).length;
-    if (connected < need) {
+    if (connected < 1) {
         const btn = document.getElementById('startMatchBtn');
-        if (btn) btn.textContent = 'Need ' + need + ' players (' + connected + ')';
+        if (btn) btn.textContent = 'Need a paddle';
         return;
     }
+    const slots = Math.max(1, Math.min(hostMaxPlayers, connected));
+    hostMaxPlayers = slots;
     persistHostSettings();
     socket.emit('start_game', {
         durationSeconds: hostDuration,
-        maxPlayers: hostMaxPlayers,
+        maxPlayers: slots,
         ballSpeed: hostBallSpeed
     });
 }

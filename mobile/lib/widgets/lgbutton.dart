@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import '../utils/app_fonts.dart';
 import '../utils/constants.dart';
 
-class LgButton extends StatefulWidget {
+class LgButton extends StatelessWidget {
   final String label;
   final VoidCallback? onPressed;
   final bool isPrimary;
@@ -18,60 +18,25 @@ class LgButton extends StatefulWidget {
   });
 
   @override
-  State<LgButton> createState() => _LgButtonState();
-}
-
-class _LgButtonState extends State<LgButton> with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _scaleAnimation;
-  bool _isFocused = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 80));
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.98).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final isDisabled = widget.disabled || widget.onPressed == null;
-    final effectiveOpacity = isDisabled ? 0.4 : 1.0;
+    final isDisabled = disabled || onPressed == null;
 
     return Opacity(
-      opacity: effectiveOpacity,
-      child: GestureDetector(
-        onTapDown: isDisabled ? null : (_) {
-          HapticFeedback.selectionClick();
-          _controller.forward();
-        },
-        onTapUp: isDisabled ? null : (_) {
-          _controller.reverse();
-          widget.onPressed?.call();
-        },
-        onTapCancel: isDisabled ? null : () => _controller.reverse(),
-        child: Focus(
-          onFocusChange: (focused) {
-            setState(() {
-              _isFocused = focused;
-            });
-          },
-          child: AnimatedBuilder(
-            animation: _scaleAnimation,
-            builder: (context, child) => Transform.scale(
-              scale: _scaleAnimation.value,
-              child: child,
-            ),
-            child: Container(
+      opacity: isDisabled ? 0.4 : 1.0,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: isDisabled
+              ? null
+              : () {
+                  HapticFeedback.selectionClick();
+                  onPressed?.call();
+                },
+          borderRadius: BorderRadius.circular(14),
+          child: Ink(
             height: 56,
             decoration: BoxDecoration(
-              gradient: widget.isPrimary
+              gradient: isPrimary
                   ? const LinearGradient(
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
@@ -82,30 +47,21 @@ class _LgButtonState extends State<LgButton> with SingleTickerProviderStateMixin
                       ],
                     )
                   : null,
-              color: widget.isPrimary ? null : Colors.transparent,
+              color: isPrimary ? null : Colors.transparent,
               border: Border.all(
-                color: _isFocused
-                    ? accentSystem
-                    : (widget.isPrimary ? const Color(0xFF20C5FF) : Colors.white.withOpacity(0.12)),
-                width: _isFocused ? 2.5 : 1.5,
+                color: isPrimary ? const Color(0xFF20C5FF) : Colors.white.withOpacity(0.12),
+                width: 1.5,
               ),
               borderRadius: BorderRadius.circular(14),
-              boxShadow: widget.isPrimary && !isDisabled
+              boxShadow: isPrimary && !isDisabled
                   ? [
                       BoxShadow(
-                        color: accentSystem.withOpacity(_isFocused ? 0.45 : 0.28),
-                        blurRadius: _isFocused ? 16 : 12,
+                        color: accentSystem.withOpacity(0.28),
+                        blurRadius: 12,
                         offset: const Offset(0, 6),
                       )
                     ]
-                  : (_isFocused
-                      ? [
-                          BoxShadow(
-                            color: accentSystem.withOpacity(0.4),
-                            blurRadius: 12,
-                          )
-                        ]
-                      : []),
+                  : null,
             ),
             child: Center(
               child: Padding(
@@ -113,10 +69,10 @@ class _LgButtonState extends State<LgButton> with SingleTickerProviderStateMixin
                 child: FittedBox(
                   fit: BoxFit.scaleDown,
                   child: Text(
-                    widget.label,
+                    label,
                     maxLines: 1,
                     style: AppFonts.spaceGrotesk(
-                      color: widget.isPrimary ? const Color(0xFF041018) : textPrimary,
+                      color: isPrimary ? const Color(0xFF041018) : textPrimary,
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 0.8,
@@ -126,7 +82,6 @@ class _LgButtonState extends State<LgButton> with SingleTickerProviderStateMixin
               ),
             ),
           ),
-        ),
         ),
       ),
     );

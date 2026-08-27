@@ -12,6 +12,7 @@ import '../widgets/lobby_player_row.dart';
 import '../widgets/lobby_host_panel.dart';
 import '../widgets/lgbutton.dart';
 import '../utils/leave_match.dart';
+import '../utils/json_int.dart';
 
 class LobbyScreen extends StatefulWidget {
   const LobbyScreen({super.key});
@@ -90,8 +91,8 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
 
     if (!_syncedFromServer && (status == 'lobby' || status == 'waiting')) {
       _syncedFromServer = true;
-      final maxP = gameState['maxPlayers'] as int?;
-      final duration = gameState['gameDurationSeconds'] as int?;
+      final maxP = asInt(gameState['maxPlayers']);
+      final duration = asInt(gameState['gameDurationSeconds']);
       final speed = gameState['ballSpeed'] as String?;
       setState(() {
         if (maxP != null && maxP >= 1 && maxP <= 5) _selectedMaxPlayers = maxP;
@@ -140,16 +141,17 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
   }
 
   Future<void> _onStartMatch() async {
-    if (_gameService.latestGameState != null) {
-      final players = _gameService.latestGameState!['players'] as List<dynamic>? ?? [];
-      final connected = players.where((p) => p['connected'] == true).length;
-      if (connected < _selectedMaxPlayers) return;
-    }
+    final gameState = _gameService.latestGameState;
+    final players = gameState?['players'] as List<dynamic>? ?? [];
+    final connected = players.where((p) => p is Map && p['connected'] == true).length;
+    final slots = startSlotCount(connected: connected, selected: _selectedMaxPlayers);
+    if (slots < 1) return;
+    setState(() => _selectedMaxPlayers = slots);
     await _persistAndPushSettings();
     if (!mounted) return;
     _gameService.startGame(
       durationSeconds: _selectedDuration,
-      maxPlayers: _selectedMaxPlayers,
+      maxPlayers: slots,
       ballSpeed: _selectedBallSpeed,
     );
   }
@@ -159,14 +161,13 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
     final service = context.watch<GameService>();
     final gameState = service.latestGameState;
     final players = gameState?['players'] as List<dynamic>? ?? [];
-    final maxPlayers = gameState?['maxPlayers'] as int? ?? 3;
+    final maxPlayers = asInt(gameState?['maxPlayers']) ?? 3;
     
-    // Count active connections
-    final connectedCount = players.where((p) => p['connected'] == true).length;
+    final connectedCount = players.where((p) => p is Map && p['connected'] == true).length;
     
-    // Check if current player is the host (master)
-    final masterIndex = gameState?['masterPlayerIndex'] as int? ?? 0;
-    final isHost = (service.playerNumber ?? 0) - 1 == masterIndex;
+    final masterIndex = asInt(gameState?['masterPlayerIndex']) ?? 0;
+    final mySlot = asInt(service.playerNumber) ?? 0;
+    final isHost = mySlot > 0 && (mySlot - 1) == masterIndex;
 
     return PopScope(
       canPop: false,
@@ -304,7 +305,7 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
                               Navigator.pushNamed(context, '/qrinvite', arguments: payload);
                             },
                             onStartMatch:
-                                connectedCount >= _selectedMaxPlayers ? _onStartMatch : null,
+                                connectedCount >= 1 ? _onStartMatch : null,
                           )
                         else
                           AnimatedBuilder(

@@ -47,7 +47,7 @@ class LobbyHostPanel extends StatelessWidget {
         ),
         const SizedBox(height: 6),
         Text(
-          'Pick how many paddles. Start unlocks only when that many phones have joined.',
+          'Pick how many paddles you want. START still works with whoever has already joined.',
           style: AppFonts.inter(fontSize: 12, color: textSecondary, height: 1.35),
           textAlign: TextAlign.center,
         ),
@@ -78,12 +78,14 @@ class LobbyHostPanel extends StatelessWidget {
         ),
         const SizedBox(height: 10),
         Text(
-          ready
-              ? 'Ready — $connectedCount / $need joined'
-              : 'Waiting for players — $connectedCount / $need joined',
+          connectedCount < 1
+              ? 'Need at least one paddle on this Wi‑Fi'
+              : (ready
+                  ? 'Ready — $connectedCount / $need joined'
+                  : 'Start with $connectedCount now, or wait for $need'),
           style: AppFonts.inter(
             fontSize: 12,
-            color: ready ? accentGame : textSecondary,
+            color: connectedCount >= 1 ? accentGame : textSecondary,
             height: 1.35,
           ),
           textAlign: TextAlign.center,
@@ -143,8 +145,10 @@ class LobbyHostPanel extends StatelessWidget {
             const SizedBox(width: 16),
             Expanded(
               child: LgButton(
-                label: ready ? 'START MATCH' : 'NEED $need',
-                onPressed: ready ? onStartMatch : null,
+                label: connectedCount < 1
+                    ? 'NEED A PADDLE'
+                    : (ready ? 'START MATCH' : 'START WITH $connectedCount'),
+                onPressed: connectedCount >= 1 ? onStartMatch : null,
                 isPrimary: true,
               ),
             ),

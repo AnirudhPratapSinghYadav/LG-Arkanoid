@@ -16,7 +16,7 @@
     "start": "concurrently --names \"SERVER,VITE,WALL\" -c \"cyan,magenta,green\" \"npm run server\" \"npm run dev\" \"npm run open-wall\"",
     "open-wall": "node scripts/open-local-wall.js",
     "build": "vite build",
-    "test": "node server/tests/gameEngine.test.js && node server/tests/join-url.test.js && node server/tests/ssh-launch.test.js && node server/tests/matchResult.test.js && node server/tests/health.test.js"
+    "test": "node server/tests/gameEngine.test.js && node server/tests/join-url.test.js && node server/tests/ssh-launch.test.js && node server/tests/matchResult.test.js && node server/tests/health.test.js && node server/tests/lg-frames.test.js"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",

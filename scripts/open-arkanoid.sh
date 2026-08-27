@@ -36,16 +36,17 @@ PROJECT_DIR="$( cd "$SCRIPT_DIR/.." && pwd )"
 
 print_backup_urls() {
   local port="$1"
-  local n=0 frame url
+  local n=0 frame url master_slice=0
   echo ""
   echo "============================================================"
   echo "Backup Chromium links (same pattern as Galaxy Pacman)."
-  echo "The command on lg1 should already have opened every glass."
+  echo "One master: lg1. QR is that machine's slice, not always /2."
   echo "If one stays dark, sit at THAT machine and paste its line:"
   echo "============================================================"
   for frame in "${FRAMES[@]:0:$NUM_SCREENS}"; do
     n=$((n + 1))
     if [ "$frame" = "lg1" ]; then
+      master_slice=$n
       url="http://localhost:${port}/${n}"
     else
       url="http://lg1:${port}/${n}"
@@ -53,6 +54,9 @@ print_backup_urls() {
     echo "  $frame  slice /$n"
     echo "    chromium-browser --start-fullscreen '$url'"
   done
+  if [ "$master_slice" -gt 0 ]; then
+    echo "Master lg1 + QR → slice /$master_slice  (ceil($NUM_SCREENS/2) for odd walls)."
+  fi
   echo "Laptop with no slaves — all slices on this PC:"
   n=0
   while [ "$n" -lt "$NUM_SCREENS" ]; do

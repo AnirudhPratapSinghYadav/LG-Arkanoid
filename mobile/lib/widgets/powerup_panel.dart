@@ -99,6 +99,7 @@ class _PowerButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final enabled = onTap != null;
     return GestureDetector(
+      behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),

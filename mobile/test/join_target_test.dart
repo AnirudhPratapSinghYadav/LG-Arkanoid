@@ -3,6 +3,8 @@ import 'package:lg_arkanoid/utils/join_target.dart';
 import 'package:lg_arkanoid/utils/settings_validators.dart';
 import 'package:lg_arkanoid/services/health_probe.dart';
 
+import 'package:lg_arkanoid/utils/json_int.dart';
+
 void main() {
   group('parseJoinInput', () {
     test('QR controller URL', () {
@@ -54,6 +56,23 @@ void main() {
         }),
         isTrue,
       );
+    });
+  });
+
+  group('startSlotCount', () {
+    test('one paddle can start a match', () {
+      expect(startSlotCount(connected: 1, selected: 2), 1);
+      expect(startSlotCount(connected: 2, selected: 2), 2);
+      expect(startSlotCount(connected: 0, selected: 2), 0);
+    });
+  });
+
+  group('asInt', () {
+    test('accepts JSON nums from Socket.IO', () {
+      expect(asInt(1), 1);
+      expect(asInt(1.0), 1);
+      expect(asInt('3'), 3);
+      expect(asInt(null), isNull);
     });
   });
 }

@@ -1,6 +1,12 @@
 #!/bin/bash
-# Left→right hostnames. Do NOT copy Pacman's ${lg:2} slice number.
-# Pacman maps lg5 → /5. Arkanoid is one court, so /1 is always the leftmost frame.
+# Left→right hostnames. Must match server/lgFrameOrder.js.
+# Do NOT copy Pacman's ${lg:2} slice number (lg5 → /5).
+# One master: lg1 always runs the server. It is the center slice ceil(N/2).
+#   3: lg3 lg1 lg2           QR /2
+#   5: lg4 lg5 lg1 lg2 lg3     QR /3
+#   7: lg5 lg6 lg7 lg1 … lg4   QR /4
+#   9: lg6…lg9 lg1 … lg5       QR /5
+#  12: lg8…lg12 lg1 … lg7      QR /6
 
 lg_frame_order() {
   local n=$1 i

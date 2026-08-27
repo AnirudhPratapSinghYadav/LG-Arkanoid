@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
 import 'ttsservice.dart';
 import '../utils/join_target.dart';
+import '../utils/json_int.dart';
 import 'health_probe.dart';
 
 class GameService extends ChangeNotifier {
@@ -133,7 +134,7 @@ class GameService extends ChangeNotifier {
       socket!.on('join_confirmed', (data){
         final map = _asMap(data);
         playerId = map['playerId'] as String?;
-        playerNumber = map['playerNumber'] as int?;
+        playerNumber = asInt(map['playerNumber']);
         sessionId = map['sessionId'] as String?;
         resumeToken = map['resumeToken'] as String?;
         if (map['sessionToken'] is String) {
@@ -175,15 +176,13 @@ class GameService extends ChangeNotifier {
           for(final p in players){
             final pm = _asMap(p);
             if(pm['id']==playerId){
-              final newScore = pm['score'] as int? ?? 0;
-              final newLives = pm['lives'] as int? ?? 0;
+              final newScore = asInt(pm['score']) ?? 0;
+              final newLives = asInt(pm['lives']) ?? 0;
               if (newLives < lives) {
                 HapticFeedback.heavyImpact();
                 urgent = true;
               }
-              if (pm['rank'] is int) {
-                rank = pm['rank'] as int;
-              }
+              rank = asInt(pm['rank']) ?? rank;
               score = newScore;
               lives = newLives;
               break;

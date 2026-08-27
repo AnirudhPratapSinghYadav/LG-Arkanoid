@@ -48,6 +48,7 @@ class _ControllerDpadState extends State<ControllerDpad> {
   }) {
     return Expanded(
       child: Listener(
+        behavior: HitTestBehavior.opaque,
         onPointerDown: (_) => _startDpadMovement(delta),
         onPointerUp: (_) => _stopDpadMovement(),
         onPointerCancel: (_) => _stopDpadMovement(),

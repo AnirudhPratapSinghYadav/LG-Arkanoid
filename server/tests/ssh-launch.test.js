@@ -76,4 +76,8 @@ assert.ok(!/^\s*io\.emit\('lobby_ready'/m.test(match), 'idle sockets must not re
 const joinHtml = read('web-client/controller.html');
 assert.ok(joinHtml.includes('controller-join.js'), 'web paddle must probe /health before Socket.IO');
 
+const { lgFrameOrder, masterSlice } = require('../lgFrameOrder.js');
+assert.strictEqual(lgFrameOrder(5)[masterSlice(5) - 1], 'lg1');
+assert.strictEqual(lgFrameOrder(12)[masterSlice(12) - 1], 'lg1');
+
 console.log('ssh-launch tests passed');

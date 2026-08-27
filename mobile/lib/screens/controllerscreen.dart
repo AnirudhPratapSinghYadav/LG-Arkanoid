@@ -15,6 +15,7 @@ import '../widgets/player_stats_bar.dart';
 import '../widgets/game_end_overlay.dart';
 import '../utils/leave_match.dart';
 import '../services/ttsservice.dart';
+import '../utils/json_int.dart';
 
 class ControllerScreen extends StatefulWidget {
   const ControllerScreen({super.key});
@@ -63,15 +64,16 @@ class _ControllerScreenState extends State<ControllerScreen> {
       final players = gameState['players'] as List<dynamic>? ?? [];
       final sorted = List<dynamic>.from(players)
         ..sort((a, b) {
-          final aScore = (a as Map)['score'] as int? ?? 0;
-          final bScore = (b as Map)['score'] as int? ?? 0;
+          final aScore = asInt((a as Map)['score']) ?? 0;
+          final bScore = asInt((b as Map)['score']) ?? 0;
           return bScore.compareTo(aScore);
         });
 
       final result = gameState['matchResult'];
       final isDraw = result is Map && result['outcome'] == 'draw';
-      final masterIndex = gameState['masterPlayerIndex'] as int? ?? 0;
-      final isHost = (service.playerNumber ?? 0) - 1 == masterIndex;
+      final masterIndex = asInt(gameState['masterPlayerIndex']) ?? 0;
+      final isHost = (service.playerNumber ?? 0) > 0 &&
+          (service.playerNumber! - 1) == masterIndex;
 
       String winnerName = 'Nobody';
       if (sorted.isNotEmpty) {
@@ -112,7 +114,7 @@ class _ControllerScreenState extends State<ControllerScreen> {
           return <String, dynamic>{
             'name': row['name'] as String? ??
                 'Player ${row['playerNumber'] ?? ''}',
-            'score': row['score'] as int? ?? 0,
+            'score': asInt(row['score']) ?? 0,
           };
         }).toList();
       });

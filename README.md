@@ -286,7 +286,7 @@ Install `mobile/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk` (or `ar
 
 ### B4. In a match
 
-1. Host sets players / speed / time if they want, then **CREATE & START**.
+1. Host taps **START MATCH** (or **START WITH 1** if only one paddle joined). Slot chips are a target, not a lock.
 2. Countdown 3s. Ball sits on the host paddle, then launches **up** into the bricks.
 3. Hold LEFT / RIGHT or swipe. 3 lives. Power-ups: wide, slow, multi, bomb.
 4. TIME LEFT on every slice. Standings on the rightmost slice (hidden at match end so they do not stack).
@@ -324,11 +324,19 @@ Or `bash scripts/open-arkanoid.sh 5`. It starts the match on **8130**, waits for
 | **lg1** (master) | this script, locally on `DISPLAY=:0` | `http://localhost:8130/N` for the slice mapped to lg1 |
 | **lg2, lg3, …** (slaves) | this script, over SSH from lg1 | `http://lg1:8130/N` |
 
-Slice **N is left→right**, not Pacman’s hostname digit (`lg2` is **not** automatically `/2`).
+Slice **N is left→right**, not Pacman’s hostname digit (`lg2` is **not** automatically `/2`). There is **always one master: lg1**. It runs the server and loads the **center** slice `ceil(N/2)` — that is the QR. Every other `lgN` is a slave Chromium pointed at `http://lg1:8130/…`.
 
-On a 3-glass the map is usually **lg3 → /1**, **lg1 → /2 (QR)**, **lg2 → /3**. So the QR is on the **center** machine because lg1 is the center frame — not because slaves were skipped. One Chromium on lg1 looking like “only QR” is correct until slaves open.
+| Glasses | Left → right machines | Master lg1 / QR |
+|---|---|---|
+| **3** | lg3 lg1 lg2 | `/2` |
+| **5** | lg4 lg5 lg1 lg2 lg3 | `/3` |
+| **7** | lg5 lg6 lg7 lg1 lg2 lg3 lg4 | `/4` |
+| **9** | lg6 lg7 lg8 lg9 lg1 … lg5 | `/5` |
+| **12** | lg8 … lg12 lg1 … lg7 | `/6` |
 
-Print the map without opening Chromium:
+If you only look at lg1 you see **only the QR**. That is correct on every size. Side TVs stay dark until SSH (or the backup Chromium line) opens those slaves.
+
+Print the map without opening Chromium (`5` can be `7`, `9`, or `12`):
 
 ```bash
 bash scripts/open-arkanoid.sh --frames 5
@@ -344,7 +352,26 @@ Already cloned: `git pull` then `bash scripts/open-arkanoid.sh`.
 
 This is how Pacman documents a single screen. Sit **at the dark machine**, not at a laptop across the room.
 
-After `open-arkanoid.sh` it prints the exact lines. Example for 3 screens:
+After `open-arkanoid.sh` it prints the exact lines for **that N**. Example **5** screens (QR is `/3`, not `/2`):
+
+```bash
+# on lg4 (left)
+chromium-browser --start-fullscreen 'http://lg1:8130/1'
+
+# on lg5
+chromium-browser --start-fullscreen 'http://lg1:8130/2'
+
+# on lg1 (master / QR)
+chromium-browser --start-fullscreen 'http://localhost:8130/3'
+
+# on lg2
+chromium-browser --start-fullscreen 'http://lg1:8130/4'
+
+# on lg3 (right)
+chromium-browser --start-fullscreen 'http://lg1:8130/5'
+```
+
+3-glass backup (QR `/2`):
 
 ```bash
 # on lg1 (center / QR)
@@ -470,7 +497,7 @@ Production `npm audit --omit=dev --audit-level=high` is the CI bar. Remaining De
 | Phone cannot join | Same Wi‑Fi. Port **8130**. IPv4 from the QR, not `lg1`, not 22. |
 | Emulator cannot join laptop | Use **`10.0.2.2:8130`**, not `127.0.0.1` (unless `adb reverse`). |
 | LAUNCH ON RIG from emulator | Must be the rig Wi‑Fi IPv4. `10.0.2.2` is rejected. |
-| START does nothing | Default needs **2** paddles. Host can set slots to **1**. |
+| START does nothing | Tap **START WITH N**. Default slot target is 2 but one paddle can still start. Same Wi‑Fi, code from center QR (`ceil(N/2)`, not always `/2`). |
 | Invalid session token | Code is 4 letters from the **center** screen. No 0/O/1/I. |
 | Only lg1 has the game | From lg1: `ssh -Xnf lg@lg2 'echo ok'` then open again, or paste the printed Chromium backup line **on the dark glass**. |
 | QR IP is wrong | `LG_HOST_IP=` in `server/.env`, restart. |
