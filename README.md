@@ -7,7 +7,7 @@ Panoramic multiplayer Arkanoid for a [Liquid Galaxy](https://www.liquidgalaxy.eu
 
 Phones are **paddles only**. Chromium on each glass draws one slice. One Node process on **port 8130** is the match.
 
-**[Download the APK](https://github.com/AnirudhPratapSinghYadav/LG-Arkanoid/releases/latest/download/27-08-2026-v1-Anirudh%20Pratap%20Singh%20Yadav-LG_Arkanoid-GSoC%202026.apk)** — AI Arkanoid LG, phone controller.
+**[Download the APK](https://github.com/AnirudhPratapSinghYadav/LG-Arkanoid/releases/latest/download/27-08-2026-2-AnirudhPratapSinghYada-Arkanoid_AI-GESOC2026.apk)** — phone controller.
 
 | | |
 |---|---|
@@ -81,7 +81,7 @@ Paddle tab: http://localhost:8130/controller — name, 4-letter code, join. Host
 
 Same Wi‑Fi as the computer or lg1. Turn off mobile data and VPN.
 
-**APK:** [direct download](https://github.com/AnirudhPratapSinghYadav/LG-Arkanoid/releases/latest/download/27-08-2026-v1-Anirudh%20Pratap%20Singh%20Yadav-LG_Arkanoid-GSoC%202026.apk)
+**APK:** [direct download](https://github.com/AnirudhPratapSinghYadav/LG-Arkanoid/releases/latest/download/27-08-2026-2-AnirudhPratapSinghYada-Arkanoid_AI-GESOC2026.apk)
 
 Or skip the APK and open `http://<QR-IPv4>:8130/controller?c=CODE` in the phone browser.
 

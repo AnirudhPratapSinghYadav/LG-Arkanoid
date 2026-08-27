@@ -121,7 +121,7 @@ jobs:
       - name: Name APK for GSoC testers
         working-directory: ./mobile
         run: |
-          DEST="$GITHUB_WORKSPACE/27-08-2026-v1-Anirudh Pratap Singh Yadav-LG_Arkanoid-GSoC 2026.apk"
+          DEST="$GITHUB_WORKSPACE/27-08-2026-2-AnirudhPratapSinghYada-Arkanoid_AI-GESOC2026.apk"
           cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk "$DEST"
           ls -la "$DEST"
 
@@ -129,5 +129,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: gsoc-apk
-          path: 27-08-2026-v1-Anirudh Pratap Singh Yadav-LG_Arkanoid-GSoC 2026.apk
+          path: 27-08-2026-2-AnirudhPratapSinghYada-Arkanoid_AI-GESOC2026.apk
           if-no-files-found: error
