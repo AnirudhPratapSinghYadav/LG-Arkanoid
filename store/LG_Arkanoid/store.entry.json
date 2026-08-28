@@ -1,0 +1,20 @@
+{
+  "name": "AI Arkanoid LG",
+  "icon": "icon.webp",
+  "category": "Arcade",
+  "carousel_assets": [
+    "1.webp",
+    "2.webp",
+    "3.webp",
+    "4.webp",
+    "5.webp"
+  ],
+  "base_url": "/apps/LG_Arkanoid/",
+  "file": "app/LG_Arkanoid_1.0.0.apk",
+  "pwa_link": "",
+  "type": "app",
+  "date": "Aug 28, 2026",
+  "android_OS": "5.0+",
+  "version": "1.0.0",
+  "content": "AI Arkanoid LG is a panoramic multiplayer brick-breaker built for Liquid Galaxy.\n\nThe court is rendered across every screen of the rig by a Node.js and Socket.IO server that serves a Phaser web client. Each player joins from their own Android phone using this Flutter controller. The same app can open and close Chromium on the wall over SSH so a match does not need the master keyboard.\n\nFeatures:\n- One continuous court across 3, 5, 7, 9 or 12 frames\n- Phone paddle only — the wall is always Chromium + Node on port 8130\n- Host picks match length, player count and ball speed, and can start with one paddle\n- QR join from the center screen (the join code is never on /health)\n- SSH connect, auto-detect screen count from personavars.txt, launch and close\n- Gemini live commentary, with offline lines when the key is unset\n\nThis project was developed as a Gemini Summer of Code 2026 project with the Liquid Galaxy Project Organization.\n\nContributor: Anirudh Pratap Singh Yadav\nMentors: Sidharth Mudgil\nLiquid Galaxy Project Org Director: Andreu Ibanez\nRepository: https://github.com/AnirudhPratapSinghYadav/LG-Arkanoid"
+}

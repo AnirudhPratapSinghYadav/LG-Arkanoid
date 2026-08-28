@@ -15,22 +15,16 @@ flutter pub get
 flutter run
 ```
 
-Release APK:
+Release APK (GO Store + testers — fat, all ABIs, under 50 MB):
 
 ```bash
-flutter build apk --release --split-per-abi
+flutter build apk --release
 ```
 
-`--split-per-abi` keeps each APK well inside the Play Store / GO Web Store
-comfort zone by shipping one native ABI instead of all of them. Release
-builds also run R8 (`isMinifyEnabled`) and the Android resource shrinker
-(`isShrinkResources`) — see `android/app/build.gradle.kts`. In-app images
-are lossless WebP. Use `flutter build appbundle --release` only if you also
-upload to Play; the GO Store wants the arm64 APK.
-
-The listing itself is a pull request against
-[LiquidGalaxyLAB/Data](https://github.com/LiquidGalaxyLAB/Data), not against
-GO-Web-Store. Full steps: [docs/GO_WEB_STORE.md](../docs/GO_WEB_STORE.md).
+Rename `build/app/outputs/flutter-apk/app-release.apk` to `LG_Arkanoid_1.0.0.apk`.
+`--split-per-abi` is only a shrink fallback; emulators often refuse arm64-only.
+Listing kit and `store.json` entry: [store/LG_Arkanoid/](../store/LG_Arkanoid/).
+The listing is a PR against [LiquidGalaxyLAB/Data](https://github.com/LiquidGalaxyLAB/Data).
 
 Connect with the IPv4 printed under the wall QR, port **8130**, and the 4-letter code on the center screen. The connecting screen probes `http://IP:8130/health` first, then opens the live link. `/health` does not include the join code. Same Wi-Fi as lg1 — never type `lg1`.
 

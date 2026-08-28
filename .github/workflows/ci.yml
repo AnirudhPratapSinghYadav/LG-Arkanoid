@@ -102,9 +102,9 @@ jobs:
         working-directory: ./mobile
 
       - name: Build release APKs
-        # Fat APK = all ABIs (~30 MB), same as the old LG_Arkanoid_1.0.0.apk.
-        # Split arm64 stays for the GO store. Do not ship split-only to testers:
-        # Android emulators are usually x86_64 and will refuse an arm64 APK.
+        # Fat APK (~34 MB, under the 50 MB GO Store target) = all ABIs.
+        # Split builds stay as a fallback if a store review asks to shrink.
+        # Do not ship split-only to testers: emulators are usually x86_64.
         working-directory: ./mobile
         env:
           GRADLE_OPTS: '-Dorg.gradle.daemon=false'
@@ -120,16 +120,18 @@ jobs:
           done
           test "$ok" = 1
 
-      - name: Name APK for GSoC testers
+      - name: Name APKs for testers and GO Store
         working-directory: ./mobile
         run: |
-          DEST="$GITHUB_WORKSPACE/27-08-2026-v2-AnirudhPratapSinghYadav-Arkanoid_AI-GESOC2026.apk"
-          cp build/app/outputs/flutter-apk/app-release.apk "$DEST"
+          DEST="$GITHUB_WORKSPACE/store-apks"
+          mkdir -p "$DEST"
+          cp build/app/outputs/flutter-apk/app-release.apk "$DEST/LG_Arkanoid_1.0.0.apk"
+          cp build/app/outputs/flutter-apk/app-release.apk "$DEST/27-08-2026-v2-AnirudhPratapSinghYadav-Arkanoid_AI-GESOC2026.apk"
           ls -lh "$DEST" build/app/outputs/flutter-apk/*.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: gsoc-apk
-          path: 27-08-2026-v2-AnirudhPratapSinghYadav-Arkanoid_AI-GESOC2026.apk
+          path: store-apks/*.apk
           if-no-files-found: error

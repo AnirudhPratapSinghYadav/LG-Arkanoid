@@ -31,10 +31,8 @@ android {
 
     defaultConfig {
         applicationId = "com.anirudh.lg_arkanoid"
-        // Pinned rather than inherited: the GO Web Store entry has to declare a
-        // concrete "android_OS" value, and mobile_scanner's ML Kit barcode
-        // reader requires API 21. 21 = Android 5.0.
-        minSdk = flutter.minSdkVersion
+        // Pinned: GO Store android_OS is "5.0+" and mobile_scanner needs API 21.
+        minSdk = 21
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
