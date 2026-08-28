@@ -73,6 +73,14 @@ else
   fi
 fi
 
+if [ -d "$PROJECT_DIR/.git" ]; then
+  echo "Pulling latest main from GitHub…"
+  git -C "$PROJECT_DIR" fetch origin 2>/dev/null || true
+  git -C "$PROJECT_DIR" pull --ff-only origin main 2>/dev/null \
+    || git -C "$PROJECT_DIR" pull --ff-only 2>/dev/null \
+    || echo "Note: git pull did not fast-forward. Using the files already in $PROJECT_DIR."
+fi
+
 # The Flutter app always launches
 #   bash ~/projects/LG-Arkanoid/scripts/open-arkanoid.sh
 # (lg-retro-gaming hardcodes the same home path). If this checkout lives

@@ -102,9 +102,7 @@ jobs:
         working-directory: ./mobile
 
       - name: Build release APKs
-        # Fat APK (~34 MB, under the 50 MB GO Store target) = all ABIs.
-        # Split builds stay as a fallback if a store review asks to shrink.
-        # Do not ship split-only to testers: emulators are usually x86_64.
+        # Release APK (all ABIs). GO Store cap is 50 MB. Split is a shrink fallback.
         working-directory: ./mobile
         env:
           GRADLE_OPTS: '-Dorg.gradle.daemon=false'
@@ -132,6 +130,6 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: gsoc-apk
+          name: gesoc-apk
           path: store-apks/*.apk
           if-no-files-found: error

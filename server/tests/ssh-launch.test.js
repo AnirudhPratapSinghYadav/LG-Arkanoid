@@ -22,6 +22,19 @@ assert.ok(asteroidsFn.includes('ssh -tXn'), 'Asteroids ssh must be ssh -tXn host
 assert.ok(asteroidsFn.includes('sshpass -e'), 'Use sshpass -e, not -p on the command line');
 assert.ok(!asteroidsFn.includes('sshpass -p'), 'Password must not be on the argv');
 
+const parseArgs = read('scripts/lib/parse-open-args.sh');
+const framesArm = (parseArgs.split('--frames|--screens)')[1] || parseArgs.split('--frames)')[1] || '').split(';;')[0];
+assert.ok(!framesArm.includes('DRY_RUN=1'), '--frames must open Chromium, not print-and-exit');
+assert.ok(/--map\|--dry-run/.test(parseArgs) || parseArgs.includes('--map'), 'print-only mode is --map / --dry-run');
+
+const install = read('install.sh');
+assert.ok(/git -C .* pull --ff-only/.test(install), 'install.sh must pull an existing clone so testers are not stuck on last week\'s files');
+
+const readme = read('README.md');
+assert.ok(!/\bGSoC\b/.test(readme) && !/\bGSOC\b/.test(readme), 'program name is GESOC, not GSoC');
+assert.ok(readme.includes('mkdir -p ~/projects'), 'first rig clone must create ~/projects');
+assert.ok(/git pull/.test(readme), 'README must tell testers to git pull');
+
 const chrome = read('scripts/lib/chrome-remote.sh');
 assert.ok(chrome.includes('export DISPLAY=:0'), 'DISPLAY=:0 like Pacman/Asteroids');
 assert.ok(chrome.includes('--start-fullscreen'), 'Pacman/Asteroids use --start-fullscreen');

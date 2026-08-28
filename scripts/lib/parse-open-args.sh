@@ -7,12 +7,14 @@ parse_open_args() {
   DRY_RUN=""
   while [ $# -gt 0 ]; do
     case "$1" in
-      --frames)
-        DRY_RUN=1
+      --frames|--screens)
+        # These open the wall. --frames used to be dry-run only, so a tester
+        # who ran `open-arkanoid.sh --frames 5` never got Chromium.
         if [[ "$2" =~ ^[0-9]+$ ]]; then ARG_SCREENS="$2"; shift; fi
         ;;
-      --screens)
-        ARG_SCREENS="$2"; shift
+      --map|--dry-run)
+        DRY_RUN=1
+        if [[ "$2" =~ ^[0-9]+$ ]]; then ARG_SCREENS="$2"; shift; fi
         ;;
       --password)
         ARG_PASSWORD="$2"; shift

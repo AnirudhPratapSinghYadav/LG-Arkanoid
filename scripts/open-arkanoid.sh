@@ -9,7 +9,8 @@
 # Slice URLs stay /1 left … /N right (not Pacman's hostname digit).
 # Never npm run build here — install.sh already built dist/.
 #
-# Usage: bash open-arkanoid.sh [screens|password] [--screens N] [--password pw] [--frames [N]]
+# Usage: bash open-arkanoid.sh [screens|password] [--screens N] [--frames N] [--password pw]
+#        bash open-arkanoid.sh --map [N]   # print host→slice map, do not open Chromium
 
 set -u
 
@@ -39,9 +40,8 @@ print_backup_urls() {
   local n=0 frame url master_slice=0
   echo ""
   echo "============================================================"
-  echo "Backup Chromium links (same pattern as Galaxy Pacman)."
-  echo "One master: lg1. QR is that machine's slice, not always /2."
-  echo "If one stays dark, sit at THAT machine and paste its line:"
+  echo "If ANY glass stays dark, sit AT THAT MACHINE and paste ONE line."
+  echo "One master: lg1. QR is lg1's slice (ceil(N/2)), not always /2."
   echo "============================================================"
   for frame in "${FRAMES[@]:0:$NUM_SCREENS}"; do
     n=$((n + 1))

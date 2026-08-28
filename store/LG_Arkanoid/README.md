@@ -13,12 +13,11 @@ Listings live in [LiquidGalaxyLAB/Data](https://github.com/LiquidGalaxyLAB/Data)
 | `1.webp` … `5.webp` | Same size (1400×800). Wall QR, lobby with players, in-match wall, phone join, phone paddle |
 | `store.entry.json` | Append this object to Data `store.json` |
 
-The APK is **not** in git (`*.apk` is ignored). Download the same fat binary from GitHub:
+The APK is **not** in git (`*.apk` is ignored). Send testers this link:
 
-- [LG_Arkanoid_1.0.0.apk](https://github.com/AnirudhPratapSinghYadav/LG-Arkanoid/releases/latest/download/LG_Arkanoid_1.0.0.apk) — GO Store name
-- [GESOC tester name](https://github.com/AnirudhPratapSinghYadav/LG-Arkanoid/releases/latest/download/27-08-2026-v2-AnirudhPratapSinghYadav-Arkanoid_AI-GESOC2026.apk) — same bytes
+- [27-08-2026-v2-AnirudhPratapSinghYadav-Arkanoid_AI-GESOC2026.apk](https://github.com/AnirudhPratapSinghYadav/LG-Arkanoid/releases/latest/download/27-08-2026-v2-AnirudhPratapSinghYadav-Arkanoid_AI-GESOC2026.apk)
 
-Fat APK (~34 MB, under the 50 MB store target): `armeabi-v7a` + `arm64-v8a` + `x86_64`. Phones and emulators both install it. Do not send testers an arm64-only split.
+Same bytes as [LG_Arkanoid_1.0.0.apk](https://github.com/AnirudhPratapSinghYadav/LG-Arkanoid/releases/latest/download/LG_Arkanoid_1.0.0.apk) (GO Store filename). Release build, under 50 MB (store policy).
 
 ## Tester play (before any Data PR)
 

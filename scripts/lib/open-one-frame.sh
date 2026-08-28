@@ -19,11 +19,23 @@ open_one_frame() {
   # Asteroids opens lg1 Chromium on DISPLAY=:0 in this shell — no ssh to self.
   if [ "$frame" = "lg1" ]; then
     echo "Opening master lg1 → /$screen_number  (local Chromium, Asteroids pattern)"
-    DISPLAY=:0 nohup chromium-browser --start-fullscreen \
-      --autoplay-policy=no-user-gesture-required "$url" \
-      >/tmp/lg-arkanoid-chrome-lg1.log 2>&1 &
-    disown || true
-    return 0
+    if command -v chromium-browser >/dev/null 2>&1; then
+      DISPLAY=:0 nohup chromium-browser --start-fullscreen \
+        --autoplay-policy=no-user-gesture-required "$url" \
+        >/tmp/lg-arkanoid-chrome-lg1.log 2>&1 &
+      disown || true
+      return 0
+    fi
+    if command -v chromium >/dev/null 2>&1; then
+      DISPLAY=:0 nohup chromium --start-fullscreen \
+        --autoplay-policy=no-user-gesture-required "$url" \
+        >/tmp/lg-arkanoid-chrome-lg1.log 2>&1 &
+      disown || true
+      return 0
+    fi
+    echo "Warning: chromium-browser is not on lg1 PATH. Sit at lg1 and paste:"
+    echo "    chromium-browser --start-fullscreen '$url'"
+    return 1
   fi
 
   remote="$(pacman_chrome_cmd "$url" "$extra")"

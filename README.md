@@ -3,11 +3,13 @@
 [![CI](https://github.com/AnirudhPratapSinghYadav/LG-Arkanoid/actions/workflows/ci.yml/badge.svg)](https://github.com/AnirudhPratapSinghYadav/LG-Arkanoid/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-Panoramic multiplayer Arkanoid for a [Liquid Galaxy](https://www.liquidgalaxy.eu/) wall. Liquid Galaxy · Gemini Summer of Code 2026.
+Panoramic multiplayer Arkanoid for a [Liquid Galaxy](https://www.liquidgalaxy.eu/) wall. Liquid Galaxy · GESOC 2026.
 
 Phones are **paddles only**. Chromium on each glass draws one slice. One Node process on **port 8130** is the match.
 
-**Phone APK (fat, ~34 MB, phones + emulators):** [LG_Arkanoid_1.0.0.apk](https://github.com/AnirudhPratapSinghYadav/LG-Arkanoid/releases/latest/download/LG_Arkanoid_1.0.0.apk) · [GESOC tester name](https://github.com/AnirudhPratapSinghYadav/LG-Arkanoid/releases/latest/download/27-08-2026-v2-AnirudhPratapSinghYadav-Arkanoid_AI-GESOC2026.apk) (same file). GO Store listing kit: [`store/LG_Arkanoid/`](store/LG_Arkanoid/).
+**Download the phone APK:** [27-08-2026-v2-AnirudhPratapSinghYadav-Arkanoid_AI-GESOC2026.apk](https://github.com/AnirudhPratapSinghYadav/LG-Arkanoid/releases/latest/download/27-08-2026-v2-AnirudhPratapSinghYadav-Arkanoid_AI-GESOC2026.apk)
+
+Same build as [LG_Arkanoid_1.0.0.apk](https://github.com/AnirudhPratapSinghYadav/LG-Arkanoid/releases/latest/download/LG_Arkanoid_1.0.0.apk) (GO Store filename). Release APK, under 50 MB. Listing kit: [`store/LG_Arkanoid/`](store/LG_Arkanoid/).
 
 | | |
 |---|---|
@@ -81,7 +83,7 @@ Paddle tab: http://localhost:8130/controller — name, 4-letter code, join. Host
 
 Same Wi‑Fi as the computer or lg1. Turn off mobile data and VPN.
 
-**APK:** [LG_Arkanoid_1.0.0.apk](https://github.com/AnirudhPratapSinghYadav/LG-Arkanoid/releases/latest/download/LG_Arkanoid_1.0.0.apk)
+**APK:** [download](https://github.com/AnirudhPratapSinghYadav/LG-Arkanoid/releases/latest/download/27-08-2026-v2-AnirudhPratapSinghYadav-Arkanoid_AI-GESOC2026.apk)
 
 Or skip the APK and open `http://<QR-IPv4>:8130/controller?c=CODE` in the phone browser.
 
@@ -99,9 +101,10 @@ Settings → CONNECT LG / LAUNCH ON RIG uses SSH **22** only to open the wall. J
 
 ## C. Run on a Liquid Galaxy wall
 
-On **lg1** (`lg` / `lq`):
+On **lg1** (`lg` / `lq`). First time:
 
 ```bash
+mkdir -p ~/projects
 cd ~/projects
 git clone https://github.com/AnirudhPratapSinghYadav/LG-Arkanoid.git LG-Arkanoid
 cd LG-Arkanoid
@@ -109,7 +112,20 @@ bash install.sh lq
 bash scripts/open-arkanoid.sh
 ```
 
-Or `bash scripts/open-arkanoid.sh 5` (also 7, 9, 12). **One master: lg1.** It loads the center QR slice `ceil(N/2)`. Slaves open `http://lg1:8130/N`.
+Already cloned (this is the pull testers should run):
+
+```bash
+cd ~/projects/LG-Arkanoid
+git fetch origin
+git checkout main
+git pull --ff-only origin main
+bash install.sh lq
+bash scripts/open-arkanoid.sh
+```
+
+`install.sh` also `git pull`s. Open with no number uses the rig's screen count from `personavars.txt` (or `NUM_SCREENS` in `server/.env`). To force a count: `bash scripts/open-arkanoid.sh 5` (also 7, 9, 12). `--frames 5` is the same launch, not a dry run. Map only: `bash scripts/open-arkanoid.sh --map`.
+
+**One master: lg1.** It loads the center QR slice `ceil(N/2)`. Slaves open `http://lg1:8130/N`.
 
 | Glasses | Left → right | lg1 / QR |
 |---|---|---|
@@ -119,15 +135,20 @@ Or `bash scripts/open-arkanoid.sh 5` (also 7, 9, 12). **One master: lg1.** It lo
 | 9 | lg6…lg9 lg1 … lg5 | `/5` |
 | 12 | lg8…lg12 lg1 … lg7 | `/6` |
 
-Looking only at lg1 and seeing the QR is correct. Side screens are other machines.
+Looking only at lg1 and seeing the QR is correct. Side screens are other machines. After open, the script always prints one Chromium line per glass. If a glass stays dark, sit **at that machine** and paste it.
+
+3-screen example:
 
 ```bash
-bash scripts/open-arkanoid.sh --frames 5
+# lg3 (left)     chromium-browser --start-fullscreen 'http://lg1:8130/1'
+# lg1 (QR)       chromium-browser --start-fullscreen 'http://localhost:8130/2'
+# lg2 (right)    chromium-browser --start-fullscreen 'http://lg1:8130/3'
+```
+
+```bash
 bash scripts/close-arkanoid.sh
 ssh -Xnf lg@lg2 'echo ok'
 ```
-
-If a glass stays dark, the open script prints a Chromium line. Sit **at that machine** and paste it (`localhost` on lg1, `http://lg1:8130/N` on a slave).
 
 `server/.env` on the rig: `PORT=8130`, `NUM_SCREENS=5` (or your count). Set `LG_HOST_IP=` if the QR IP is wrong.
 
@@ -149,4 +170,4 @@ If a glass stays dark, the open script prints a Chromium line. Sit **at that mac
 
 ## License
 
-MIT. Copyright © Anirudh Pratap Singh Yadav · Liquid Galaxy / Gemini Summer of Code 2026.
+MIT. Copyright © Anirudh Pratap Singh Yadav · Liquid Galaxy / GESOC 2026.
