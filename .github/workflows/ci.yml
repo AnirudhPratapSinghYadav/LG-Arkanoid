@@ -101,33 +101,35 @@ jobs:
         run: flutter test
         working-directory: ./mobile
 
-      - name: Build split-per-ABI release APKs
-        # Maven Central sometimes returns 429 on GitHub-hosted runners.
-        # Retry a few times so a rate-limit does not fail a green tree.
-        # Daemon is off in gradle.properties so a JVM OOM cannot linger.
+      - name: Build release APKs
+        # Fat APK = all ABIs (~30 MB), same as the old LG_Arkanoid_1.0.0.apk.
+        # Split arm64 stays for the GO store. Do not ship split-only to testers:
+        # Android emulators are usually x86_64 and will refuse an arm64 APK.
         working-directory: ./mobile
         env:
           GRADLE_OPTS: '-Dorg.gradle.daemon=false'
         run: |
+          ok=0
           for i in 1 2 3 4 5; do
-            if flutter build apk --release --split-per-abi; then
-              exit 0
+            if flutter build apk --release && flutter build apk --release --split-per-abi; then
+              ok=1
+              break
             fi
             echo "APK build failed (try $i). Waiting before retry..."
             sleep $((i * 20))
           done
-          exit 1
+          test "$ok" = 1
 
       - name: Name APK for GSoC testers
         working-directory: ./mobile
         run: |
-          DEST="$GITHUB_WORKSPACE/27-08-2026-2-AnirudhPratapSinghYada-Arkanoid_AI-GESOC2026.apk"
-          cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk "$DEST"
-          ls -la "$DEST"
+          DEST="$GITHUB_WORKSPACE/27-08-2026-v2-AnirudhPratapSinghYadav-Arkanoid_AI-GESOC2026.apk"
+          cp build/app/outputs/flutter-apk/app-release.apk "$DEST"
+          ls -lh "$DEST" build/app/outputs/flutter-apk/*.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: gsoc-apk
-          path: 27-08-2026-2-AnirudhPratapSinghYada-Arkanoid_AI-GESOC2026.apk
+          path: 27-08-2026-v2-AnirudhPratapSinghYadav-Arkanoid_AI-GESOC2026.apk
           if-no-files-found: error
