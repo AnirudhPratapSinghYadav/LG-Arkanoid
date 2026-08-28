@@ -136,7 +136,7 @@ async function main() {
   const root = await httpGet('/');
   const loc = String((root.headers && root.headers.location) || '');
   record(
-    'GET / redirects to /controller (Pacman-style phone link)',
+    'GET / redirects to /controller (phone browser paddle)',
     root.status === 302 && /\/controller/.test(loc),
     `status=${root.status} location=${loc}`
   );

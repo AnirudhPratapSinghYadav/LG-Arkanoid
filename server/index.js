@@ -76,9 +76,8 @@ const io = new Server(server, {
 });
 
 const webRoot = resolveWebRoot();
-// Pacman/Asteroids: the phone opens http://masterIp:PORT/controller.
-// GET / used to serve the wall Phaser page, so typing the "game link" on a
-// phone showed a broken court instead of a paddle. Always send / to the controller.
+// Phone browser opens http://masterIp:PORT/controller. GET / used to serve the
+// wall Phaser page, so typing the game link showed a broken court. Send / to the controller.
 app.get('/', (req, res) => {
   res.redirect(302, '/controller');
 });

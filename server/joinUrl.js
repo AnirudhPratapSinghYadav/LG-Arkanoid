@@ -1,10 +1,10 @@
 'use strict';
 
 /**
- * Pacman/Asteroids join with a real browser URL:
+ * Join with a real browser URL:
  *   http://<master-ipv4>:<port>/controller
- * Our wall used to encode LGARK|ip|port|token, which a phone camera cannot open
- * and which the Flutter IP field cannot paste as a "link".
+ * The wall used to encode LGARK|ip|port|token, which a phone camera cannot open
+ * and which the Flutter IP field cannot paste as a link.
  */
 
 function buildControllerJoinUrl(lanIp, port, token) {

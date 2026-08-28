@@ -1,5 +1,5 @@
 #!/bin/bash
-# Flags for open-arkanoid.sh. LGRG calls: bash open-arkanoid.sh <password>
+# Flags for open-arkanoid.sh. The rig launcher may pass the password as $1.
 
 parse_open_args() {
   ARG_SCREENS=""

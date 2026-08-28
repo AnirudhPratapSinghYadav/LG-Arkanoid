@@ -24,8 +24,7 @@ const double spaceMd = 16;
 const double spaceLg = 24;
 const double spaceXl = 32;
 
-// Matches server/config.js: 8130 is Arkanoid's slot in the LG game port family
-// (pong 8112, snake 8114, pacman 8128, asteroids 8129).
+// Matches server/config.js.
 const String defaultServerPort = '8130';
 const int defaultSshPort = 22;
 const String defaultSshUsername = 'lg';

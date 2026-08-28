@@ -1,5 +1,5 @@
 #!/bin/bash
-# Pacman does not wait. We do, so Chromium is not pointed at a dead port.
+# Wait until the match process answers /health before pointing Chromium at it.
 
 wait_for_health() {
   local port="$1"

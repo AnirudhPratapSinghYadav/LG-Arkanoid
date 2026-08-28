@@ -1,5 +1,5 @@
 // SSH Service for Liquid Galaxy Rig Remote Control
-// Patterns match Pacman / Asteroids: password auth, short commands, no hanging UI.
+// SSH to the Liquid Galaxy master: password auth, short commands, no hanging UI.
 
 import 'dart:async';
 import 'dart:convert';
@@ -178,8 +178,8 @@ class SSHService {
   Future<String> launchGame(int numScreens) async {
     final remotePath = await _remotePath();
     final screens = numScreens.clamp(1, 12);
-    // Wall open used to die at 45s while Vite rebuilt dist/. Pacman/Asteroids
-    // never rebuild on launch; 180s covers pm2 + /health + slave SSH.
+    // Wall open used to die at 45s while Vite rebuilt dist/. 180s covers
+    // pm2 + /health + slave SSH. Do not rebuild on launch.
     return sendCommand(
       'bash $remotePath/scripts/open-arkanoid.sh $screens',
       timeout: _wallScriptTimeout,

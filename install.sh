@@ -5,9 +5,8 @@
 #
 # Installs on the LG master (lg1). Prefer Node 16 via nvm on older Ubuntu/glibc rigs.
 #
-# Every published LG game takes the rig password as $1 and never prompts
-# (galaxy-asteroids/install.sh, lg-retro-gaming/install.sh both do PW="$1"), so
-# an installer triggered over SSH from a phone app is not left waiting on stdin.
+# Every published LG wall app takes the rig password as $1 and never prompts,
+# so an installer triggered over SSH from a phone is not left waiting on stdin.
 # We accept the same argument and only prompt when it is absent.
 
 set -e
@@ -23,7 +22,7 @@ echo "Installing system packages..."
 sudo apt-get install -y curl chromium-browser sshpass build-essential speech-dispatcher espeak-ng
 
 # Unmute the default ALSA/Pulse path when present. Stock LG images often leave
-# system audio muted because no other game uses TTS.
+# system audio muted.
 if command -v amixer >/dev/null 2>&1; then
   amixer -q set Master unmute 80% 2>/dev/null || true
   amixer -q set PCM unmute 80% 2>/dev/null || true
@@ -83,7 +82,7 @@ fi
 
 # The Flutter app always launches
 #   bash ~/projects/LG-Arkanoid/scripts/open-arkanoid.sh
-# (lg-retro-gaming hardcodes the same home path). If this checkout lives
+# If this checkout lives
 # anywhere else, point that canonical path at it so CONNECT LG → LAUNCH
 # does not fail with "No such file" on a Lleida clone that is not named
 # LG-Arkanoid.
@@ -108,8 +107,7 @@ npm run build
 
 ENV_FILE="$PROJECT_DIR/server/.env"
 touch "$ENV_FILE"
-# 8130 = next free port in the LG game family (pong 8112, snake 8114,
-# pacman 8128, asteroids 8129; the lg-retro-gaming launcher holds 3123).
+# Default match port.
 grep -q '^PORT=' "$ENV_FILE" || echo "PORT=8130" >> "$ENV_FILE"
 grep -q 'LG_HOST_IP' "$ENV_FILE" || echo "# LG_HOST_IP=   # pin lg1 Wi-Fi IPv4 for the wall QR if getLanIp picks the wrong NIC" >> "$ENV_FILE"
 
@@ -141,8 +139,7 @@ if [ -n "$geminiKey" ]; then
   fi
 fi
 
-# 'lq' is the password the rest of the ecosystem assumes for the lg user
-# (lg-retro-gaming hardcodes SSHClient(username: 'lg', passwordOrKey: 'lq')).
+# Stock Liquid Galaxy images use password lq for the lg user.
 if [ -n "$PW" ]; then
   lgPass="$PW"
   echo "Using the LG password passed as an argument."
@@ -183,17 +180,13 @@ if command -v ufw >/dev/null 2>&1 && sudo ufw status 2>/dev/null | grep -q "Stat
   sudo ufw allow "$GAME_PORT"/tcp || true
 fi
 
-# lg-retro-gaming (LGRG) is the launcher the other LG games are published
-# through. Its server reads server/games.json and runs `bash <openScript> lq`,
-# passing the rig password as $1 — which open-arkanoid.sh accepts. Registering
-# here means Arkanoid shows up alongside pacman/pong/snake/asteroids instead of
-# needing its own SSH command.
-LGRG_GAMES=""
+# Optional: register with the rig's game launcher (games.json) if it is installed.
+LAUNCHER_GAMES=""
 for candidate in /home/lg/lg-retro-gaming/server/games.json "$HOME/lg-retro-gaming/server/games.json"; do
-  if [ -f "$candidate" ]; then LGRG_GAMES="$candidate"; break; fi
+  if [ -f "$candidate" ]; then LAUNCHER_GAMES="$candidate"; break; fi
 done
-if [ -n "$LGRG_GAMES" ]; then
-  echo "Registering Arkanoid with lg-retro-gaming ($LGRG_GAMES)..."
+if [ -n "$LAUNCHER_GAMES" ]; then
+  echo "Registering Arkanoid with the rig launcher ($LAUNCHER_GAMES)..."
   node -e '
     const fs = require("fs");
     const file = process.argv[1];
@@ -205,10 +198,10 @@ if [ -n "$LGRG_GAMES" ]; then
       closeScript: dir + "/scripts/close-arkanoid.sh",
     };
     fs.writeFileSync(file, JSON.stringify(games, null, 2) + "\n");
-  ' "$LGRG_GAMES" "$PROJECT_DIR" && echo "Registered as game id \"arkanoid\"." \
-    || echo "Warning: could not update $LGRG_GAMES — add the arkanoid entry manually."
+  ' "$LAUNCHER_GAMES" "$PROJECT_DIR" && echo "Registered as game id \"arkanoid\"." \
+    || echo "Warning: could not update $LAUNCHER_GAMES — add the arkanoid entry manually."
 else
-  echo "lg-retro-gaming not found — skipping launcher registration (optional)."
+  echo "No rig game launcher found — skipping optional registration."
 fi
 
 echo "Setting up pm2 autostart..."

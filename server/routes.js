@@ -26,7 +26,7 @@ function createRouter(worldState) {
     res.json(healthPayload(worldState));
   });
 
-  // Pacman-style browser controller (optional). Flutter app is preferred on phone.
+  // Optional browser paddle. The Flutter app is preferred on phone.
   router.get('/controller', (req, res) => {
     const candidates = [
       path.join(web.root, 'controller.html'),
@@ -47,14 +47,12 @@ function createRouter(worldState) {
     router.use(express.static(web.publicDir));
   }
 
-  // -- Screen route (LG convention) -------------------------------------------
-  // Each screen on the Liquid Galaxy rig is addressed by its screen number:
-  //   http://lg1:8130/1  -- leftmost slice of the wall
-  //   http://lg1:8130/2  -- the slice to its right
-  // Unlike galaxy-pacman, which puts the *hostname* digit in the URL, the slice
-  // index here is the physical left→right position the launcher derived from
-  // LG_FRAMES. README section C documents the map.
-  // Injects SCREEN_ID + NUM_SCREENS for the Phaser client (Pacman-style routes).
+  // -- Screen route -----------------------------------------------------------
+  // Each glass is addressed by left→right slice number:
+  //   http://lg1:8130/1  -- leftmost
+  //   http://lg1:8130/2  -- next
+  // Slice index is physical position from LG_FRAMES, not the hostname digit.
+  // Injects SCREEN_ID + NUM_SCREENS for the Phaser client.
 
   router.get('/:screenNum(\\d+)', (req, res) => {
     const screenNum = parseInt(req.params.screenNum, 10);

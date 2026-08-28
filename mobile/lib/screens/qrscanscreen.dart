@@ -78,14 +78,14 @@ class _QrScanScreenState extends State<QrScanScreen> {
                     if (parsed != null && looksLikeJoin) {
                       _barcodeFound = true;
                       await controller.stop();
-                      if (!mounted) return;
+                      if (!context.mounted) return;
                       Navigator.of(context).pop(raw);
                       return;
                     }
                   } else if (mode == 'rigConnect' && raw.startsWith('LGRIG|')) {
                     _barcodeFound = true;
                     await controller.stop();
-                    if (!mounted) return;
+                    if (!context.mounted) return;
                     Navigator.of(context).pop(raw);
                     return;
                   }

@@ -1,14 +1,7 @@
 #!/bin/bash
-# Remote command strings from published LG games, then one URL only.
-#
-# galaxy-pacman/Bash/open-pacman.sh (slave):
-#   ssh -Xnf lg@$lg " export DISPLAY=:0 ; chromium-browser URL --start-fullscreen /dev/null 2>&1 &"
-# galaxy-asteroids/scripts/open.sh (slave):
-#   sshpass … ssh -tXn $lg "export DISPLAY=:0 ; chromium-browser URL --start-fullscreen &" &
-#
-# /dev/null is a second Chromium URL. Pacman opens a junk tab. We omit it.
-# DISPLAY=:0 and --start-fullscreen stay as in those scripts.
-# Stock LG images ship chromium-browser; some slaves only have chromium.
+# Remote Chromium strings for Liquid Galaxy slaves.
+# Pattern used on LG walls: DISPLAY=:0, --start-fullscreen, ssh -Xnf lg@host.
+# Stock images ship chromium-browser; some slaves only have chromium.
 
 _remote_chrome_body() {
   local url="$1"
@@ -16,20 +9,20 @@ _remote_chrome_body() {
   printf 'export DISPLAY=:0 ; BIN=$(command -v chromium-browser || command -v chromium); [ -n "$BIN" ] && "$BIN" %s --start-fullscreen %s 2>&1 &' "$url" "$extra"
 }
 
-pacman_chrome_cmd() {
+key_chrome_cmd() {
   local url="$1"
   local extra="${2:-}"
   printf ' %s' "$(_remote_chrome_body "$url" "$extra")"
 }
 
-asteroids_chrome_cmd() {
+password_chrome_cmd() {
   local url="$1"
   local extra="${2:-}"
   _remote_chrome_body "$url" "$extra"
 }
 
 # ssh -Xnf returns 0 as soon as the remote shell backgrounds Chromium.
-# Check the slave actually has a Chromium process before calling it launched.
+# Check the slave actually has a Chromium process on this game port.
 slave_chromium_up() {
   local host="$1"
   local pw="${2:-}"
@@ -46,7 +39,6 @@ slave_chromium_up() {
   return 1
 }
 
-# close-arkanoid: wait for pkill (no -f on ssh itself).
 ssh_pkill() {
   local host="$1"
   local remote="$2"

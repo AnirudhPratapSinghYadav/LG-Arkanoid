@@ -1,10 +1,9 @@
 #!/bin/bash
 # Password SSH when lg1 has no key to the slave.
-# Pacman uses ssh -Xnf (returns after starting the remote command).
-# Asteroids used ssh -tXn … & and always continued; that reported success
-# on a dark glass. We keep sshpass -e and lg@$host, and return ssh's exit.
+# Same flags as key SSH (ssh -Xnf lg@$host) plus sshpass -e.
+# Do not background this and assume success — the caller checks Chromium.
 
-ssh_asteroids() {
+ssh_password_slave() {
   local host="$1"
   local remote="$2"
   local pw="$3"

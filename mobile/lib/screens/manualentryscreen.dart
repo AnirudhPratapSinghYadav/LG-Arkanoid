@@ -54,7 +54,7 @@ class _ManualEntryScreenState extends State<ManualEntryScreen> {
     var ip = _ipController.text.trim();
     var port = _portController.text.trim();
 
-    // Pacman testers paste http://masterIp:8130/controller — that used to be
+    // Testers paste http://masterIp:8130/controller — that used to be
     // treated as a hostname and the socket never connected.
     final parsedField = parseJoinInput(ip.isEmpty ? token : ip, defaultPort: port.isEmpty ? defaultServerPort : port);
     if (parsedField != null) {

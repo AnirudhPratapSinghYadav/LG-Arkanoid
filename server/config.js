@@ -4,10 +4,7 @@ const path = require('path');
 const crypto = require('crypto');
 const gameEngine = require('./gameEngine.js');
 
-// Dedicated game port (sister LG games each use their own; Pacman=8128).
-// 8130 is the next free slot in the Liquid Galaxy game port family: pong 8112,
-// snake 8114, pacman 8128, asteroids 8129. The lg-retro-gaming launcher itself
-// runs on 3123, so nothing in the ecosystem competes for this one.
+// Dedicated match port for this game.
 const PORT = Number.parseInt(process.env.PORT || '8130', 10);
 // Court geometry is owned by the engine: height is fixed, per-frame width comes
 // from the rig's real frame aspect (portrait on a stock LG rotation).

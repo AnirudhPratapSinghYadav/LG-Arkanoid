@@ -1,13 +1,8 @@
 #!/bin/bash
-# Open the wall the way Galaxy Asteroids opens the master and Pacman opens slaves.
-#
-# Master (lg1): local Chromium on DISPLAY=:0 (galaxy-asteroids/scripts/open.sh).
-# Slaves: Pacman first, then Asteroids sshpass in the background:
-#   ssh -Xnf lg@$lg " export DISPLAY=:0 ; chromium-browser <url> --start-fullscreen … &"
-#   sshpass … ssh -tXn lg@$lg "export DISPLAY=:0 ; chromium-browser … &" &
-#
-# Slice URLs stay /1 left … /N right (not Pacman's hostname digit).
-# Never npm run build here — install.sh already built dist/.
+# Open every Liquid Galaxy glass from lg1.
+# Master: local Chromium on DISPLAY=:0.
+# Slaves: ssh -Xnf lg@$host, then password SSH if needed.
+# Slices are /1 left … /N right. Never npm run build here — install.sh already built dist/.
 #
 # Usage: bash open-arkanoid.sh [screens|password] [--screens N] [--frames N] [--password pw]
 #        bash open-arkanoid.sh --map [N]   # print host→slice map, do not open Chromium
@@ -23,9 +18,9 @@ PROJECT_DIR="$( cd "$SCRIPT_DIR/.." && pwd )"
 # shellcheck disable=SC1091
 . "$SCRIPT_DIR/lib/frames.sh"
 # shellcheck disable=SC1091
-. "$SCRIPT_DIR/lib/ssh-pacman.sh"
+. "$SCRIPT_DIR/lib/ssh-key.sh"
 # shellcheck disable=SC1091
-. "$SCRIPT_DIR/lib/ssh-asteroids.sh"
+. "$SCRIPT_DIR/lib/ssh-password.sh"
 # shellcheck disable=SC1091
 . "$SCRIPT_DIR/lib/chrome-remote.sh"
 # shellcheck disable=SC1091
@@ -131,8 +126,8 @@ fi
 export LG_FRAME_ASPECT="${LG_FRAME_ASPECT:-}"
 export LG_RANDR
 
-# Pacman/Asteroids never rebuild on launch. A phone SSH used to die at 45s
-# while Vite ran, so master+slaves never opened. install.sh already built dist/.
+# Do not rebuild on launch. A phone SSH used to die at 45s while Vite ran.
+# install.sh already built dist/.
 if [ ! -f "$PROJECT_DIR/dist/index.html" ]; then
   export NODE_ENV=development
   echo "dist/ missing — serving web-client (run npm run build on the rig once)."

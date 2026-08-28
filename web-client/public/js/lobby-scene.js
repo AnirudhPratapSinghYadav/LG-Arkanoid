@@ -284,8 +284,8 @@ GameScene.prototype.renderJoin = function() {
 
             const lanIp = this.sessionLanIp || this.currentState.lanIp;
             const port = this.sessionPort || this.currentState.port;
-            // Pacman: phone opens http://masterIp:PORT/controller. Encode that
-            // URL so a camera / browser can open a paddle, not a private LGARK blob.
+            // Phone opens http://masterIp:PORT/controller so a camera / browser
+            // gets a paddle, not a private LGARK blob.
             const joinUrl = (lanIp && token)
                 ? `http://${lanIp}:${port || 8130}/controller?c=${encodeURIComponent(token)}`
                 : '';

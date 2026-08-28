@@ -28,7 +28,7 @@ load_server_env() {
   fi
 }
 
-# Same files Pacman/Asteroids source: personavars then ~/etc/shell.conf
+# Same files the Liquid Galaxy image sources: personavars then ~/etc/shell.conf
 load_lg_personality() {
   local persona
   for persona in /lg/personavars.txt /home/lg/personavars.txt; do

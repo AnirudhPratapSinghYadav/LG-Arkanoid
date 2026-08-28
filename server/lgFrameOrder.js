@@ -11,7 +11,7 @@
  *   9: lg6..lg9 lg1 .. lg5
  *  12: lg8..lg12 lg1 .. lg7       QR /6
  *
- * Do NOT map hostname digit to URL (Pacman lg5→/5). Arkanoid is one court.
+ * Slice /1 is the leftmost glass. Do not map hostname digit to URL.
  */
 function lgFrameOrder(n) {
   const count = Number(n);

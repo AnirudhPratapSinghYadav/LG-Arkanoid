@@ -1,6 +1,6 @@
 #!/bin/bash
 # Left→right hostnames. Must match server/lgFrameOrder.js.
-# Do NOT copy Pacman's ${lg:2} slice number (lg5 → /5).
+# Slice /1 is the leftmost glass. Do not map hostname digit to URL.
 # One master: lg1 always runs the server. It is the center slice ceil(N/2).
 #   3: lg3 lg1 lg2           QR /2
 #   5: lg4 lg5 lg1 lg2 lg3     QR /3

@@ -14,7 +14,7 @@ class JoinTarget {
   });
 }
 
-/// Pacman-style join strings plus the legacy LGARK payload.
+/// Join strings plus the legacy LGARK payload.
 ///
 /// Accepts:
 ///   LGARK|10.0.0.5|8130|ABCD

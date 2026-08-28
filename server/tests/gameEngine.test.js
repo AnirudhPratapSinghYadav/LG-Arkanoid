@@ -235,20 +235,11 @@ test('CORS allows LAN origins and empty Flutter origin', () => {
   assert.strictEqual(isAllowedCorsOrigin('https://evil.example'), false);
 });
 
-test('default port does not collide with other LG games', () => {
+test('default port is 8130 and not a reserved cluster port', () => {
   const { PORT } = require('../config.js');
-  // Ports claimed by the published Liquid Galaxy games and their launcher.
-  const taken = {
-    8112: 'galaxy-pong',
-    8114: 'galaxy-snake',
-    8128: 'galaxy-pacman',
-    8129: 'galaxy-asteroids',
-    3123: 'lg-retro-gaming',
-    8111: 'lg core (iptables)',
-    81: 'lg core (iptables)',
-  };
-  assert.strictEqual(PORT, 8130, 'Arkanoid owns 8130 in the LG port family');
-  assert.ok(!taken[PORT], `port ${PORT} is already used by ${taken[PORT]}`);
+  const reserved = [81, 8111, 8112, 8114, 8128, 8129, 3123];
+  assert.strictEqual(PORT, 8130);
+  assert.ok(!reserved.includes(PORT), `port ${PORT} is reserved on the rig`);
 });
 
 test('frame aspect comes from LG rotation vars', () => {

@@ -1,15 +1,15 @@
 #!/bin/bash
-# Stop this game only. Pacman has no close script; we pkill our Chromium + pm2.
+# Stop this game only: Chromium on this port, then pm2.
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 # shellcheck disable=SC1091
 . "$SCRIPT_DIR/lib/load-rig.sh"
 # shellcheck disable=SC1091
-. "$SCRIPT_DIR/lib/ssh-pacman.sh"
+. "$SCRIPT_DIR/lib/ssh-key.sh"
 # shellcheck disable=SC1091
 . "$SCRIPT_DIR/lib/chrome-remote.sh"
 # shellcheck disable=SC1091
-. "$SCRIPT_DIR/lib/ssh-asteroids.sh"
+. "$SCRIPT_DIR/lib/ssh-password.sh"
 
 load_nvm_node16
 load_server_env "$SCRIPT_DIR/../server/.env"
@@ -33,7 +33,7 @@ for frame in "${FRAMES[@]}"; do
   fi
   echo "Killing Chromium on $frame (port $port)…"
   if ! ssh_pkill "$frame" "$kill_remote"; then
-    ssh_asteroids "$frame" "$kill_remote" "${LG_PASSWORD:-}" || true
+    ssh_password_slave "$frame" "$kill_remote" "${LG_PASSWORD:-}" || true
   fi
 done
 
