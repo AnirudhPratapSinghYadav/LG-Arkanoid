@@ -191,7 +191,10 @@ class GameService extends ChangeNotifier {
         }
         final status = latestGameState!['gameStatus'] as String? ?? '';
         if (status == 'game_over' || status == 'time_up' || status == 'win' ||
-            status == 'countdown' || status == 'lobby') {
+            status == 'countdown') {
+          urgent = true;
+        }
+        if (status == 'lobby' && _hudStatus != 'lobby') {
           urgent = true;
         }
         _notifyHud(urgent: urgent);
@@ -223,7 +226,7 @@ class GameService extends ChangeNotifier {
         robotStateTimer?.cancel();
         robotStateTimer = Timer(const Duration(seconds: 3), () {
           robotState = 'idle';
-          notifyListeners();
+          _notifyHud(urgent: true);
         });
 
           if(newCommentary.isNotEmpty && newCommentary!=lastCommentary){
@@ -276,7 +279,7 @@ class GameService extends ChangeNotifier {
     // Scale by the real court width, not just the screen count: LG frames are
     // portrait by default, which makes each frame 608 logical px wide instead
     // of 1920, so the same swipe must move the paddle proportionally less.
-    final n = latestGameState?['numScreens'] as int? ?? 3;
+    final n = asInt(latestGameState?['numScreens']) ?? 3;
     final frameWidth = (latestGameState?['screenWidth'] as num?)?.toDouble() ?? 1920.0;
     final scale = ((n * frameWidth) / (3 * 1920.0)).clamp(0.15, 5.0);
     var stepped = (deltaX * scale).round();
@@ -293,6 +296,8 @@ class GameService extends ChangeNotifier {
   void activatePowerUp(String powerUpType){
     if(socket==null || !connected || playerId==null) return;
     if(lives <= 0) return;
+    final status = latestGameState?['gameStatus'] as String? ?? '';
+    if (status != 'playing' && status != 'countdown') return;
     socket!.emit('power_up_activate', {
       'playerId': playerId,
       'powerUpType': powerUpType,
@@ -349,6 +354,8 @@ class GameService extends ChangeNotifier {
 
   void disconnect(){
     stopLatencyPing();
+    robotStateTimer?.cancel();
+    robotStateTimer = null;
     socket?.dispose();
     socket = null;
     connected = false;

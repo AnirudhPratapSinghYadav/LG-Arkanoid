@@ -1,7 +1,8 @@
 #!/bin/bash
 # Master Chromium is local (galaxy-asteroids/scripts/open.sh).
-# Slaves: Pacman ssh -Xnf lg@$frame first, then Asteroids sshpass in background.
+# Slaves: Pacman ssh -Xnf lg@$frame first, then password SSH.
 # Slice URL is left→right /N — not Pacman's ${lg:2} hostname digit.
+# ssh -Xnf is not proof Chromium started — slave_chromium_up checks the process.
 
 open_one_frame() {
   local frame="$1"
@@ -38,20 +39,27 @@ open_one_frame() {
     return 1
   fi
 
-  remote="$(pacman_chrome_cmd "$url" "$extra")"
   echo "Opening $frame → /$screen_number  (ssh -Xnf lg@$frame)"
-  if ssh_pacman "$frame" "$remote"; then
+  remote="$(pacman_chrome_cmd "$url" "$extra")"
+  ssh_pacman "$frame" "$remote" || true
+  sleep 1
+  if slave_chromium_up "$frame" "${LG_PASSWORD:-}" "$port"; then
     return 0
   fi
 
   remote="$(asteroids_chrome_cmd "$url" "$extra")"
   if ssh_asteroids "$frame" "$remote" "${LG_PASSWORD:-}"; then
-    echo "  Pacman ssh failed — Asteroids sshpass used (ssh -tXn lg@$frame)."
-    return 0
+    echo "  Key SSH did not start Chromium — password SSH used (ssh -Xnf lg@$frame)."
+    sleep 1
+    if slave_chromium_up "$frame" "${LG_PASSWORD:-}" "$port"; then
+      return 0
+    fi
   fi
 
   echo "Warning: failed to open Chromium on $frame"
   echo "  From lg1 this must work with no password:"
   echo "    ssh -Xnf lg@$frame 'echo ok'"
+  echo "  Sit at $frame and paste:"
+  echo "    chromium-browser --start-fullscreen '$url'"
   return 1
 }

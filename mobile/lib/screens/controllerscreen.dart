@@ -32,15 +32,24 @@ class _ControllerScreenState extends State<ControllerScreen> {
   String _gameEndMessage = '';
   bool _gameEndIsHost = false;
   List<Map<String, dynamic>> _gameEndRankings = <Map<String, dynamic>>[];
+  Timer? _clock;
 
   @override
   void initState() {
     super.initState();
     context.read<GameService>().addListener(_onGameStateUpdate);
+    _clock = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      final status =
+          context.read<GameService>().latestGameState?['gameStatus'] as String? ??
+              '';
+      if (status == 'playing') setState(() {});
+    });
   }
 
   @override
   void dispose() {
+    _clock?.cancel();
     context.read<GameService>().removeListener(_onGameStateUpdate);
     super.dispose();
   }
@@ -56,6 +65,15 @@ class _ControllerScreenState extends State<ControllerScreen> {
     if (_showGameEndOverlay &&
         (status == 'countdown' || status == 'playing')) {
       setState(() => _showGameEndOverlay = false);
+      return;
+    }
+
+    if (_showGameEndOverlay && status == 'lobby') {
+      setState(() => _showGameEndOverlay = false);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        Navigator.pushReplacementNamed(context, '/lobby');
+      });
       return;
     }
 
@@ -141,8 +159,8 @@ class _ControllerScreenState extends State<ControllerScreen> {
     bool showTimer = false;
     bool warnLowTime = false;
     if (gameState != null) {
-      final gameStartedAt = gameState['gameStartedAt'] as int?;
-      final duration = gameState['gameDurationSeconds'] as int? ?? 180;
+      final gameStartedAt = asInt(gameState['gameStartedAt']);
+      final duration = asInt(gameState['gameDurationSeconds']) ?? 180;
       final status = gameState['gameStatus'] as String? ?? '';
       if (gameStartedAt != null && status == 'playing') {
         final elapsed =

@@ -22,6 +22,14 @@ class _ManualEntryScreenState extends State<ManualEntryScreen> {
   final _storage = const FlutterSecureStorage();
 
   @override
+  void dispose() {
+    _tokenController.dispose();
+    _ipController.dispose();
+    _portController.dispose();
+    super.dispose();
+  }
+
+  @override
   void initState() {
     super.initState();
     _loadSavedSettings();

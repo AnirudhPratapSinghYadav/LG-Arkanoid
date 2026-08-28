@@ -155,9 +155,9 @@ for frame in "${FRAMES[@]:0:$NUM_SCREENS}"; do
   sleep 1
 done
 
-echo "Launched $NUM_SCREENS screens on port $port."
 print_backup_urls "$port"
 if [ "$failed" = 1 ]; then
-  echo "Some slaves did not open. Use the Chromium line for that machine above, or fix SSH and run this script again."
+  echo "Some slaves did not open. Sit at that machine and paste its Chromium line above, or fix SSH (ssh -Xnf lg@lg2 'echo ok') and run this script again."
   exit 1
 fi
+echo "Opened Chromium on all $NUM_SCREENS frames on port $port."

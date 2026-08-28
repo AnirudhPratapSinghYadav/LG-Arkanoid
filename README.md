@@ -16,7 +16,7 @@ Same build as [LG_Arkanoid_1.0.0.apk](https://github.com/AnirudhPratapSinghYadav
 | **Contributor** | [Anirudh Pratap Singh Yadav](https://github.com/AnirudhPratapSinghYadav) |
 | **Mentor** | [Sidharth Mudgil](https://github.com/SidharthMudgil) |
 | **Game port** | **8130** — join, QR, `/health`, wall, paddles |
-| **SSH (rig only)** | **22** — opens Chromium. Never used to join |
+| **SSH (rig only)** | **22** — opens Chromium on every glass from lg1 |
 
 **Start here:** [A. Computer](#a-run-on-your-computer) · [B. Phone](#b-run-on-the-phone) · [C. Liquid Galaxy wall](#c-run-on-a-liquid-galaxy-wall)
 
@@ -135,9 +135,9 @@ bash scripts/open-arkanoid.sh
 | 9 | lg6…lg9 lg1 … lg5 | `/5` |
 | 12 | lg8…lg12 lg1 … lg7 | `/6` |
 
-Looking only at lg1 and seeing the QR is correct. Side screens are other machines. After open, the script always prints one Chromium line per glass. If a glass stays dark, sit **at that machine** and paste it.
+Looking only at lg1 and seeing the QR is correct. Side screens are other machines. After open, the script prints one Chromium line per glass. If a glass stays dark, sit **at that machine** and paste its line. The open script now checks that Chromium is running on each slave before it reports success.
 
-3-screen example:
+3-screen paste (sit at that PC):
 
 ```bash
 # lg3 (left)     chromium-browser --start-fullscreen 'http://lg1:8130/1'

@@ -41,16 +41,17 @@ class _ControllerTouchpadState extends State<ControllerTouchpad> {
     if (now.difference(_lastEmit).inMilliseconds >= 33) {
       widget.onPaddleMove(rigDeltaX);
       _lastEmit = now;
+      if (!mounted) return;
+      setState(() {
+        _puckPosition += dx;
+        double maxVisual = trackWidth / 2;
+        _puckPosition = _puckPosition.clamp(-maxVisual, maxVisual);
+      });
     }
-
-    setState(() {
-      _puckPosition += dx;
-      double maxVisual = trackWidth / 2;
-      _puckPosition = _puckPosition.clamp(-maxVisual, maxVisual);
-    });
   }
 
   void _onPanEnd(DragEndDetails details) {
+    if (!mounted) return;
     setState(() {
       _puckPosition = 0;
     });

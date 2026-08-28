@@ -18,9 +18,10 @@ assert.ok(!/BatchMode|IdentitiesOnly|UserKnownHostsFile/.test(pacmanFn), 'Pacman
 
 const asteroids = read('scripts/lib/ssh-asteroids.sh');
 const asteroidsFn = asteroids.split('ssh_asteroids()')[1] || '';
-assert.ok(asteroidsFn.includes('ssh -tXn'), 'Asteroids ssh must be ssh -tXn host');
+assert.ok(asteroidsFn.includes('ssh -Xnf'), 'Password SSH uses Pacman -Xnf so a failed ssh is not reported as launched');
 assert.ok(asteroidsFn.includes('sshpass -e'), 'Use sshpass -e, not -p on the command line');
 assert.ok(!asteroidsFn.includes('sshpass -p'), 'Password must not be on the argv');
+assert.ok(!/sleep 1\s+return 0/.test(asteroidsFn), 'Do not return 0 after backgrounding sshpass');
 
 const parseArgs = read('scripts/lib/parse-open-args.sh');
 const framesArm = (parseArgs.split('--frames|--screens)')[1] || parseArgs.split('--frames)')[1] || '').split(';;')[0];
@@ -38,6 +39,10 @@ assert.ok(/git pull/.test(readme), 'README must tell testers to git pull');
 const chrome = read('scripts/lib/chrome-remote.sh');
 assert.ok(chrome.includes('export DISPLAY=:0'), 'DISPLAY=:0 like Pacman/Asteroids');
 assert.ok(chrome.includes('--start-fullscreen'), 'Pacman/Asteroids use --start-fullscreen');
+assert.ok(chrome.includes('chromium-browser'), 'LG images use chromium-browser');
+assert.ok(chrome.includes('command -v chromium'), 'slaves may only have chromium');
+assert.ok(chrome.includes('slave_chromium_up'), 'ssh -Xnf is not proof Chromium started');
+assert.ok(chrome.includes('pgrep -f'), 'slave check looks for a Chromium process on this game port');
 assert.ok(
   !/printf '[^']*\/dev\/null/.test(chrome),
   'printf must not pass /dev/null as a second Chromium URL'
@@ -55,6 +60,7 @@ const wait = read('scripts/lib/wait-health.sh');
 assert.ok(wait.includes('seq 1 40'), 'Give pm2 ~20s to answer /health');
 
 const one = read('scripts/lib/open-one-frame.sh');
+assert.ok(one.includes('slave_chromium_up'), 'slave launch must check Chromium is running');
 assert.ok(one.includes('http://localhost:'), 'lg1 URL is localhost like Pacman');
 assert.ok(one.includes('http://lg1:'), 'slave URL is http://lg1:PORT/N like Pacman');
 assert.ok(one.includes('ssh -Xnf lg@'), 'log line must show the Pacman ssh');

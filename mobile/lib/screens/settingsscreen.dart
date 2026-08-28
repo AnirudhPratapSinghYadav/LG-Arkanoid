@@ -150,6 +150,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (t.contains('did not answer /health')) return true;
     if (t.contains('Warning: failed to open Chromium')) return true;
     if (t.contains('Some slaves did not open')) return true;
+    if (t.contains('did not start Chromium')) return true;
     return false;
   }
 
@@ -376,7 +377,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       final result = await Navigator.pushNamed(context, '/qrscan', arguments: 'rigConnect');
                       if (result != null && result is String && result.startsWith('LGRIG|')) {
                         final parts = result.split('|');
-                        // Never autofill SSH password from QR — treat that field as opaque.
+                        if (!mounted) return;
                         if (parts.length >= 6) {
                           setState(() {
                             _usernameController.text = parts[1];

@@ -40,7 +40,7 @@ String joinRejectedCopy(String? serverMessage) {
   }
   if (m.contains('need') && m.contains('before start')) {
     return 'Not enough phones in the lobby yet.\n\n'
-        'When you pick 2 players, two phones must join before START unlocks.';
+        'Host START works with whoever has already joined (one phone is enough).';
   }
   if (m.contains('locked')) {
     return 'Too many wrong codes from this phone.\n\nWait a minute, then try the code from the wall again.';

@@ -62,7 +62,7 @@ class _QrScanScreenState extends State<QrScanScreen> {
                 ),
               );
             },
-            onDetect: (capture) {
+            onDetect: (capture) async {
               if (_barcodeFound) return;
               final mode = ModalRoute.of(context)?.settings.arguments as String? ?? 'session';
               final List<Barcode> barcodes = capture.barcodes;
@@ -77,11 +77,15 @@ class _QrScanScreenState extends State<QrScanScreen> {
                         (parsed != null && parsed.token.length == 4);
                     if (parsed != null && looksLikeJoin) {
                       _barcodeFound = true;
+                      await controller.stop();
+                      if (!mounted) return;
                       Navigator.of(context).pop(raw);
                       return;
                     }
                   } else if (mode == 'rigConnect' && raw.startsWith('LGRIG|')) {
                     _barcodeFound = true;
+                    await controller.stop();
+                    if (!mounted) return;
                     Navigator.of(context).pop(raw);
                     return;
                   }
