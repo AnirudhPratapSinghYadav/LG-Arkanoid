@@ -16,7 +16,7 @@ const createRouter = require('./routes.js');
 const { createMatchController } = require('./match.js');
 
 if (!GEMINI_API_KEY) {
-  console.warn('WARNING: GEMINI_API_KEY is missing. AI commentary and level generation will be disabled.');
+  console.warn('GEMINI_API_KEY unset — wall uses the offline announcer. Set a key for live Gemini commentary and levels.');
 }
 if (!process.env.LG_PASSWORD) {
   console.warn('LG_PASSWORD is unset — SSH launch scripts will use key auth. The game server does not SSH.');

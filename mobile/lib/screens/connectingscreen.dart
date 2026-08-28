@@ -145,11 +145,12 @@ class _ConnectingScreenState extends State<ConnectingScreen> {
     );
     if (!mounted || _cancelled) return;
     if (!ok) {
+      final detail = _gameService.lastConnectError;
       setState(() {
         _error = socketFailedCopy(
           _ip,
           _port,
-          detail: _gameService.lastConnectError,
+          detail: detail,
         );
       });
       return;

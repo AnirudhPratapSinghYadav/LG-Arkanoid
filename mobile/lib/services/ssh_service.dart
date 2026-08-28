@@ -35,6 +35,24 @@ class SSHService {
 
   bool get isConnected => _client != null;
 
+  static String friendlyError(Object? e) {
+    final s = (e ?? '').toString().toLowerCase();
+    if (s.contains('not configured')) {
+      return 'Set the rig Wi-Fi IPv4 in Settings first.';
+    }
+    if (s.contains('timed out') || s.contains('timeout')) {
+      return 'Could not reach the rig on port 22. Use the Wi-Fi IPv4, not 8130.';
+    }
+    if (s.contains('connection refused') || s.contains('os error')) {
+      return 'SSH port 22 is closed or the IP is wrong.';
+    }
+    if (s.contains('auth') || s.contains('permission')) {
+      return 'Wrong username or password.';
+    }
+    if (s.isEmpty) return 'Could not connect to the rig. Check IP, Wi-Fi, and password.';
+    return 'Could not connect to the rig. Check IP, Wi-Fi, and password.';
+  }
+
   Future<String?> connect() {
     return _serialized(() => _connectUnlocked());
   }
@@ -81,7 +99,7 @@ class SSHService {
     } catch (e) {
       debugPrint('[SSHService] Connection failed: $e');
       _client = null;
-      return e.toString();
+      return SSHService.friendlyError(e);
     }
   }
 

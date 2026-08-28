@@ -62,6 +62,28 @@ function buildPrompt(eventType, snapshot) {
   return templates[eventType] || templates.score_milestone;
 }
 
+function parseJsonObject(text) {
+  const cleaned = String(text || '').replace(/```(?:json)?/gi, '').replace(/```/g, '').trim();
+  const match = cleaned.match(/\{[\s\S]*\}/);
+  if (!match) return null;
+  try {
+    return JSON.parse(match[0]);
+  } catch (_) {
+    return null;
+  }
+}
+
+function parseJsonArray(text) {
+  const cleaned = String(text || '').replace(/```(?:json)?/gi, '').replace(/```/g, '').trim();
+  const match = cleaned.match(/\[[\s\S]*\]/);
+  if (!match) return null;
+  try {
+    return JSON.parse(match[0]);
+  } catch (_) {
+    return null;
+  }
+}
+
 function rememberCommentary(worldState, text, source, model, eventType) {
   if (!worldState) return;
   worldState.lastCommentary = text;
@@ -110,6 +132,7 @@ async function triggerCommentary(eventType, snapshot, io, commentaryRateLimiter,
 }
 
 async function pollGameMasterAsync(worldState, io, snapshot) {
+  if (!config.GEMINI_API_KEY) return;
   if (isPollingGameMaster) return;
   if (Date.now() < geminiPollCooldownUntil) return;
   const limiter = worldState.commentaryRateLimiter && worldState.commentaryRateLimiter.game_master;
@@ -122,9 +145,19 @@ async function pollGameMasterAsync(worldState, io, snapshot) {
     io.emit('commentary_thinking', { eventType: 'game_master', source: 'gemini' });
     const prompt = buildPrompt('game_master', view);
     const result = await callGemini(prompt, { maxOutputTokens: 120, temperature: 0.5 });
-    const jsonMatch = result.text && result.text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) return;
-    const data = JSON.parse(jsonMatch[0]);
+    const data = parseJsonObject(result && result.text);
+    if (!data) {
+      const fallbackText = pickFallbackCommentary('game_master', view);
+      rememberCommentary(worldState, fallbackText, 'fallback', '', 'game_master');
+      io.emit('commentary', {
+        text: fallbackText,
+        source: 'fallback',
+        model: '',
+        eventType: 'game_master',
+        ai: 'ARKANOID AI',
+      });
+      return;
+    }
     if (data.modifier && data.modifier !== 'NONE') {
       gameEngine.applyGameMasterMod(worldState, data.modifier);
     }
@@ -140,6 +173,15 @@ async function pollGameMasterAsync(worldState, io, snapshot) {
     }
   } catch (err) {
     geminiPollCooldownUntil = Date.now() + 120000;
+    const fallbackText = pickFallbackCommentary('game_master', view);
+    rememberCommentary(worldState, fallbackText, 'fallback', '', 'game_master');
+    io.emit('commentary', {
+      text: fallbackText,
+      source: 'fallback',
+      model: '',
+      eventType: 'game_master',
+      ai: 'ARKANOID AI',
+    });
     if (err && err.code !== 'NO_KEY' && err.code !== 'AUTH_COOLDOWN') {
       console.error('ARKANOID AI game master fallback:', err.message || err);
     }
@@ -167,7 +209,7 @@ Return ONLY a JSON 2D array: exactly 8 rows, each with exactly ${tileCols} integ
     const result = await callGemini(prompt, { maxOutputTokens: 2048, temperature: 0.4, timeoutMs: 15000 });
     const jsonMatch = result.text && result.text.match(/\[[\s\S]*\]/);
     if (jsonMatch) {
-      const grid = JSON.parse(jsonMatch[0]);
+      const grid = parseJsonArray(result.text);
       if (Array.isArray(grid) && grid.length === 8) {
         let tileOk = true;
         for (let i = 0; i < grid.length; i++) {

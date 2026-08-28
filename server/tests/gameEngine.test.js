@@ -194,8 +194,11 @@ test('life-loss respawn uses configured ballSpeed', () => {
   state.lastFallenBallToucher = 'player1';
   gameEngine.updateGameLoop(state, () => {});
   const ball = state.balls.find((b) => b.active);
-  const expected = gameEngine.getRespawnVelocity(state);
   assert.ok(ball, 'respawned ball');
+  assert.strictEqual(ball.glued, true);
+  state.serveLaunchAt = Date.now() - 1;
+  gameEngine.updateGameLoop(state, () => {});
+  const expected = gameEngine.getRespawnVelocity(state);
   assert.strictEqual(ball.vx, expected.vx);
   assert.strictEqual(ball.vy, expected.vy);
 });
@@ -311,7 +314,7 @@ test('ARKANOID AI lists ten Gemini fallback models', () => {
   assert.ok(/Bravo/i.test(life), life);
 });
 
-test('life-loss respawn launches upward from the serving paddle', () => {
+test('life-loss respawn glues the ball on the serving paddle', () => {
   const state = makePlayingState(3);
   const p = state.players[0];
   p.paddleX = 120;
@@ -323,11 +326,15 @@ test('life-loss respawn launches upward from the serving paddle', () => {
   assert.ok(ball, 'respawned ball');
   assert.ok(Math.abs(ball.x - (p.paddleX + p.paddleWidth / 2)) < 2, 'serve sits on paddle X');
   assert.ok(ball.y < p.paddleY, 'serve sits above the paddle');
-  assert.ok(ball.vy < 0, 'serve goes up into the bricks');
+  assert.strictEqual(ball.glued, true);
+  assert.strictEqual(ball.vy, 0);
+  state.serveLaunchAt = Date.now() - 1;
+  gameEngine.updateGameLoop(state, () => {});
   assert.strictEqual(ball.glued, false);
+  assert.ok(ball.vy < 0, 'serve goes up into the bricks after the hold');
 });
 
-test('brick break credits a living paddle if the ball was never touched', () => {
+test('brick break does not credit a paddle the ball never touched', () => {
   const state = makePlayingState(3);
   const ball = state.balls[0];
   ball.lastTouchedByPlayerId = null;
@@ -336,7 +343,24 @@ test('brick break credits a living paddle if the ball was never touched', () => 
   ball.x = brick.x + brick.width / 2;
   ball.y = brick.y + brick.height / 2;
   gameEngine.checkBrickCollision(ball, state);
-  assert.strictEqual(state.players[0].score, 10);
+  assert.strictEqual(state.players[0].score, 0);
+});
+
+test('stock levels always have destructible bricks', () => {
+  for (const n of [3, 5, 12]) {
+    for (let level = 1; level <= 5; level++) {
+      const grid = gameEngine.loadLevel(level, null, n);
+      const playable = grid.some((row) => row.some((b) => b.active && b.type !== 'indestructible'));
+      assert.ok(playable, `level ${level} on ${n} screens must be finishable`);
+    }
+  }
+});
+
+test('game master wide paddle buffs living paddles immediately', () => {
+  const state = makePlayingState(3);
+  const before = state.players[0].paddleWidth;
+  gameEngine.applyGameMasterMod(state, 'WIDE_PADDLE');
+  assert.ok(state.players[0].paddleWidth > before);
 });
 
 test('disconnect grace freezes the court so lives are not drained offline', () => {

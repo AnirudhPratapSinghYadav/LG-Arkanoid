@@ -25,6 +25,7 @@ class ControllerScreen extends StatefulWidget {
 }
 
 class _ControllerScreenState extends State<ControllerScreen> {
+  late GameService _gameService;
   bool _showGameEndOverlay = false;
   String _gameEndTitle = '';
   String _gameEndSubtitle = '';
@@ -37,12 +38,12 @@ class _ControllerScreenState extends State<ControllerScreen> {
   @override
   void initState() {
     super.initState();
-    context.read<GameService>().addListener(_onGameStateUpdate);
+    _gameService = context.read<GameService>();
+    _gameService.addListener(_onGameStateUpdate);
     _clock = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted) return;
       final status =
-          context.read<GameService>().latestGameState?['gameStatus'] as String? ??
-              '';
+          _gameService.latestGameState?['gameStatus'] as String? ?? '';
       if (status == 'playing') setState(() {});
     });
   }
@@ -50,13 +51,13 @@ class _ControllerScreenState extends State<ControllerScreen> {
   @override
   void dispose() {
     _clock?.cancel();
-    context.read<GameService>().removeListener(_onGameStateUpdate);
+    _gameService.removeListener(_onGameStateUpdate);
     super.dispose();
   }
 
   void _onGameStateUpdate() {
     if (!mounted) return;
-    final service = context.read<GameService>();
+    final service = _gameService;
     final gameState = service.latestGameState;
     if (gameState == null) return;
 
@@ -120,7 +121,7 @@ class _ControllerScreenState extends State<ControllerScreen> {
           _gameEndKicker = 'CONGRATULATIONS';
           _gameEndTitle = status == 'time_up' ? 'TIME\'S UP!' : 'YOU WIN';
           _gameEndSubtitle = 'You take the wall.';
-          _gameEndMessage = '$winnerName wins.';
+          _gameEndMessage = 'You win this match.';
         } else {
           _gameEndKicker = 'BETTER LUCK NEXT TIME';
           _gameEndTitle = myRank == 2 ? '2ND PLACE' : 'YOU PLACED #$myRank';
@@ -158,6 +159,7 @@ class _ControllerScreenState extends State<ControllerScreen> {
     int remainingSeconds = 0;
     bool showTimer = false;
     bool warnLowTime = false;
+    bool endlessClock = false;
     if (gameState != null) {
       final gameStartedAt = asInt(gameState['gameStartedAt']);
       final duration = asInt(gameState['gameDurationSeconds']) ?? 180;
@@ -170,6 +172,7 @@ class _ControllerScreenState extends State<ControllerScreen> {
           warnLowTime = remainingSeconds <= 30;
         } else {
           remainingSeconds = elapsed;
+          endlessClock = true;
         }
         showTimer = true;
       }
@@ -191,6 +194,30 @@ class _ControllerScreenState extends State<ControllerScreen> {
             SafeArea(
               child: Column(
                 children: [
+                  if (!service.connected)
+                    Material(
+                      color: accentError,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.wifi_off, color: Colors.white, size: 18),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Connection lost — reconnecting. Paddle is paused.',
+                                style: AppFonts.inter(
+                                  fontSize: 12,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   Padding(
                     padding: const EdgeInsets.fromLTRB(12, 6, 12, 0),
                     child: ControllerHudBar(
@@ -211,6 +238,7 @@ class _ControllerScreenState extends State<ControllerScreen> {
                     remainingSeconds: remainingSeconds,
                     showTimer: showTimer,
                     warnLowTime: warnLowTime,
+                    timerLabel: endlessClock ? 'ELAPSED' : 'TIME',
                   ),
                   if (service.lastCommentary.isNotEmpty)
                     Padding(
@@ -278,6 +306,7 @@ class _ControllerScreenState extends State<ControllerScreen> {
                 isHost: _gameEndIsHost,
                 onRematch: _gameEndIsHost
                     ? () {
+                        setState(() => _showGameEndOverlay = false);
                         context.read<GameService>().rematch();
                       }
                     : null,

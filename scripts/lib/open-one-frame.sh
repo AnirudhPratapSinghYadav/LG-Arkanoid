@@ -23,16 +23,25 @@ open_one_frame() {
         --autoplay-policy=no-user-gesture-required "$url" \
         >/tmp/lg-arkanoid-chrome-lg1.log 2>&1 &
       disown || true
-      return 0
-    fi
-    if command -v chromium >/dev/null 2>&1; then
+    elif command -v chromium >/dev/null 2>&1; then
       DISPLAY=:0 nohup chromium --start-fullscreen \
         --autoplay-policy=no-user-gesture-required "$url" \
         >/tmp/lg-arkanoid-chrome-lg1.log 2>&1 &
       disown || true
-      return 0
+    else
+      echo "Warning: chromium-browser is not on lg1 PATH. Sit at lg1 and paste:"
+      echo "    chromium-browser --start-fullscreen '$url'"
+      return 1
     fi
-    echo "Warning: chromium-browser is not on lg1 PATH. Sit at lg1 and paste:"
+    sleep 1
+    for _try in 1 2 3 4 5 6 7 8; do
+      if local_chromium_up "$port" "$screen_number"; then
+        return 0
+      fi
+      sleep 0.5
+    done
+    echo "Warning: Chromium did not stay up on lg1 for /$screen_number"
+    echo "  Sit at lg1 and paste:"
     echo "    chromium-browser --start-fullscreen '$url'"
     return 1
   fi
@@ -41,7 +50,7 @@ open_one_frame() {
   remote="$(key_chrome_cmd "$url" "$extra")"
   ssh_key_slave "$frame" "$remote" || true
   sleep 1
-  if slave_chromium_up "$frame" "${LG_PASSWORD:-}" "$port"; then
+  if slave_chromium_up "$frame" "${LG_PASSWORD:-}" "$port" "$screen_number"; then
     return 0
   fi
 
@@ -49,7 +58,7 @@ open_one_frame() {
   if ssh_password_slave "$frame" "$remote" "${LG_PASSWORD:-}"; then
     echo "  Key SSH did not start Chromium — password SSH used (ssh -Xnf lg@$frame)."
     sleep 1
-    if slave_chromium_up "$frame" "${LG_PASSWORD:-}" "$port"; then
+    if slave_chromium_up "$frame" "${LG_PASSWORD:-}" "$port" "$screen_number"; then
       return 0
     fi
   fi

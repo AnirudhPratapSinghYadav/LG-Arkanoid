@@ -13,6 +13,8 @@ class QrScanScreen extends StatefulWidget {
 
 class _QrScanScreenState extends State<QrScanScreen> {
   final MobileScannerController controller = MobileScannerController();
+  bool _barcodeFound = false;
+  DateTime? _wrongHintAt;
 
   @override
   void dispose() {
@@ -20,7 +22,17 @@ class _QrScanScreenState extends State<QrScanScreen> {
     super.dispose();
   }
 
-  bool _barcodeFound = false;
+  void _hintWrongQr() {
+    final now = DateTime.now();
+    if (_wrongHintAt != null && now.difference(_wrongHintAt!) < const Duration(seconds: 3)) {
+      return;
+    }
+    _wrongHintAt = now;
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Not a join QR — scan the center-screen code')),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -75,13 +87,14 @@ class _QrScanScreenState extends State<QrScanScreen> {
                         raw.contains('/controller') ||
                         raw.contains('?c=') ||
                         (parsed != null && parsed.token.length == 4);
-                    if (parsed != null && looksLikeJoin) {
+                    if (parsed != null && looksLikeJoin && parsed.token.length == 4) {
                       _barcodeFound = true;
                       await controller.stop();
                       if (!context.mounted) return;
                       Navigator.of(context).pop(raw);
                       return;
                     }
+                    _hintWrongQr();
                   } else if (mode == 'rigConnect' && raw.startsWith('LGRIG|')) {
                     _barcodeFound = true;
                     await controller.stop();

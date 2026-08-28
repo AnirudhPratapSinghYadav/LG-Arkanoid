@@ -5,7 +5,9 @@
 
 Panoramic multiplayer Arkanoid for a [Liquid Galaxy](https://www.liquidgalaxy.eu/) wall. Liquid Galaxy · GESOC 2026.
 
-Phones are **paddles only**. Chromium on each glass draws one slice. One Node process on **port 8130** is the match.
+The phone app name is **AI Arkanoid LG**. Phones are **paddles only**. Chromium on each glass draws one slice. One Node process on **port 8130** is the match.
+
+If `GEMINI_API_KEY` is set, the wall announcer and next-level layouts use Gemini. If it is not, the wall still talks using the offline announcer.
 
 **Download the phone APK:** [27-08-2026-v2-AnirudhPratapSinghYadav-Arkanoid_AI-GESOC2026.apk](https://github.com/AnirudhPratapSinghYadav/LG-Arkanoid/releases/latest/download/27-08-2026-v2-AnirudhPratapSinghYadav-Arkanoid_AI-GESOC2026.apk)
 
@@ -75,7 +77,7 @@ Opens every slice on **8130** (not only the QR):
 | Center QR | http://localhost:8130/2  *(3 screens; on 5 glasses this is `/3`)* |
 | Right | http://localhost:8130/3 |
 
-Paddle tab: http://localhost:8130/controller — name, 4-letter code, join. Host **START**. If a popup blocker eats a tab: `npm run open-wall`.
+Paddle tab: http://localhost:8130/controller — name, 4-letter code, join. Host **START** (works with one paddle). If a popup blocker eats a tab: `npm run open-wall`. Wall slices must be **:8130**, not Vite :5173.
 
 ---
 

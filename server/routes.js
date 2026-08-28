@@ -3,7 +3,7 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
-const { getLanIp, resolveWebRoot, SCREEN_WIDTH, CANVAS_HEIGHT, PORT } = require('./config.js');
+const { getLanIp, resolveWebRoot, SCREEN_WIDTH, CANVAS_HEIGHT, PORT, GEMINI_API_KEY } = require('./config.js');
 
 function healthPayload(worldState) {
   return {
@@ -15,6 +15,7 @@ function healthPayload(worldState) {
     // sessionToken intentionally omitted — join code is pushed only to screen sockets.
     lanIp: getLanIp(),
     port: PORT,
+    geminiLive: Boolean(GEMINI_API_KEY),
   };
 }
 

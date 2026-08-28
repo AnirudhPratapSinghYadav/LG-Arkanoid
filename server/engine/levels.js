@@ -42,7 +42,7 @@ function loadLevel(levelNumber, aiGeneratedGrid = null, numScreens = 3, screenWi
         if(levelNumber===2 && (row+col) % 3===0){
           brickType = 'hard';
         }else if(levelNumber===3){
-          if(row===3 || row===4){
+          if((row===3 || row===4) && col % 4 === 0){
             brickType = 'indestructible';
           }else if(col % 2===0){
             brickType = 'hard';
@@ -52,7 +52,7 @@ function loadLevel(levelNumber, aiGeneratedGrid = null, numScreens = 3, screenWi
           if(row === 7 && col % 4 === 0) brickType = 'indestructible';
         }else if(levelNumber>=5){
           const edge = col === 0 || col === numCols - 1;
-          if(edge && row < 6){
+          if(edge && row < 2){
             brickType = 'indestructible';
           }else if((row + col) % 2 === 0){
             brickType = 'hard';
@@ -68,8 +68,24 @@ function loadLevel(levelNumber, aiGeneratedGrid = null, numScreens = 3, screenWi
     }
     return newBricks;
   } catch(error){
-    console.log(error);
-    return [];
+    console.error('loadLevel failed, using stock layout', error && error.message);
+    if (aiGeneratedGrid) return loadLevel(levelNumber, null, numScreens, screenWidth);
+    const m = brickMetrics(screenWidth);
+    const cols = brickColumnsForWorld(numScreens);
+    const fallback = [];
+    for (let row = 0; row < 4; row++) {
+      const rowBricks = [];
+      for (let col = 0; col < cols; col++) {
+        rowBricks.push(new Brick(
+          row, col,
+          m.gutter + col * m.cell,
+          m.top + row * m.rowPitch,
+          m.brickWidth, m.brickHeight
+        ));
+      }
+      fallback.push(rowBricks);
+    }
+    return fallback;
   }
 }
 

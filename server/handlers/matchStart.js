@@ -40,15 +40,16 @@ function tryStartMatch(socket, ctx, data, opts) {
     socket.emit('error', settingsErr);
     return;
   }
-  const need = Math.max(1, worldState.maxPlayers || 1);
+  const selected = Math.max(1, worldState.maxPlayers || 1);
   const connected = worldState.players.filter((p) => p.connected).length;
-  if (connected < need) {
+  if (connected < 1) {
     socket.emit('error', {
       errorCode: 1012,
-      message: `Need ${need} players in the lobby before start (have ${connected})`,
+      message: 'Need at least one paddle in the lobby before start',
     });
     return;
   }
+  worldState.maxPlayers = Math.min(selected, connected);
   if (typeof cancelReturnToLobby === 'function') cancelReturnToLobby();
 
   clearAllPowerUpTimers(worldState);

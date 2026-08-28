@@ -1,5 +1,8 @@
+const pathScreen = (typeof location !== 'undefined' && location.pathname.match(/^\/(\d+)$/));
 const numScreens = (typeof window.NUM_SCREENS !== 'undefined') ? window.NUM_SCREENS : 3;
-const screenId = (typeof window.SCREEN_ID !== 'undefined') ? window.SCREEN_ID : Math.ceil(numScreens / 2);
+const screenId = pathScreen
+    ? parseInt(pathScreen[1], 10)
+    : ((typeof window.SCREEN_ID !== 'undefined') ? window.SCREEN_ID : Math.ceil(numScreens / 2));
 const isCenterScreen = screenId === Math.ceil(numScreens / 2);
 
 // Court size comes from the server (portrait LG frames are 608x1080, not 1920x1080).

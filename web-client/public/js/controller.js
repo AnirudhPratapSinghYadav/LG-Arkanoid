@@ -224,12 +224,13 @@ function openJoinSocket(serverOrigin, token, playerName) {
             hostControls.style.display = canStart ? 'block' : 'none';
             const startBtn = document.getElementById('startMatchBtn');
             if (startBtn && canStart) {
-                const need = Number(state.maxPlayers) || hostMaxPlayers;
                 const connected = players.filter((p) => p && p.connected).length;
-                startBtn.disabled = connected < need;
-                startBtn.textContent = connected < need
-                    ? ('Need ' + need + ' players')
-                    : 'Create & start';
+                startBtn.disabled = connected < 1;
+                startBtn.textContent = connected < 1
+                    ? 'Need a paddle'
+                    : (connected < (Number(state.maxPlayers) || hostMaxPlayers)
+                        ? ('START WITH ' + connected)
+                        : 'START MATCH');
             }
         }
         if (isHost && (state.gameStatus === 'lobby' || state.gameStatus === 'waiting')) {
@@ -242,31 +243,36 @@ function openJoinSocket(serverOrigin, token, playerName) {
         if (me) {
             myScore = me.score;
             myLives = me.lives;
-            myRank = me.rank || 1;
+            myRank = me.rank || 0;
             myInventory = Array.isArray(me.inventory) ? me.inventory.slice() : [];
 
             document.getElementById('scoreVal').innerText = String(myScore).padStart(5, '0');
             document.getElementById('scoreVal').style.color = playerColor;
             document.getElementById('livesVal').innerText = myLives;
             document.getElementById('livesVal').style.color = myLives <= 1 ? '#D9534F' : '#4CAF50';
-            document.getElementById('rankVal').innerText = '#' + myRank;
+            document.getElementById('rankVal').innerText = myRank >= 1 ? '#' + myRank : '—';
             document.getElementById('rankVal').style.color = myRank === 1 ? '#F4A261' : '#4F7CAC';
             updatePowerUpButtons();
         }
 
-        if (state.gameStartedAt && state.gameStatus === 'playing' && state.gameDurationSeconds > 0) {
+        if (state.gameStartedAt && state.gameStatus === 'playing') {
             const elapsed = Math.floor((Date.now() - state.gameStartedAt) / 1000);
-            const remaining = Math.max(0, state.gameDurationSeconds - elapsed);
-            const m = String(Math.floor(remaining / 60)).padStart(2, '0');
-            const s = String(remaining % 60).padStart(2, '0');
-            document.getElementById('timerVal').innerText = m + ':' + s;
-            document.getElementById('timerVal').style.color = remaining <= 30 ? '#D9534F' : '#fff';
-        } else if (state.gameStartedAt && state.gameStatus === 'playing') {
-            const elapsed = Math.floor((Date.now() - state.gameStartedAt) / 1000);
-            const m = String(Math.floor(elapsed / 60)).padStart(2, '0');
-            const s = String(elapsed % 60).padStart(2, '0');
-            document.getElementById('timerVal').innerText = m + ':' + s;
-            document.getElementById('timerVal').style.color = '#FFC300';
+            const timerEl = document.getElementById('timerVal');
+            const timerLabel = timerEl && timerEl.parentElement && timerEl.parentElement.querySelector('.stat-label');
+            if (state.gameDurationSeconds > 0) {
+                const remaining = Math.max(0, state.gameDurationSeconds - elapsed);
+                const m = String(Math.floor(remaining / 60)).padStart(2, '0');
+                const s = String(remaining % 60).padStart(2, '0');
+                timerEl.innerText = m + ':' + s;
+                timerEl.style.color = remaining <= 30 ? '#D9534F' : '#fff';
+                if (timerLabel) timerLabel.textContent = 'TIME';
+            } else {
+                const m = String(Math.floor(elapsed / 60)).padStart(2, '0');
+                const s = String(elapsed % 60).padStart(2, '0');
+                timerEl.innerText = m + ':' + s;
+                timerEl.style.color = '#fff';
+                if (timerLabel) timerLabel.textContent = 'ELAPSED';
+            }
         } else if (state.gameStatus === 'lobby' || state.gameStatus === 'waiting') {
             const duration = state.gameDurationSeconds;
             document.getElementById('timerVal').innerText = duration === 0 ? '∞' : '--:--';
@@ -366,7 +372,7 @@ function openJoinSocket(serverOrigin, token, playerName) {
         isConnected = false;
         const statusEl = document.getElementById('hudStatus');
         statusEl.style.color = '#D9534F';
-        statusEl.innerHTML = '<span style="width:6px;height:6px;border-radius:50%;background:#D9534F;display:inline-block;"></span> OFFLINE';
+        statusEl.innerHTML = '<span style="width:6px;height:6px;border-radius:50%;background:#D9534F;display:inline-block;"></span> RECONNECTING';
     });
 }
 

@@ -171,7 +171,7 @@ function generateToken(){
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let token = '';
   for(let i = 0; i < 4; i++){
-    token += chars.charAt(Math.floor(Math.random()*chars.length));
+    token += chars.charAt(crypto.randomInt(chars.length));
   }
   return token;
 }

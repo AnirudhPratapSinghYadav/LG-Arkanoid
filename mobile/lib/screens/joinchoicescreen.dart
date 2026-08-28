@@ -99,7 +99,7 @@ class _JoinChoiceScreenState extends State<JoinChoiceScreen> {
                         final result = await Navigator.pushNamed(context, '/qrscan', arguments: 'session');
                         if (result != null && result is String) {
                           final parsed = parseJoinInput(result);
-                          if (parsed != null && parsed.ip.isNotEmpty) {
+                          if (parsed != null && parsed.ip.isNotEmpty && parsed.token.length == 4) {
                             if (context.mounted) {
                               if (parsed.warning != null) {
                                 ScaffoldMessenger.of(context).showSnackBar(
@@ -122,6 +122,12 @@ class _JoinChoiceScreenState extends State<JoinChoiceScreen> {
                                 },
                               );
                             }
+                          } else if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('QR has no 4-letter code — scan the center-screen QR'),
+                              ),
+                            );
                           }
                         }
                       },

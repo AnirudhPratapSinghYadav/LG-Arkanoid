@@ -25,7 +25,7 @@ else
   for i in $(seq 2 12); do FRAMES+=("lg$i"); done
 fi
 
-kill_remote="pkill -f 'chromium-browser.*:${port}/' 2>/dev/null || true"
+kill_remote="pkill -f 'chromium.*:${port}/' 2>/dev/null || true"
 
 for frame in "${FRAMES[@]}"; do
   if [ "$frame" = "lg1" ]; then
@@ -38,8 +38,8 @@ for frame in "${FRAMES[@]}"; do
 done
 
 echo "Killing Chromium on master…"
-pkill -f "chromium-browser.*localhost:${port}/" 2>/dev/null || true
-pkill -f "chromium-browser.*lg1:${port}/" 2>/dev/null || true
+pkill -f "chromium.*localhost:${port}/" 2>/dev/null || true
+pkill -f "chromium.*lg1:${port}/" 2>/dev/null || true
 pkill -f "lg-arkanoid-chrome" 2>/dev/null || true
 
 if command -v pm2 >/dev/null 2>&1; then

@@ -83,6 +83,13 @@ class _ManualEntryScreenState extends State<ManualEntryScreen> {
       return;
     }
 
+    if (port == '22') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Join uses port 8130. Port 22 is only for CONNECT LG in Settings.')),
+      );
+      return;
+    }
+
     final host = parseJoinInput(ip, defaultPort: port);
     if (host?.warning != null || parsedField?.warning != null) {
       ScaffoldMessenger.of(context).showSnackBar(

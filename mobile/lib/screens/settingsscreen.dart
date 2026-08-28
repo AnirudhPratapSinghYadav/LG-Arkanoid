@@ -90,10 +90,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     
     bool connected = false;
     int retries = 0;
-    
+    String? lastErr;
+
     while (!connected && retries < 5) {
-      final err = await SSHService().connect();
-      connected = err == null;
+      lastErr = await SSHService().connect();
+      connected = lastErr == null;
       if (!connected) {
         retries++;
         if (retries < 5) {
@@ -126,7 +127,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ? (detectedScreens != null
             ? 'Connected to rig — $detectedScreens screens detected.'
             : 'Connected to rig. Screen count not reported, using the value above.')
-        : 'Failed to connect after $retries retries.';
+        : (lastErr ?? 'Failed to connect after $retries retries.');
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -315,7 +316,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     const SizedBox(height: 16),
                     SettingsLabeledField(
                       label: 'PASSWORD',
-                      hint: 'lq',
+                      hint: 'rig password',
                       controller: _passwordController,
                       obscure: _obscurePassword,
                       suffixIcon: IconButton(
@@ -407,6 +408,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
             // Rig Action Buttons
             ElevatedButton.icon(
               onPressed: () {
+                if (!(_formKey.currentState?.validate() ?? false)) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Fix the rig IP before saving.'),
+                      backgroundColor: accentError,
+                    ),
+                  );
+                  return;
+                }
                 _saveValues();
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(

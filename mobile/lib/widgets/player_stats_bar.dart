@@ -9,6 +9,7 @@ class PlayerStatsBar extends StatelessWidget {
   final int remainingSeconds;
   final bool showTimer;
   final bool warnLowTime;
+  final String timerLabel;
 
   const PlayerStatsBar({
     super.key,
@@ -16,6 +17,7 @@ class PlayerStatsBar extends StatelessWidget {
     required this.remainingSeconds,
     required this.showTimer,
     this.warnLowTime = false,
+    this.timerLabel = 'TIME',
   });
 
   String _formatTime(int totalSeconds) {
@@ -100,7 +102,7 @@ class PlayerStatsBar extends StatelessWidget {
           Expanded(
             child: _buildStatCard(
               label: 'RANK',
-              value: '#${service.rank}',
+              value: service.rank >= 1 ? '#${service.rank}' : '—',
               color: service.rank == 1 ? accentWarning : accentSystem,
               icon: Icons.emoji_events_rounded,
             ),
@@ -110,8 +112,8 @@ class PlayerStatsBar extends StatelessWidget {
             // Timer
             Expanded(
               child: _buildStatCard(
-                label: 'TIME',
-                value: _formatTime(remainingSeconds),
+              label: timerLabel,
+              value: _formatTime(remainingSeconds),
                 color: warnLowTime ? accentError : textPrimary,
                 icon: Icons.timer_rounded,
               ),

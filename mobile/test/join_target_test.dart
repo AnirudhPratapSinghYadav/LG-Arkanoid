@@ -23,6 +23,13 @@ void main() {
       expect(t.warning, isNotNull);
     });
 
+    test('controller URL without code has empty token', () {
+      final t = parseJoinInput('http://10.11.77.106:8130/controller');
+      expect(t, isNotNull);
+      expect(t!.ip, '10.11.77.106');
+      expect(t.token.length, isNot(4));
+    });
+
     test('emulator loopback is a hint, not a block', () {
       final t = parseJoinInput('http://10.0.2.2:8130/controller?c=CATA');
       expect(t, isNotNull);
@@ -64,6 +71,8 @@ void main() {
       expect(startSlotCount(connected: 1, selected: 2), 1);
       expect(startSlotCount(connected: 2, selected: 2), 2);
       expect(startSlotCount(connected: 0, selected: 2), 0);
+      expect(connectedPlayerCount([], selfJoined: true), 1);
+      expect(connectedPlayerCount([], selfJoined: false), 0);
     });
   });
 

@@ -308,7 +308,7 @@ async function main() {
   ]);
   record(
     'Non-host start_game blocked or ignored safely',
-    hostGuard.type !== 'timeout' || true, // may only emit join_rejected/error; also OK if silently ignored while playing
+    hostGuard.type !== 'timeout',
     JSON.stringify(hostGuard)
   );
 

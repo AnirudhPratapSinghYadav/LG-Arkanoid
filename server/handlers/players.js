@@ -197,9 +197,11 @@ function registerPlayerHandlers(socket, ctx) {
       player.paddleX += deltaX;
       const pw = player.paddleWidth || 300;
       player.paddleX = Math.max(0, Math.min(maxRight - pw, Math.round(player.paddleX)));
-      if (worldState.gameStatus === 'countdown') {
+      if (worldState.gameStatus === 'countdown' || worldState.gameStatus === 'playing') {
         gameEngine.stickGluedBalls(worldState, player);
-        broadcastGameState({ forceControllers: true });
+        if (worldState.gameStatus === 'countdown') {
+          broadcastGameState({ forceControllers: true });
+        }
       }
     });
 

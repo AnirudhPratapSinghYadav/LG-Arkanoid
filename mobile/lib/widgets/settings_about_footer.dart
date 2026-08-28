@@ -39,7 +39,7 @@ class SettingsAboutFooter extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            'Built by Anirudh Pratap Singh Yadav for Liquid Galaxy\nGemini SoC 2026',
+            'Built by Anirudh Pratap Singh Yadav for Liquid Galaxy\nGESOC 2026',
             style: AppFonts.inter(
               fontSize: 11,
               color: textSecondary,

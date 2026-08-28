@@ -15,6 +15,7 @@ assert.strictEqual(payload.status, 'ok');
 assert.strictEqual(payload.gameStatus, 'lobby');
 assert.strictEqual(payload.connectedPlayers, 1);
 assert.strictEqual(payload.port, 8130);
+assert.strictEqual(typeof payload.geminiLive, 'boolean');
 assert.ok(!Object.prototype.hasOwnProperty.call(payload, 'sessionToken'));
 assert.ok(!Object.prototype.hasOwnProperty.call(payload, 'sessionId'));
 assert.ok(!JSON.stringify(payload).includes('LEAK'));

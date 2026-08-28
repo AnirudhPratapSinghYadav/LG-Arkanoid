@@ -19,6 +19,7 @@ class PowerupPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final game = context.watch<GameService>();
     final inventory = _playerInventory(game);
+    final canUse = game.connected && game.lives > 0;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -46,7 +47,7 @@ class PowerupPanel extends StatelessWidget {
                   child: _PowerButton(
                     def: entry.value,
                     count: count,
-                    onTap: count > 0
+                    onTap: canUse && count > 0
                         ? () {
                             HapticFeedback.mediumImpact();
                             context.read<GameService>().activatePowerUp(entry.key);

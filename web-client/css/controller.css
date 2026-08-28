@@ -411,10 +411,28 @@ body {
 .touch-pad-wrap {
     flex: 1;
     display: flex;
+    flex-direction: column;
     align-items: stretch;
     justify-content: center;
     padding: 8px 16px 18px;
     min-height: 180px;
+    gap: 10px;
+}
+
+.swipe-strip {
+    flex-shrink: 0;
+    height: 56px;
+    border: 1px solid rgba(32, 197, 255, 0.28);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #9aa4af;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    touch-action: none;
+    user-select: none;
 }
 
 .dpad-row {

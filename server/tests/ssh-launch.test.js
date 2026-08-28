@@ -44,6 +44,7 @@ assert.ok(chrome.includes('export DISPLAY=:0'), 'DISPLAY=:0 on the slave X sessi
 assert.ok(chrome.includes('--start-fullscreen'), 'Chromium opens fullscreen on the glass');
 assert.ok(chrome.includes('chromium-browser'), 'LG images use chromium-browser');
 assert.ok(chrome.includes('command -v chromium'), 'slaves may only have chromium');
+assert.ok(chrome.includes('local_chromium_up'), 'lg1 Chromium must be checked like slaves');
 assert.ok(chrome.includes('slave_chromium_up'), 'ssh -Xnf is not proof Chromium started');
 assert.ok(chrome.includes('pgrep -f'), 'slave check looks for a Chromium process on this game port');
 assert.ok(
@@ -71,6 +72,11 @@ assert.ok(one.includes('ssh -Xnf lg@'), 'log line must show the key SSH');
 assert.ok(one.includes("ssh -Xnf lg@$frame 'echo ok'"), 'failed slave must print the SSH check');
 assert.ok(/\[ "\$frame" = "lg1" \]/.test(one), 'lg1 must take the local Chromium branch');
 assert.ok(one.includes('local Chromium'), 'lg1 Chromium is local');
+assert.ok(one.includes('local_chromium_up'), 'lg1 launch must verify Chromium started');
+assert.ok(one.includes('sleep 0.5'), 'lg1 Chromium check retries if the process is slow to appear');
+
+const closeSh = read('scripts/close-arkanoid.sh');
+assert.ok(closeSh.includes("chromium.*:${port}/") || closeSh.includes('chromium.*localhost'), 'close must kill chromium and chromium-browser');
 
 const config = read('server/config.js');
 assert.ok(config.includes("ABCDEFGHJKLMNPQRSTUVWXYZ23456789"), 'session codes skip 0/O/1/I');

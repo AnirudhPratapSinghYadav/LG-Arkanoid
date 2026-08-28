@@ -50,7 +50,7 @@ GameScene.prototype.updateHUD = function() {
     if (isCenterScreen && line && !matchEnded) {
         this.centerCommentaryTitle.setVisible(true);
         this.centerCommentaryTitle.setText(
-            this.currentState.lastCommentarySource === 'gemini' ? 'ARKANOID AI' : 'ARKANOID AI · LOCAL'
+            this.currentState.lastCommentarySource === 'gemini' ? 'GEMINI' : 'OFFLINE ANNOUNCER'
         );
         this.centerCommentaryText.setVisible(true);
         if (this._shownCommentary !== line) {

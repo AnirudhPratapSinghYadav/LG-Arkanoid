@@ -252,9 +252,13 @@ class GameService extends ChangeNotifier {
         }
       }
       lastConnectError ??= 'Timed out after ${timeout.inSeconds}s';
+      final err = lastConnectError;
+      disconnect();
+      lastConnectError = err;
       return false;
     } catch (e) {
       debugPrint('Socket connection error: $e');
+      disconnect();
       lastConnectError = e.toString();
       return false;
     }
@@ -385,7 +389,9 @@ class GameService extends ChangeNotifier {
         final stopwatch = Stopwatch()..start();
         socket!.emitWithAck('ping_test', {}, ack: (_) {
           stopwatch.stop();
-          latencyMs = stopwatch.elapsedMilliseconds;
+          final ms = stopwatch.elapsedMilliseconds;
+          if ((ms - latencyMs).abs() < 40) return;
+          latencyMs = ms;
           notifyListeners();
         });
       }

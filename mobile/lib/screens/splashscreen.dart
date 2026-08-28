@@ -112,7 +112,7 @@ class _SplashScreenState extends State<SplashScreen>
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          'Anirudh Pratap Singh Yadav · Gemini SoC 2026',
+                          'Anirudh Pratap Singh Yadav · GESOC 2026',
                           style: AppFonts.inter(
                             fontSize: 11,
                             color: textSecondary,

@@ -16,13 +16,24 @@ const {
   launchGluedBall,
   stickGluedBalls,
 } = require('./engine/physics.js');
+const physics = require('./engine/physics.js');
 
 function applyGameMasterMod(gameState, modType){
   try {
     switch(modType){
-      case 'WIDE_PADDLE':
-        gameState.powerUps.push(new PowerUp('wide_paddle', ((gameState.numScreens || 3) * layout.SCREEN_WIDTH)/2, 0));
+      case 'WIDE_PADDLE': {
+        const normalW = layout.DEFAULT_PADDLE_WIDTH;
+        (gameState.players || []).forEach((p) => {
+          if (!p || !p.connected || p.lives <= 0) return;
+          p.paddleWidth = normalW * 2;
+          if (p.widePaddleTimer) clearTimeout(p.widePaddleTimer);
+          p.widePaddleTimer = setTimeout(() => {
+            p.paddleWidth = normalW;
+            p.widePaddleTimer = null;
+          }, 8000);
+        });
         break;
+      }
       case 'EXTRA_BALL': {
         const radius = gameState.balls.length > 0 ? gameState.balls[0].radius : 8;
         const extra = new Ball(Date.now().toString(), 0, 0, 0, 0, radius);
@@ -99,4 +110,5 @@ module.exports = {
   placeBallOnPaddle,
   launchGluedBall,
   stickGluedBalls,
+  SERVE_HOLD_MS: physics.SERVE_HOLD_MS,
 };

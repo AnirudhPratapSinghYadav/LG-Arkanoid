@@ -42,6 +42,28 @@ function setupTouchControls() {
     bindHold(left, -1);
     bindHold(right, 1);
     window.addEventListener('blur', stopHold);
+    setupSwipePad();
+}
+
+function setupSwipePad() {
+    const pad = document.getElementById('swipePad');
+    if (!pad || pad.dataset.ready === '1') return;
+    pad.dataset.ready = '1';
+    let lastX = null;
+    pad.addEventListener('pointerdown', function (e) {
+        lastX = e.clientX;
+        try { pad.setPointerCapture(e.pointerId); } catch (_) {}
+    });
+    pad.addEventListener('pointermove', function (e) {
+        if (lastX == null) return;
+        const dx = e.clientX - lastX;
+        lastX = e.clientX;
+        if (Math.abs(dx) < 1) return;
+        window.__lgPaddleDelta(dx * 3.2 * worldInputScale());
+    });
+    function endSwipe() { lastX = null; }
+    pad.addEventListener('pointerup', endSwipe);
+    pad.addEventListener('pointercancel', endSwipe);
 }
 
 window.__lgPaddleDelta = function (dx) {

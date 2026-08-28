@@ -22,12 +22,17 @@ password_chrome_cmd() {
 }
 
 # ssh -Xnf returns 0 as soon as the remote shell backgrounds Chromium.
-# Check the slave actually has a Chromium process on this game port.
+# Check the slave actually has a Chromium process on this slice URL.
 slave_chromium_up() {
   local host="$1"
   local pw="${2:-}"
   local port="${3:-8130}"
-  local check="pgrep -f 'chromium-browser.*:${port}/' >/dev/null 2>&1 || pgrep -f 'chromium.*:${port}/' >/dev/null 2>&1"
+  local slice="${4:-}"
+  local needle=":${port}/"
+  if [ -n "$slice" ]; then
+    needle=":${port}/${slice}"
+  fi
+  local check="pgrep -f 'chromium.*${needle}' >/dev/null 2>&1"
   if ssh -n -o ConnectTimeout=5 lg@"$host" "$check" 2>/dev/null; then
     return 0
   fi
@@ -37,6 +42,16 @@ slave_chromium_up() {
     return $?
   fi
   return 1
+}
+
+local_chromium_up() {
+  local port="${1:-8130}"
+  local slice="${2:-}"
+  local needle=":${port}/"
+  if [ -n "$slice" ]; then
+    needle=":${port}/${slice}"
+  fi
+  pgrep -f "chromium.*${needle}" >/dev/null 2>&1
 }
 
 ssh_pkill() {

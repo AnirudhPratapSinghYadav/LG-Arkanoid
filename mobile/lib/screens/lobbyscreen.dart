@@ -83,7 +83,8 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
     if (status == _lastHeardStatus &&
         connected == _lastHeardConnected &&
         _syncedFromServer &&
-        status != 'playing') {
+        status != 'playing' &&
+        status != 'lobby') {
       return;
     }
     _lastHeardStatus = status;
@@ -143,7 +144,10 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
   Future<void> _onStartMatch() async {
     final gameState = _gameService.latestGameState;
     final players = gameState?['players'] as List<dynamic>? ?? [];
-    final connected = players.where((p) => p is Map && p['connected'] == true).length;
+    final connected = connectedPlayerCount(
+      players,
+      selfJoined: _gameService.isJoinConfirmed && !_gameService.isSpectator,
+    );
     final slots = startSlotCount(connected: connected, selected: _selectedMaxPlayers);
     if (slots < 1) return;
     setState(() => _selectedMaxPlayers = slots);
@@ -163,7 +167,10 @@ class _LobbyScreenState extends State<LobbyScreen> with TickerProviderStateMixin
     final players = gameState?['players'] as List<dynamic>? ?? [];
     final maxPlayers = asInt(gameState?['maxPlayers']) ?? 3;
     
-    final connectedCount = players.where((p) => p is Map && p['connected'] == true).length;
+    final connectedCount = connectedPlayerCount(
+      players,
+      selfJoined: service.isJoinConfirmed && !service.isSpectator,
+    );
     
     final masterIndex = asInt(gameState?['masterPlayerIndex']) ?? 0;
     final mySlot = asInt(service.playerNumber) ?? 0;
