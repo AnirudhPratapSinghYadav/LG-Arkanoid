@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "dotenv": "^16.4.5",
-    "engine.io": "^6.6.9",
+    "engine.io": "^6.6.10",
     "express": "^4.21.0",
     "express-rate-limit": "^7.5.0",
     "helmet": "^7.2.0",
